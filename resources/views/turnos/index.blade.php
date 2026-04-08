@@ -23,6 +23,7 @@
         @csrf
         <input type="hidden" name="voluntario_id" value="{{ session('form_data.voluntario_id') }}">
         <input type="hidden" name="observaciones" value="{{ session('form_data.observaciones') }}">
+        <input type="hidden" name="entrada_at" value="{{ session('form_data.entrada_at') }}">
         @foreach(session('form_data.unidades', []) as $uid)
             <input type="hidden" name="unidades[]" value="{{ $uid }}">
         @endforeach
@@ -50,6 +51,7 @@
         @csrf
         <input type="hidden" name="cuartelero_id" value="{{ session('form_data_cuartelero.cuartelero_id') }}">
         <input type="hidden" name="observaciones" value="{{ session('form_data_cuartelero.observaciones') }}">
+        <input type="hidden" name="entrada_at" value="{{ session('form_data_cuartelero.entrada_at') }}">
         @foreach(session('form_data_cuartelero.unidades', []) as $uid)
             <input type="hidden" name="unidades[]" value="{{ $uid }}">
         @endforeach
@@ -75,14 +77,14 @@
                         <input class="form-check-input" type="radio" name="tipo_conductor"
                                id="tipoMaquinista" value="maquinista" checked>
                         <label class="form-check-label fw-bold text-danger" for="tipoMaquinista">
-                            <i class="bi bi-person-badge me-1"></i>Maquinista 
+                            <i class="bi bi-person-badge me-1"></i>Maquinista
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="tipo_conductor"
                                id="tipoCuartelero" value="cuartelero">
                         <label class="form-check-label fw-bold text-primary" for="tipoCuartelero">
-                            <i class="bi bi-person-gear me-1"></i>Cuartelero 
+                            <i class="bi bi-person-gear me-1"></i>Cuartelero
                         </label>
                     </div>
                 </div>
@@ -91,7 +93,13 @@
 
         {{-- Formulario Maquinista --}}
         <form id="formMaquinista" action="{{ route('turnos.store') }}" method="POST">
-            @csrf
+            @csrf 
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                La hora de puesta en servicio se registra automáticamente. Si necesita ajustar la fecha u hora de entrada, utilice el botón <i class="bi bi-clock-history"></i> al final de la fila.
+            </p>
+            {{-- Campo oculto de hora — solo se envía si el operador lo ajustó --}}
+            <input type="hidden" name="entrada_at" id="entradaAtMaquinista" value="">
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Voluntario <span class="text-danger">*</span></label>
@@ -108,7 +116,7 @@
                     </select>
                     @error('voluntario_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label fw-bold">Unidades <span class="text-danger">*</span></label>
                     <div id="unidadesContainer" class="border rounded p-2 bg-light" style="min-height:42px">
                         <span class="text-muted small">Selecciona primero un voluntario...</span>
@@ -120,7 +128,44 @@
                     <input type="text" name="observaciones" class="form-control"
                            placeholder="Opcional..." value="{{ old('observaciones') }}">
                 </div>
+                <div class="col-md-1 d-flex flex-column">
+                    <label class="form-label fw-bold" style="visibility:hidden">‎</label>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            id="btnAjusteHoraMaquinista"
+                            title="Ajustar hora de entrada"
+                            data-bs-toggle="tooltip">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+                </div>
             </div>
+
+            {{-- Panel ajuste hora (oculto por defecto) --}}
+            <div id="panelHoraMaquinista" class="mt-3 p-3 border rounded bg-light" style="display:none">
+                <div class="d-flex align-items-end gap-3 flex-wrap">
+                    <div>
+                        <label class="form-label fw-bold mb-1 small text-warning-emphasis">
+                            <i class="bi bi-exclamation-circle me-1"></i>Ajuste de hora de entrada
+                        </label>
+                        <input type="datetime-local" id="inputHoraMaquinista" class="form-control form-control-sm" style="width:220px">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-warning btn-sm" id="btnConfirmarHoraMaquinista">
+                            <i class="bi bi-check-lg me-1"></i>Confirmar ajuste
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCancelarHoraMaquinista">
+                            Cancelar
+                        </button>
+                    </div>
+                    <div id="horaAjustadaMaquinista" class="text-success small fw-bold" style="display:none">
+                        <i class="bi bi-check-circle me-1"></i><span></span>
+                    </div>
+                </div>
+                <div class="text-muted small mt-2">
+                    Si no ajustas la hora, se usará la hora actual al momento de guardar.
+                </div>
+            </div>
+
             <div class="mt-3">
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-box-arrow-in-right me-1"></i>Registrar Entrada
@@ -131,6 +176,12 @@
         {{-- Formulario Cuartelero --}}
         <form id="formCuartelero" action="{{ route('cuarteleros.turnos.store') }}" method="POST" style="display:none">
             @csrf
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                La hora de puesta en servicio se registra automáticamente. Si necesita ajustar la fecha u hora de entrada, utilice el botón <i class="bi bi-clock-history"></i> al final de la fila.
+            </p>
+            {{-- Campo oculto de hora — solo se envía si el operador lo ajustó --}}
+            <input type="hidden" name="entrada_at" id="entradaAtCuartelero" value="">
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Cuartelero <span class="text-danger">*</span></label>
@@ -147,7 +198,7 @@
                     </select>
                     @error('cuartelero_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-4">
                     <label class="form-label fw-bold">Unidades <span class="text-danger">*</span></label>
                     <div id="unidadesCuarteleroContainer" class="border rounded p-2 bg-light" style="min-height:42px">
                         <span class="text-muted small">Selecciona primero un cuartelero...</span>
@@ -157,7 +208,44 @@
                     <label class="form-label fw-bold">Observaciones</label>
                     <input type="text" name="observaciones" class="form-control" placeholder="Opcional...">
                 </div>
+                <div class="col-md-1 d-flex flex-column">
+                    <label class="form-label fw-bold" style="visibility:hidden">‎</label>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            id="btnAjusteHoraCuartelero"
+                            title="Ajustar hora de entrada"
+                            data-bs-toggle="tooltip">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+                </div>
             </div>
+
+            {{-- Panel ajuste hora (oculto por defecto) --}}
+            <div id="panelHoraCuartelero" class="mt-3 p-3 border rounded bg-light" style="display:none">
+                <div class="d-flex align-items-end gap-3 flex-wrap">
+                    <div>
+                        <label class="form-label fw-bold mb-1 small text-warning-emphasis">
+                            <i class="bi bi-exclamation-circle me-1"></i>Ajuste de hora de entrada
+                        </label>
+                        <input type="datetime-local" id="inputHoraCuartelero" class="form-control form-control-sm" style="width:220px">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-warning btn-sm" id="btnConfirmarHoraCuartelero">
+                            <i class="bi bi-check-lg me-1"></i>Confirmar ajuste
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCancelarHoraCuartelero">
+                            Cancelar
+                        </button>
+                    </div>
+                    <div id="horaAjustadaCuartelero" class="text-success small fw-bold" style="display:none">
+                        <i class="bi bi-check-circle me-1"></i><span></span>
+                    </div>
+                </div>
+                <div class="text-muted small mt-2">
+                    Si no ajustas la hora, se usará la hora actual al momento de guardar.
+                </div>
+            </div>
+            
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-box-arrow-in-right me-1"></i>Registrar Entrada
@@ -417,6 +505,11 @@ document.querySelectorAll('.unidad-badge').forEach(el => {
     new bootstrap.Popover(el, { container: 'body' });
 });
 
+// Inicializar tooltips
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+    new bootstrap.Tooltip(el);
+});
+
 // Cerrar popovers al hacer clic fuera
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.unidad-badge') && !e.target.closest('.popover')) {
@@ -442,7 +535,6 @@ const tsVoluntario = new TomSelect('#selectVoluntario', {
     searchField: ['text'],
     maxOptions: 50,
     onChange: function(value) {
-        // Disparar el evento change original para que funcionen las unidades
         document.getElementById('selectVoluntario').dispatchEvent(new Event('change'));
     }
 });
@@ -457,7 +549,7 @@ const tsCuartelero = new TomSelect('#selectCuartelero', {
 });
 
 document.getElementById('selectVoluntario').addEventListener('change', function() {
-    const voluntarioId = tsVoluntario.getValue(); // leer desde Tom Select
+    const voluntarioId = tsVoluntario.getValue();
     const container = document.getElementById('unidadesContainer');
     const yaEnTurno = unidadesEnTurno[voluntarioId] || [];
     const unidades  = (unidadesPorVoluntario[voluntarioId] || [])
@@ -483,7 +575,7 @@ document.getElementById('selectVoluntario').addEventListener('change', function(
 });
 
 document.getElementById('selectCuartelero').addEventListener('change', function() {
-    const cuarteleroId = tsCuartelero.getValue(); // leer desde Tom Select
+    const cuarteleroId = tsCuartelero.getValue();
     const container = document.getElementById('unidadesCuarteleroContainer');
     const yaEnTurno = unidadesEnTurnoCuartelero[cuarteleroId] || [];
     const unidades  = (unidadesPorCuartelero[cuarteleroId] || [])
@@ -508,7 +600,100 @@ document.getElementById('selectCuartelero').addEventListener('change', function(
     `).join('');
 });
 
-// Cronómetros
+// ─── Ajuste de hora de entrada ───────────────────────────────────────────────
+
+function horaActualLocal() {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    // Formato YYYY-MM-DDTHH:MM ajustado a la zona local
+    const pad = n => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function formatearHoraLegible(datetimeLocal) {
+    if (!datetimeLocal) return '';
+    const [fecha, hora] = datetimeLocal.split('T');
+    const [anio, mes, dia] = fecha.split('-');
+    return `${dia}/${mes}/${anio} ${hora}`;
+}
+
+// Configurar lógica de ajuste para un formulario dado
+function configurarAjusteHora({ btnAbrir, panelId, inputId, campoOcultoId, confirmId, cancelId, indicadorId }) {
+    const panel      = document.getElementById(panelId);
+    const input      = document.getElementById(inputId);
+    const campoOcul  = document.getElementById(campoOcultoId);
+    const btnConfirm = document.getElementById(confirmId);
+    const btnCancel  = document.getElementById(cancelId);
+    const indicador  = document.getElementById(indicadorId);
+
+    // Abrir panel y pre-rellenar con hora actual
+    btnAbrir.addEventListener('click', () => {
+        input.value = horaActualLocal();
+        input.max   = horaActualLocal(); // no permitir hora futura
+        panel.style.display = 'block';
+        btnAbrir.classList.add('active', 'btn-warning');
+        btnAbrir.classList.remove('btn-outline-secondary');
+        input.focus();
+    });
+
+    // Confirmar ajuste: guardar en campo oculto y mostrar indicador
+    btnConfirm.addEventListener('click', () => {
+        if (!input.value) return;
+
+        // Actualizar max por si pasó tiempo desde que abrió
+        const ahora = horaActualLocal();
+        if (input.value > ahora) {
+            alert('No puedes seleccionar una hora futura.');
+            input.value = ahora;
+            return;
+        }
+
+        campoOcul.value = input.value;
+        panel.style.display = 'none';
+
+        // Mostrar indicador de hora ajustada junto al botón
+        const legible = formatearHoraLegible(input.value);
+        indicador.querySelector('span').textContent = `Hora ajustada: ${legible}`;
+        indicador.style.display = 'inline-block';
+
+        // Cambiar botón a estado "ajustado"
+        btnAbrir.title = `Hora ajustada: ${legible} — clic para cambiar`;
+        bootstrap.Tooltip.getInstance(btnAbrir)?.dispose();
+        new bootstrap.Tooltip(btnAbrir);
+    });
+
+    // Cancelar: cerrar panel y limpiar campo oculto si no había confirmado antes
+    btnCancel.addEventListener('click', () => {
+        panel.style.display = 'none';
+        if (!campoOcul.value) {
+            btnAbrir.classList.remove('active', 'btn-warning');
+            btnAbrir.classList.add('btn-outline-secondary');
+        }
+    });
+}
+
+configurarAjusteHora({
+    btnAbrir:      document.getElementById('btnAjusteHoraMaquinista'),
+    panelId:       'panelHoraMaquinista',
+    inputId:       'inputHoraMaquinista',
+    campoOcultoId: 'entradaAtMaquinista',
+    confirmId:     'btnConfirmarHoraMaquinista',
+    cancelId:      'btnCancelarHoraMaquinista',
+    indicadorId:   'horaAjustadaMaquinista',
+});
+
+configurarAjusteHora({
+    btnAbrir:      document.getElementById('btnAjusteHoraCuartelero'),
+    panelId:       'panelHoraCuartelero',
+    inputId:       'inputHoraCuartelero',
+    campoOcultoId: 'entradaAtCuartelero',
+    confirmId:     'btnConfirmarHoraCuartelero',
+    cancelId:      'btnCancelarHoraCuartelero',
+    indicadorId:   'horaAjustadaCuartelero',
+});
+
+// ─── Cronómetros ─────────────────────────────────────────────────────────────
+
 function actualizarCronometros() {
     document.querySelectorAll('.cronometro').forEach(el => {
         const entrada  = parseInt(el.dataset.entrada);

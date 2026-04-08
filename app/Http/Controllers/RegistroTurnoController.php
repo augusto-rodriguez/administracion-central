@@ -6,6 +6,7 @@ use App\Models\SalidaUnidad;
 use App\Models\Voluntario;
 use App\Models\RegistroTurno;
 use App\Models\Unidad;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class RegistroTurnoController extends Controller
@@ -79,6 +80,7 @@ class RegistroTurnoController extends Controller
             'unidades'      => 'required|array|min:1',
             'unidades.*'    => 'exists:unidades,id',
             'observaciones' => 'nullable|string',
+            'entrada_at'    => 'nullable|date|before_or_equal:now',
         ]);
 
         $voluntario = \App\Models\Voluntario::findOrFail($request->voluntario_id);
@@ -130,6 +132,7 @@ class RegistroTurnoController extends Controller
                     'voluntario_id' => $request->voluntario_id,
                     'unidades'      => $request->unidades,
                     'observaciones' => $request->observaciones,
+                    'entrada_at'    => $request->entrada_at,
                 ],
             ]);
             return redirect()->route('turnos.index');
@@ -161,9 +164,13 @@ class RegistroTurnoController extends Controller
                 ->with('success', 'Unidades agregadas al turno activo del voluntario.');
         }
 
+        $entradaAt = $request->filled('entrada_at')
+            ? Carbon::parse($request->entrada_at)
+            : now();
+
         $turno = \App\Models\RegistroTurno::create([
             'voluntario_id' => $request->voluntario_id,
-            'entrada_at'    => now(),
+            'entrada_at'    => $entradaAt,
             'observaciones' => $request->observaciones,
         ]);
 
@@ -251,7 +258,8 @@ class RegistroTurnoController extends Controller
             $this->crearTurno(
                 $formData['voluntario_id'],
                 $unidadesNuevas,
-                $formData['observaciones'] ?? null
+                $formData['observaciones'] ?? null,
+                $formData['entrada_at'] ?? null,
             );
         }
 
@@ -319,11 +327,11 @@ class RegistroTurnoController extends Controller
             ->with('success', "Unidad {$unidad->nombre} removida del turno.");
     }
 
-    private function crearTurno($voluntarioId, $unidades, $observaciones = null)
+    private function crearTurno($voluntarioId, $unidades, $observaciones = null, $entradaAt = null)
     {
         $turno = RegistroTurno::create([
             'voluntario_id' => $voluntarioId,
-            'entrada_at'    => now(),
+            'entrada_at'    => $entradaAt ? Carbon::parse($entradaAt) : now(),
             'observaciones' => $observaciones,
         ]);
 

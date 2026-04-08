@@ -6,6 +6,7 @@ use App\Models\SalidaUnidad;
 use App\Models\Cuartelero;
 use App\Models\RegistroTurnoCuartelero;
 use App\Models\Unidad;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class TurnoCuarteleroController extends Controller
@@ -30,6 +31,7 @@ class TurnoCuarteleroController extends Controller
             'unidades'      => 'required|array|min:1',
             'unidades.*'    => 'exists:unidades,id',
             'observaciones' => 'nullable|string',
+            'entrada_at'    => 'nullable|date|before_or_equal:now',
         ]);
 
         $cuartelero = Cuartelero::findOrFail($request->cuartelero_id);
@@ -81,6 +83,7 @@ class TurnoCuarteleroController extends Controller
                     'cuartelero_id' => $request->cuartelero_id,
                     'unidades'      => $request->unidades,
                     'observaciones' => $request->observaciones,
+                    'entrada_at'    => $request->entrada_at,
                 ],
             ]);
             return redirect()->route('turnos.index');
@@ -112,9 +115,13 @@ class TurnoCuarteleroController extends Controller
                 ->with('success', 'Unidades agregadas al turno activo del cuartelero.');
         }
 
+        $entradaAt = $request->filled('entrada_at')
+            ? Carbon::parse($request->entrada_at)
+            : now();
+
         $turno = RegistroTurnoCuartelero::create([
             'cuartelero_id' => $request->cuartelero_id,
-            'entrada_at'    => now(),
+            'entrada_at'    => $entradaAt,
             'observaciones' => $request->observaciones,
         ]);
 
@@ -196,12 +203,16 @@ class TurnoCuarteleroController extends Controller
 
         $cuartelero = Cuartelero::findOrFail($formData['cuartelero_id']);
 
+        $entradaAt = !empty($formData['entrada_at'])
+            ? Carbon::parse($formData['entrada_at'])
+            : now();
+
         if ($cuartelero->turnoActivo) {
             $cuartelero->turnoActivo->unidades()->syncWithoutDetaching($unidadesNuevas);
         } else {
             $turno = RegistroTurnoCuartelero::create([
                 'cuartelero_id' => $formData['cuartelero_id'],
-                'entrada_at'    => now(),
+                'entrada_at'    => $entradaAt,
                 'observaciones' => $formData['observaciones'] ?? null,
             ]);
             $turno->unidades()->attach($unidadesNuevas);
