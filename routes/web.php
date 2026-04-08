@@ -33,6 +33,7 @@ Route::middleware(['rol'])->group(function () {
     Route::get('consultas',                     [App\Http\Controllers\ConsultaController::class, 'index'])            ->name('consultas.index');
     Route::get('estadisticas',                  [App\Http\Controllers\EstadisticaController::class, 'index'])         ->name('estadisticas.index');
     Route::get('guardias-nocturnas/{guardia}/pdf', [App\Http\Controllers\GuardiaNocturnaController::class, 'exportarPdf'])->name('guardias-nocturnas.pdf');
+    Route::get('libro-novedades/{libroNovedade}/pdf', [App\Http\Controllers\LibroNovedadesController::class, 'exportarPdf'])->name('libro-novedades.pdf');
     // ─────────────────────────────────────────────────────────────────
     // OPERACIONES (solo operadores — excluye admin y comandante)
     // ─────────────────────────────────────────────────────────────────

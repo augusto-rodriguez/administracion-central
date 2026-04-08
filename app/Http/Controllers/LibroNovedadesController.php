@@ -365,4 +365,30 @@ class LibroNovedadesController extends Controller
             'libro', 'salidasAdmin', 'salidasEmergencia', 'puestasEnServicio'
         ));
     }
+
+    public function exportarPdf(LibroNovedades $libroNovedade)
+    {
+        $libro = $libroNovedade->load('operador', 'cerradoPor');
+
+        $idsAdmin      = $libro->salidas_administrativas ?? [];
+        $idsEmergencia = $libro->salidas_emergencia ?? [];
+
+        $salidasAdmin = \App\Models\SalidaUnidad::whereIn('id', $idsAdmin)
+            ->with('unidad', 'claveSalida', 'oficial')
+            ->get();
+
+        $salidasEmergencia = \App\Models\SalidaUnidad::whereIn('id', $idsEmergencia)
+            ->with('unidad', 'claveSalida')
+            ->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+                'libro_novedades.pdf',
+                compact('libro', 'salidasAdmin', 'salidasEmergencia')
+            )
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download(
+            'libro_novedades_' . $libro->fecha->format('Y-m-d') . '_' . $libro->turno . '.pdf'
+        );
+    }
 }
