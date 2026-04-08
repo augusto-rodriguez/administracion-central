@@ -37,11 +37,16 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Rol <span class="text-danger">*</span></label>
-                    <select name="rol" class="form-select" required>
+                    <select name="rol" class="form-select" required {{ $usuario->rol == 'admin' ? 'disabled' : '' }}>
                         <option value="operador"   {{ $usuario->rol == 'operador'   ? 'selected' : '' }}>Operador</option>
                         <option value="comandante" {{ $usuario->rol == 'comandante' ? 'selected' : '' }}>Comandante</option>
-                        <!-- <option value="admin"      {{ $usuario->rol == 'admin'      ? 'selected' : '' }}>Administrador</option> -->
+                        @if($usuario->rol == 'admin')
+                            <option value="admin" selected>Administrador</option>
+                        @endif
                     </select>
+                    @if($usuario->rol == 'admin')
+                        <input type="hidden" name="rol" value="admin">
+                    @endif
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Estado</label>
