@@ -258,7 +258,7 @@
 
 @push('scripts')
 <script>
-@if($boletinGenerado)
+@if($boletinGenerado || request('leer'))
     document.addEventListener('DOMContentLoaded', function () {
         new bootstrap.Modal(document.getElementById('modalLectura')).show();
     });

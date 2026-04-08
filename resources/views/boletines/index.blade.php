@@ -68,10 +68,12 @@
                         {{ $boletin->maquinistas->map(fn($m) => $m->voluntario->nombre)->implode(', ') ?: '—' }}
                     </td>
                     <td class="text-end">
-                        <a href="{{ route('boletines.show', $boletin) }}"
-                           class="btn btn-sm btn-outline-primary">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary btn-ver-boletin"
+                                data-id="{{ $boletin->id }}"
+                                data-url="{{ route('boletines.show', $boletin) }}">
                             <i class="bi bi-eye me-1"></i>Ver
-                        </a>
+                        </button>
                         <form action="{{ route('boletines.destroy', $boletin) }}" method="POST"
                               class="d-inline"
                               onsubmit="return confirm('¿Eliminar este boletín? Podrás volver a generarlo.')">
@@ -98,11 +100,66 @@
     {{ $boletines->links() }}
 </div>
 
+{{-- Modal de lectura rápida desde el listado --}}
+<div class="modal fade" id="modalLecturaRapida" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" style="margin-top: 2rem;">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <div>
+                    <h6 class="modal-title mb-0">
+                        <i class="bi bi-broadcast me-2"></i>Lectura del boletín
+                    </h6>
+                    <small class="opacity-75" id="modalLecturaSubtitle"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalLecturaBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-danger" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
-// Activar tooltips de Bootstrap
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
     new bootstrap.Tooltip(el);
+});
+
+document.querySelectorAll('.btn-ver-boletin').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const url      = this.dataset.url;
+        const modal    = new bootstrap.Modal(document.getElementById('modalLecturaRapida'));
+        const body     = document.getElementById('modalLecturaBody');
+        const subtitle = document.getElementById('modalLecturaSubtitle');
+
+        body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-danger" role="status"></div></div>';
+        subtitle.textContent = '';
+        modal.show();
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc    = parser.parseFromString(html, 'text/html');
+
+                const subEl = doc.querySelector('#modalLectura .modal-header small');
+                if (subEl) subtitle.innerHTML = subEl.innerHTML;
+
+                const bodyEl = doc.querySelector('#modalLectura .modal-body');
+                if (bodyEl) body.innerHTML = bodyEl.innerHTML;
+            })
+            .catch(() => {
+                body.innerHTML = '<p class="text-danger text-center py-4">Error al cargar el boletín.</p>';
+            });
+    });
 });
 </script>
 @endpush

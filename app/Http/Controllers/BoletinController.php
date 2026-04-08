@@ -52,8 +52,8 @@ class BoletinController extends Controller
             ->get();
 
         // ── Detectar si es domingo PM ────────────────────────────────
-        // $esDomingoPM  = now('America/Santiago')->dayOfWeek === Carbon::SUNDAY;
-        $esDomingoPM  = true;
+        $esDomingoPM  = now('America/Santiago')->dayOfWeek === Carbon::SUNDAY;
+        // $esDomingoPM  = true;
         $comandantes  = collect();
         $guardiaActual = null;
         $proximoComandante = null;
