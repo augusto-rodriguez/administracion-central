@@ -3,7 +3,7 @@
 @section('content')
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes de Turnos</h4>
+    <h4 class="mb-0"><i class="bi bi-file-earmark-bar-graph me-2"></i>Reporte de puestas en servicio/turnos</h4>
 </div>
 
 {{-- Pestañas --}}

@@ -29,7 +29,14 @@
 {{-- Sidebar --}}
 <div class="col-md-2 sidebar px-0">
 
-    <div class="brand">Administración Central</div>
+    <!-- <div class="brand">Administración Central</div> -->
+    <div class="brand text-center">
+        <img src="{{ asset('images/logo2.png') }}" alt="Logo Bomberos"
+            style="width:70px; height:70px; object-fit:contain; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;">
+        <div style="font-size:0.85rem; font-weight:bold; line-height:1.3;">
+            Administración Central
+        </div>
+    </div>
 
     <nav class="nav flex-column mt-3">
 
