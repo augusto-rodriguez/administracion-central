@@ -159,6 +159,22 @@ class DatosSeeder extends Seeder
         $oficialesAutorizantes = collect($oficiales)->where('puede_autorizar', true)->values();
 
         // =====================
+        // COMANDANTES (3 voluntarios al azar con rangos 1, 2 y 3)
+        // =====================
+        $voluntariosParaComandante = collect($voluntarios)->shuffle()->take(3)->values();
+        foreach ($voluntariosParaComandante as $rangoNum => $v) {
+            DB::table('voluntario_roles')->insert([
+                'voluntario_id'           => $v['id'],
+                'rol'                     => 'comandante',
+                'rango'                   => $rangoNum + 1,
+                'activo'                  => true,
+                'puede_autorizar_salidas' => true,
+                'created_at'              => now()->toDateTimeString(),
+                'updated_at'              => now()->toDateTimeString(),
+            ]);
+        }
+
+        // =====================
         // AUTORIZACIÓN UNIDADES → VOLUNTARIOS
         // =====================
         foreach ($voluntarios as $v) {
@@ -207,9 +223,9 @@ class DatosSeeder extends Seeder
         }
 
         // =====================
-        // RANGO DE FECHAS: 2025 → HOY
+        // RANGO DE FECHAS: últimos 12 meses → ayer
         // =====================
-        $inicio = Carbon::create(2025, 1, 1);
+        $inicio = Carbon::now()->subMonths(12)->startOfDay();
         $fin    = Carbon::now()->subDay()->endOfDay();
 
         // =====================
@@ -299,11 +315,11 @@ class DatosSeeder extends Seeder
         // =====================
         // SALIDAS
         // =====================
-        $codigosExcluidos    = ['10-11', '10-13', '10-14'];
-        $claves              = DB::table('claves_salida')->whereNotIn('codigo', $codigosExcluidos)->get();
-        $clavesEmergencia    = $claves->where('tipo', 'emergencia')->values();
+        $codigosExcluidos     = ['10-11', '10-13', '10-14'];
+        $claves               = DB::table('claves_salida')->whereNotIn('codigo', $codigosExcluidos)->get();
+        $clavesEmergencia     = $claves->where('tipo', 'emergencia')->values();
         $clavesAdministrativa = $claves->where('tipo', 'administrativa')->values();
-        $unidadesIds         = DB::table('unidades')->pluck('id');
+        $unidadesIds          = DB::table('unidades')->pluck('id');
 
         $cuarteleroNombres = [];
         foreach ($cuarteleros as $c) {
@@ -365,7 +381,9 @@ class DatosSeeder extends Seeder
         // =====================
         $todasUnidades = DB::table('unidades')->get();
         $adminUserId   = DB::table('users')->first()?->id ?? 1;
-        $fecha         = $inicio->copy()->startOfMonth();
+
+        // Iniciar desde el primer día del mes de inicio
+        $fecha = $inicio->copy()->startOfMonth();
 
         while ($fecha->lte($fin)) {
             $precioMes = rand(600, 1000);
@@ -378,7 +396,9 @@ class DatosSeeder extends Seeder
                     $diasEnMes  = $fecha->daysInMonth;
                     $diaCarga   = rand(1, $diasEnMes);
                     $fechaCarga = $fecha->copy()->setDay($diaCarga);
-                    if ($fechaCarga->gt($fin)) continue;
+
+                    // Solo insertar si la fecha de carga está dentro del rango
+                    if ($fechaCarga->lt($inicio) || $fechaCarga->gt($fin)) continue;
 
                     $litros = match($unidad->tipo) {
                         'Bomba'           => round(rand(600, 1200) / 10, 3),
@@ -436,21 +456,19 @@ class DatosSeeder extends Seeder
             'Instrucción especial para nuevos integrantes.',
         ];
 
-        // Generar citaciones vigentes y vencidas
         foreach ($companiasIds as $companiaId) {
             for ($i = 0; $i < 5; $i++) {
-                // Mezcla de vigentes y vencidas
                 $fechaCitacion = rand(0, 1)
-                    ? Carbon::now()->addDays(rand(1, 30))   // vigente
-                    : Carbon::now()->subDays(rand(1, 60));  // vencida
+                    ? Carbon::now()->addDays(rand(1, 30))                          // vigente
+                    : Carbon::now()->subDays(rand(1, 60))->max($inicio);           // vencida, no antes del inicio
 
                 DB::table('citaciones')->insert([
-                    'compania_id'       => $companiaId,
+                    'compania_id'        => $companiaId,
                     'medio_recepcion_id' => $mediosIds[array_rand($mediosIds)],
-                    'mensaje'           => $mensajesCitacion[array_rand($mensajesCitacion)],
-                    'fecha_citacion'    => $fechaCitacion->toDateTimeString(),
-                    'created_at'        => now()->toDateTimeString(),
-                    'updated_at'        => now()->toDateTimeString(),
+                    'mensaje'            => $mensajesCitacion[array_rand($mensajesCitacion)],
+                    'fecha_citacion'     => $fechaCitacion->toDateTimeString(),
+                    'created_at'         => now()->toDateTimeString(),
+                    'updated_at'         => now()->toDateTimeString(),
                 ]);
             }
         }
@@ -467,34 +485,32 @@ class DatosSeeder extends Seeder
                 $horaFin    = $turno === 'dia' ? '20:00:00' : '08:00:00';
                 $fechaStr   = $fecha->toDateString();
 
-                $cerradoAt = $turno === 'dia'
-                    ? $fecha->copy()->setTime(20, rand(0, 10), 0)
-                    : $fecha->copy()->setTime(20, rand(0, 10), 0);
+                $cerradoAt = $fecha->copy()->setTime(20, rand(0, 10), 0);
 
                 DB::table('libro_novedades')->insert([
-                    'fecha'                              => $fechaStr,
-                    'turno'                              => $turno,
-                    'hora_inicio'                        => $horaInicio,
-                    'hora_fin'                           => $horaFin,
-                    'operador_id'                        => $operadorId,
-                    'operador_turno_anterior'            => null,
-                    'maquinistas_al_recibir'             => json_encode([]),
-                    'cuarteleros_al_recibir'             => json_encode([]),
-                    'unidades_fuera_servicio_al_recibir' => json_encode([]),
-                    'maquinistas_al_entregar'            => json_encode([]),
-                    'cuarteleros_al_entregar'            => json_encode([]),
-                    'unidades_fuera_servicio_al_entregar'=> json_encode([]),
-                    'puestas_en_servicio'                => json_encode([]),
-                    'salidas_administrativas'            => json_encode([]),
-                    'salidas_emergencia'                 => json_encode([]),
-                    'novedades_cronologicas'             => null,
-                    'observaciones_telecomunicaciones'   => null,
-                    'novedades_viper'                    => null,
-                    'estado'                             => 'cerrado',
-                    'cerrado_por'                        => $operadorId,
-                    'cerrado_at'                         => $cerradoAt->toDateTimeString(),
-                    'created_at'                         => $fecha->toDateTimeString(),
-                    'updated_at'                         => $cerradoAt->toDateTimeString(),
+                    'fecha'                               => $fechaStr,
+                    'turno'                               => $turno,
+                    'hora_inicio'                         => $horaInicio,
+                    'hora_fin'                            => $horaFin,
+                    'operador_id'                         => $operadorId,
+                    'operador_turno_anterior'             => null,
+                    'maquinistas_al_recibir'              => json_encode([]),
+                    'cuarteleros_al_recibir'              => json_encode([]),
+                    'unidades_fuera_servicio_al_recibir'  => json_encode([]),
+                    'maquinistas_al_entregar'             => json_encode([]),
+                    'cuarteleros_al_entregar'             => json_encode([]),
+                    'unidades_fuera_servicio_al_entregar' => json_encode([]),
+                    'puestas_en_servicio'                 => json_encode([]),
+                    'salidas_administrativas'             => json_encode([]),
+                    'salidas_emergencia'                  => json_encode([]),
+                    'novedades_cronologicas'              => null,
+                    'observaciones_telecomunicaciones'    => null,
+                    'novedades_viper'                     => null,
+                    'estado'                              => 'cerrado',
+                    'cerrado_por'                         => $operadorId,
+                    'cerrado_at'                          => $cerradoAt->toDateTimeString(),
+                    'created_at'                          => $fecha->toDateTimeString(),
+                    'updated_at'                          => $cerradoAt->toDateTimeString(),
                 ]);
             }
             $fecha->addDay();
@@ -509,19 +525,20 @@ class DatosSeeder extends Seeder
         while ($fecha->lte($fin)) {
             foreach (['am', 'pm'] as $tipo) {
 
-                // Verificar si ya existe (unique fecha+tipo)
-                $existe = DB::table('boletines')->where('fecha', $fecha->toDateString())->where('tipo', $tipo)->exists();
+                $existe = DB::table('boletines')
+                    ->where('fecha', $fecha->toDateString())
+                    ->where('tipo', $tipo)
+                    ->exists();
                 if ($existe) continue;
 
                 $boletinId = DB::table('boletines')->insertGetId([
-                    'fecha'        => $fecha->toDateString(),
-                    'tipo'         => $tipo,
-                    'texto_guardia'=> null,
-                    'created_at'   => $fecha->toDateTimeString(),
-                    'updated_at'   => $fecha->toDateTimeString(),
+                    'fecha'         => $fecha->toDateString(),
+                    'tipo'          => $tipo,
+                    'texto_guardia' => null,
+                    'created_at'    => $fecha->toDateTimeString(),
+                    'updated_at'    => $fecha->toDateTimeString(),
                 ]);
 
-                // Cuarteleros en turno (1 por compañía aleatoriamente)
                 $cuartelerosBoletin = collect($cuarteleros)->random(rand(2, count($cuarteleros)));
                 foreach ($cuartelerosBoletin as $c) {
                     DB::table('boletin_cuarteleros')->insert([
@@ -532,7 +549,6 @@ class DatosSeeder extends Seeder
                     ]);
                 }
 
-                // Maquinistas en turno (2-4 voluntarios aleatorios)
                 $maquinistasBoletin = collect($voluntarios)->random(rand(2, 4));
                 foreach ($maquinistasBoletin as $m) {
                     $unidadesComp  = $unidadesPorCompania[$m['compania_id']];
@@ -540,7 +556,6 @@ class DatosSeeder extends Seeder
                     $unidadesTexto = $unidadesMaq->pluck('nombre')->implode(' ');
                     $unidadId      = $unidadesMaq->first()->id;
 
-                    // Evitar duplicado voluntario en mismo boletín
                     $dup = DB::table('boletin_maquinistas')
                         ->where('boletin_id', $boletinId)
                         ->where('voluntario_id', $m['id'])
@@ -562,12 +577,11 @@ class DatosSeeder extends Seeder
         }
 
         // =====================
-        // GUARDIAS NOCTURNAS (2025 → hoy)
+        // GUARDIAS NOCTURNAS
         // =====================
         $fecha = $inicio->copy();
 
         while ($fecha->lte($fin)) {
-            // Evitar duplicado por fecha unique
             $existe = DB::table('guardia_nocturna')->where('fecha', $fecha->toDateString())->exists();
             if ($existe) {
                 $fecha->addDay();
@@ -586,7 +600,6 @@ class DatosSeeder extends Seeder
             ]);
 
             foreach ($companiaIdsArray as $companiaId) {
-                // 5% de probabilidad de no reportar
                 $sinReporte = rand(1, 100) <= 5;
 
                 $gnCompaniaId = DB::table('guardia_nocturna_compania')->insertGetId([
@@ -603,11 +616,9 @@ class DatosSeeder extends Seeder
                 ]);
 
                 if ($sinReporte) {
-                    $fecha->addDay();
                     continue;
                 }
 
-                // Voluntarios en guardia (3-8 por compañía)
                 $volsCompania = collect($voluntarios)->where('compania_id', $companiaId)->values();
                 $cantidad     = min(rand(3, 8), $volsCompania->count());
                 $volsGuardia  = $volsCompania->random($cantidad);
@@ -616,25 +627,21 @@ class DatosSeeder extends Seeder
                     DB::table('guardia_nocturna_voluntario')->insert([
                         'guardia_nocturna_compania_id' => $gnCompaniaId,
                         'voluntario_id'                => $v['id'],
-                        'hora_ingreso'                 => null, // antes del cierre = 01:00
+                        'hora_ingreso'                 => null,
                         'created_at'                   => $cerradoAt->toDateTimeString(),
                         'updated_at'                   => $cerradoAt->toDateTimeString(),
                     ]);
                 }
 
-                // Unidades en servicio
-                $unidadesComp    = $unidadesPorCompania[$companiaId];
-                $cuarteleroComp  = collect($cuarteleros)->firstWhere('compania_id', $companiaId);
-                $cuarteleroEnGN  = DB::table('guardia_nocturna_compania')->where('id', $gnCompaniaId)->value('cuartelero_id');
+                $unidadesComp   = $unidadesPorCompania[$companiaId];
+                $cuarteleroEnGN = DB::table('guardia_nocturna_compania')->where('id', $gnCompaniaId)->value('cuartelero_id');
 
                 foreach ($unidadesComp as $u) {
-                    // Si hay cuartelero en guardia, 50% de unidades van con él
                     if ($cuarteleroEnGN && rand(0, 1)) {
                         $maquinistaId = null;
                         $cuarteleroId = $cuarteleroEnGN;
                     } else {
-                        // Asignar maquinista aleatorio de la compañía o dejar sin conductor
-                        $sinConductor = rand(1, 10) <= 2; // 20% sin conductor
+                        $sinConductor = rand(1, 10) <= 2;
                         if ($sinConductor) {
                             $maquinistaId = null;
                             $cuarteleroId = null;
@@ -658,7 +665,7 @@ class DatosSeeder extends Seeder
             $fecha->addDay();
         }
 
-        $this->command->info('✅ Seeder ejecutado correctamente para el período 2025 → hoy.');
+        $this->command->info('✅ Seeder ejecutado correctamente para el período de los últimos 12 meses.');
     }
 
     private function direccionAleatoria(): string

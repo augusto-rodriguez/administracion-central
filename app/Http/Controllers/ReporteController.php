@@ -32,7 +32,7 @@ class ReporteController extends Controller
             10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
 
-        $anios = range(now()->year, 2024);
+        $anios = range(now()->year, 2025);
 
         // Reporte por compañía (maquinistas)
         if ($tab === 'compania' && $request->filled('compania_id')) {
@@ -144,7 +144,7 @@ class ReporteController extends Controller
     {
         $companias = Compania::where('activa', true)->orderBy('numero')->get();
         $unidades  = \App\Models\Unidad::with('compania')->where('activa', true)->orderBy('nombre')->get();
-        $anios     = range(now()->year, 2024);
+        $anios     = range(now()->year, 2025);
         $meses     = [
             1 => 'Enero',    2 => 'Febrero',   3 => 'Marzo',
             4 => 'Abril',    5 => 'Mayo',       6 => 'Junio',
@@ -223,7 +223,7 @@ class ReporteController extends Controller
     public function guardiasNocturnas(Request $request)
     {
         $companias = Compania::where('activa', true)->orderBy('numero')->get();
-        $anios     = range(now()->year, 2024);
+        $anios     = range(now()->year, 2025);
         $meses     = [
             1 => 'Enero',    2 => 'Febrero',   3 => 'Marzo',
             4 => 'Abril',    5 => 'Mayo',       6 => 'Junio',

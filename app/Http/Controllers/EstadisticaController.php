@@ -12,7 +12,7 @@ class EstadisticaController extends Controller
     {
         $companias = Compania::where('activa', true)->orderBy('numero')->get();
 
-        $anios = range(now()->year, 2024);
+        $anios = range(now()->year, 2025);
         $meses = [
             1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo',
             4 => 'Abril', 5 => 'Mayo', 6 => 'Junio',
