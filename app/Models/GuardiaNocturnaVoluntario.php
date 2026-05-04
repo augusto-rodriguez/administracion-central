@@ -12,6 +12,7 @@ class GuardiaNocturnaVoluntario extends Model
         'guardia_nocturna_compania_id',
         'voluntario_id',
         'hora_ingreso',
+        'hora_salida'
     ];
 
     public function voluntario()

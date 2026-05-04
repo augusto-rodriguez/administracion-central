@@ -98,18 +98,36 @@
                         <ul class="list-group list-group-flush mb-2">
                             @foreach($gnCompania->voluntarios as $gnVol)
                                 <li class="list-group-item px-0 py-1 border-0 d-flex justify-content-between align-items-center">
-                                    <span>
-                                        <i class="bi bi-person-fill text-success me-1"></i>
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-person-fill text-success"></i>
                                         {{ $gnVol->voluntario->nombre ?? '—' }}
+                                        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-xs p-0 px-1"
+                                                    style="font-size: 0.65rem; line-height: 1.4;"
+                                                    onclick="abrirModalSalida({{ $gnVol->id }}, '{{ addslashes($gnVol->voluntario->nombre ?? '') }}', '{{ $gnVol->hora_salida ?? '' }}')">
+                                                <i class="bi bi-box-arrow-right"></i>
+                                            </button>
+                                        @endif
                                     </span>
                                     @php
                                         $horaIngreso = $gnVol->hora_ingreso
                                             ? \Carbon\Carbon::parse($gnVol->hora_ingreso)->format('H:i')
                                             : '01:00';
                                         $esTardio = $gnVol->hora_ingreso !== null;
+
+                                        $horaSalida = $gnVol->hora_salida
+                                            ? \Carbon\Carbon::parse($gnVol->hora_salida)->format('H:i')
+                                            : '08:00';
+                                        $salidaTemprana = $gnVol->hora_salida !== null;
                                     @endphp
-                                    <span class="badge {{ $esTardio ? 'bg-warning text-dark' : 'bg-secondary' }} ms-2">
-                                        <i class="bi bi-clock me-1"></i>{{ $horaIngreso }}
+                                    <span class="d-flex gap-1">
+                                        <span class="badge {{ $esTardio ? 'bg-warning text-dark' : 'bg-secondary' }}">
+                                            <i class="bi bi-box-arrow-in-right me-1"></i>{{ $horaIngreso }}
+                                        </span>
+                                        <span class="badge {{ $salidaTemprana ? 'bg-warning text-dark' : 'bg-secondary' }}">
+                                            <i class="bi bi-box-arrow-right me-1"></i>{{ $horaSalida }}
+                                        </span>
                                     </span>
                                 </li>
                             @endforeach
@@ -283,6 +301,41 @@
         </div>
     </div>
 
+    {{-- Modal hora de salida --}}
+    <div class="modal fade" id="modalHoraSalida" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title mb-0" id="modalSalidaTitulo">
+                        <i class="bi bi-box-arrow-right me-2"></i>Hora de salida
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formHoraSalida" method="POST">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-body">
+                        <p class="small text-muted mb-2" id="modalSalidaNombre"></p>
+                        <label class="form-label fw-bold">Hora de salida</label>
+                        <input type="time" name="hora_salida" id="inputHoraSalida"
+                            class="form-control">
+                        <div class="form-text">
+                            Déjalo vacío para asumir salida a las 08:00.
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-floppy me-1"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 @endif
 
 @push('scripts')
@@ -300,6 +353,17 @@ const voluntariosPorCompania = {
 };
 
 let tsAgregar = null;
+
+function abrirModalSalida(gnVolId, nombreVoluntario, horaSalidaActual) {
+    document.getElementById('modalSalidaTitulo').innerHTML =
+        `<i class="bi bi-box-arrow-right me-2"></i>Hora de salida`;
+    document.getElementById('modalSalidaNombre').textContent = nombreVoluntario;
+    document.getElementById('inputHoraSalida').value = horaSalidaActual ?? '';
+    document.getElementById('formHoraSalida').action =
+        `{{ url('guardias-nocturnas/voluntario') }}/${gnVolId}/hora-salida`;
+
+    new bootstrap.Modal(document.getElementById('modalHoraSalida')).show();
+}
 
 function abrirModalAgregar(companiaId, companiaNombre) {
     document.getElementById('modalAgregarCompaniaId').value = companiaId;

@@ -41,13 +41,14 @@ Route::middleware(['rol'])->group(function () {
 
         // Guardias nocturnas — escritura
         Route::prefix('guardias-nocturnas')->name('guardias-nocturnas.')->group(function () {
-            Route::post('/iniciar',                            [App\Http\Controllers\GuardiaNocturnaController::class, 'iniciar'])          ->name('iniciar');
-            Route::get('/{guardia}/edit',                      [App\Http\Controllers\GuardiaNocturnaController::class, 'edit'])             ->name('edit');
-            Route::post('/{guardia}/compania',                 [App\Http\Controllers\GuardiaNocturnaController::class, 'guardarCompania'])  ->name('guardar-compania');
-            Route::post('/{guardia}/cerrar',                   [App\Http\Controllers\GuardiaNocturnaController::class, 'cerrar'])           ->name('cerrar');
-            Route::get('/{guardia}/heredar/{compania}',        [App\Http\Controllers\GuardiaNocturnaController::class, 'heredar'])          ->name('heredar');
-            Route::post('/{guardia}/agregar-voluntario',       [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarVoluntario'])->name('agregar-voluntario');
-            Route::post('/{guardia}/observacion/{gnCompania}', [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarObservacion'])->name('agregar-observacion');
+            Route::post('/iniciar',                            [App\Http\Controllers\GuardiaNocturnaController::class, 'iniciar'])             ->name('iniciar');
+            Route::get('/{guardia}/edit',                      [App\Http\Controllers\GuardiaNocturnaController::class, 'edit'])                ->name('edit');
+            Route::post('/{guardia}/compania',                 [App\Http\Controllers\GuardiaNocturnaController::class, 'guardarCompania'])     ->name('guardar-compania');
+            Route::post('/{guardia}/cerrar',                   [App\Http\Controllers\GuardiaNocturnaController::class, 'cerrar'])              ->name('cerrar');
+            Route::get('/{guardia}/heredar/{compania}',        [App\Http\Controllers\GuardiaNocturnaController::class, 'heredar'])             ->name('heredar');
+            Route::post('/{guardia}/agregar-voluntario',       [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarVoluntario'])   ->name('agregar-voluntario');
+            Route::post('/{guardia}/observacion/{gnCompania}', [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarObservacion'])  ->name('agregar-observacion');
+            Route::patch('/voluntario/{gnVoluntario}/hora-salida', [App\Http\Controllers\GuardiaNocturnaController::class, 'registrarHoraSalida'])->name('hora-salida');
         });
 
         // Libro de novedades

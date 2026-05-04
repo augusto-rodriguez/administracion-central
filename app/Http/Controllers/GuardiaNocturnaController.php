@@ -341,4 +341,19 @@ class GuardiaNocturnaController extends Controller
 
         return $pdf->download('guardia_nocturna_' . $guardia->fecha->format('Y-m-d') . '.pdf');
     }
+
+    public function registrarHoraSalida(Request $request, GuardiaNocturnaVoluntario $gnVoluntario)
+    {
+        $request->validate([
+            'hora_salida' => 'nullable|date_format:H:i',
+        ]);
+
+        $gnVoluntario->update([
+            'hora_salida' => $request->hora_salida ?? null,
+        ]);
+
+        $nombre = $gnVoluntario->voluntario->nombre;
+
+        return back()->with('success', "Hora de salida de {$nombre} registrada correctamente.");
+    }
 }
