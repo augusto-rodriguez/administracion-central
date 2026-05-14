@@ -21,6 +21,10 @@
             </div>
             <form action="{{ route('salidas.store') }}" method="POST">
                 @csrf
+
+                {{-- Campo oculto para hora de salida ajustada --}}
+                <input type="hidden" name="salida_at" id="salidaAtAjustada">
+
                 <div class="modal-body">
                     <div class="row g-3">
 
@@ -131,7 +135,7 @@
                         </div>
 
                         {{-- Km Salida --}}
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Km Salida</label>
                             <input type="number" name="km_salida" id="kmSalida" step="1"
                                    class="form-control @error('km_salida') is-invalid @enderror"
@@ -141,17 +145,71 @@
                         </div>
 
                         {{-- Personal --}}
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Cantidad Personal</label>
                             <input type="number" name="cantidad_personal" class="form-control"
                                    value="{{ old('cantidad_personal') }}" placeholder="Opcional" min="1">
                         </div>
 
                         {{-- Observaciones --}}
-                        <div class="col-md-4">
+                        <div class="col-md-5">
                             <label class="form-label fw-bold">Observaciones</label>
                             <input type="text" name="observaciones" class="form-control"
                                    value="{{ old('observaciones') }}" placeholder="Opcional...">
+                        </div>
+
+                        {{-- Ajuste de hora de salida --}}
+                        <div class="col-md-1 d-flex flex-column">
+                            <label class="form-label fw-bold" style="visibility:hidden">‎</label>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    id="btnAjusteHoraSalida"
+                                    title="Ajustar hora de salida"
+                                    data-bs-toggle="tooltip">
+                                <i class="bi bi-clock-history"></i>
+                            </button>
+                        </div>
+
+                        {{-- Panel desplegable para ajustar hora --}}
+                        <div class="col-12" id="panelHoraSalida" style="display:none">
+                            <div class="card border-warning">
+                                <div class="card-body py-2">
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <label class="form-label fw-bold mb-1">
+                                                <i class="bi bi-clock me-1"></i>Hora real de salida
+                                            </label>
+                                            <input type="time" id="inputHoraSalida" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-md-7 d-flex flex-column">
+                                            <label class="form-label fw-bold mb-1" style="visibility:hidden">‎</label>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" id="btnConfirmarHoraSalida" class="btn btn-success btn-sm">
+                                                    <i class="bi bi-check-lg me-1"></i>Confirmar
+                                                </button>
+                                                <button type="button" id="btnCancelarHoraSalida" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="bi bi-x-lg me-1"></i>Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-muted small mt-2">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Selecciona la hora real en la que la unidad salió del cuartel.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Indicador de hora ajustada --}}
+                        <div class="col-12" id="horaAjustadaSalida" style="display:none">
+                            <div class="alert alert-warning py-2 mb-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    <span></span>
+                                </div>
+                                <button type="button" class="btn-close btn-sm" id="btnLimpiarHoraSalida" title="Quitar ajuste y usar hora actual"></button>
+                            </div>
                         </div>
 
                     </div>
@@ -606,6 +664,132 @@ function actualizarCronometros() {
 }
 actualizarCronometros();
 setInterval(actualizarCronometros, 1000);
+
+// ════════════════════════════════════════════════════════════════
+// AJUSTE DE HORA DE SALIDA
+// ════════════════════════════════════════════════════════════════
+
+// Devuelve la hora actual local en formato HH:MM (24h)
+function horaActualLocal() {
+    const ahora = new Date();
+    const hh = String(ahora.getHours()).padStart(2, '0');
+    const mm = String(ahora.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+}
+
+// Formato legible HH:MM (24h) — si quieres 12h cámbialo aquí
+function formatearHoraLegible(hora) {
+    if (!hora) return '';
+    const [hh, mm] = hora.split(':');
+    return `${hh}:${mm}`;
+}
+
+function configurarAjusteHora({ btnAbrir, panelId, inputId, campoOcultoId, confirmId, cancelId, indicadorId, limpiarId }) {
+    const panel      = document.getElementById(panelId);
+    const input      = document.getElementById(inputId);
+    const campoOcul  = document.getElementById(campoOcultoId);
+    const btnConfirm = document.getElementById(confirmId);
+    const btnCancel  = document.getElementById(cancelId);
+    const indicador  = document.getElementById(indicadorId);
+    const btnLimpiar = limpiarId ? document.getElementById(limpiarId) : null;
+
+    // Inicializa tooltip si no existe
+    if (!bootstrap.Tooltip.getInstance(btnAbrir)) {
+        new bootstrap.Tooltip(btnAbrir);
+    }
+
+    // Abrir panel y pre-rellenar con hora actual
+    btnAbrir.addEventListener('click', () => {
+        // Si ya hay una hora ajustada confirmada, usa esa como punto de partida
+        input.value = campoOcul.value
+            ? campoOcul.value.substring(11, 16) // tomar HH:MM del datetime ya guardado
+            : horaActualLocal();
+        input.max   = horaActualLocal(); // no permitir hora futura
+        panel.style.display = 'block';
+        btnAbrir.classList.add('active', 'btn-warning');
+        btnAbrir.classList.remove('btn-outline-secondary');
+        input.focus();
+    });
+
+    // Confirmar ajuste: guardar en campo oculto y mostrar indicador
+    btnConfirm.addEventListener('click', () => {
+        if (!input.value) return;
+
+        // Actualizar max por si pasó tiempo desde que abrió
+        const ahora = horaActualLocal();
+        if (input.value > ahora) {
+            alert('No puedes seleccionar una hora futura.');
+            input.value = ahora;
+            return;
+        }
+
+        // Construir datetime completo (YYYY-MM-DD HH:MM:00) con la fecha de hoy
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm   = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd   = String(hoy.getDate()).padStart(2, '0');
+        campoOcul.value = `${yyyy}-${mm}-${dd} ${input.value}:00`;
+
+        panel.style.display = 'none';
+
+        // Mostrar indicador de hora ajustada
+        const legible = formatearHoraLegible(input.value);
+        indicador.querySelector('span').textContent = `Hora de salida ajustada: ${legible} (en lugar de la hora actual)`;
+        indicador.style.display = 'block';
+
+        // Cambiar tooltip del botón
+        btnAbrir.title = `Hora ajustada: ${legible} — clic para cambiar`;
+        bootstrap.Tooltip.getInstance(btnAbrir)?.dispose();
+        new bootstrap.Tooltip(btnAbrir);
+    });
+
+    // Cancelar: cerrar panel
+    btnCancel.addEventListener('click', () => {
+        panel.style.display = 'none';
+        if (!campoOcul.value) {
+            btnAbrir.classList.remove('active', 'btn-warning');
+            btnAbrir.classList.add('btn-outline-secondary');
+        }
+    });
+
+    // Limpiar ajuste: volver a hora automática
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            campoOcul.value = '';
+            indicador.style.display = 'none';
+            btnAbrir.classList.remove('active', 'btn-warning');
+            btnAbrir.classList.add('btn-outline-secondary');
+            btnAbrir.title = 'Ajustar hora de salida';
+            bootstrap.Tooltip.getInstance(btnAbrir)?.dispose();
+            new bootstrap.Tooltip(btnAbrir);
+        });
+    }
+}
+
+// Configurar el ajuste de hora de salida
+configurarAjusteHora({
+    btnAbrir:      document.getElementById('btnAjusteHoraSalida'),
+    panelId:       'panelHoraSalida',
+    inputId:       'inputHoraSalida',
+    campoOcultoId: 'salidaAtAjustada',
+    confirmId:     'btnConfirmarHoraSalida',
+    cancelId:      'btnCancelarHoraSalida',
+    indicadorId:   'horaAjustadaSalida',
+    limpiarId:     'btnLimpiarHoraSalida',
+});
+
+// Resetear el ajuste de hora cuando se cierre el modal
+document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('salidaAtAjustada').value = '';
+    document.getElementById('panelHoraSalida').style.display = 'none';
+    document.getElementById('horaAjustadaSalida').style.display = 'none';
+    const btn = document.getElementById('btnAjusteHoraSalida');
+    btn.classList.remove('active', 'btn-warning');
+    btn.classList.add('btn-outline-secondary');
+    btn.title = 'Ajustar hora de salida';
+    bootstrap.Tooltip.getInstance(btn)?.dispose();
+    new bootstrap.Tooltip(btn);
+});
 
 @if($errors->any())
     var modal = new bootstrap.Modal(document.getElementById('modalNuevaSalida'));

@@ -106,6 +106,7 @@ class SalidaUnidadController extends Controller
             'conductor_libre'   => 'nullable|string|max:255',
             'cantidad_personal' => 'nullable|integer|min:1',
             'observaciones'     => 'nullable|string',
+            'salida_at'         => 'nullable|date|before_or_equal:now',
         ]);
 
         // Verificar que la unidad no tenga salida activa
@@ -214,6 +215,23 @@ class SalidaUnidadController extends Controller
             $conductorLibre = $request->conductor_libre;
         }
 
+        // ── Determinar hora de salida ──
+        // Si el operador ajustó la hora, usar esa; si no, usar la hora actual.
+        // Validación extra: si la hora ajustada es futura (por reloj desincronizado),
+        // se descarta silenciosamente y se usa now().
+        $salidaAt = now();
+
+        if ($request->filled('salida_at')) {
+            try {
+                $horaAjustada = \Carbon\Carbon::parse($request->salida_at);
+                if ($horaAjustada->lessThanOrEqualTo(now())) {
+                    $salidaAt = $horaAjustada;
+                }
+            } catch (\Exception $e) {
+                // Si falla el parseo, se mantiene now() — no se interrumpe el registro.
+            }
+        }
+
         SalidaUnidad::create([
             'unidad_id'         => $request->unidad_id,
             'clave_salida_id'   => $request->clave_salida_id,
@@ -224,7 +242,7 @@ class SalidaUnidadController extends Controller
             'direccion'         => $request->direccion,
             'cantidad_personal' => $request->cantidad_personal,
             'km_salida'         => $request->km_salida,
-            'salida_at'         => now(),
+            'salida_at'         => $salidaAt,
             'observaciones'     => $request->observaciones,
         ]);
 
