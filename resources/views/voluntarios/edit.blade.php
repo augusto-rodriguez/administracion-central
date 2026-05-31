@@ -27,9 +27,10 @@
 
                 <div class="col-md-3">
                     <label class="form-label fw-bold">RUT</label>
-                    <input type="text" name="rut"
-                           class="form-control @error('rut') is-invalid @enderror"
-                           value="{{ old('rut', $voluntario->rut) }}">
+                    <input type="text" name="rut" id="rut"
+                        class="form-control @error('rut') is-invalid @enderror"
+                        value="{{ old('rut', $voluntario->rut) }}" placeholder="12.345.678-9"
+                        maxlength="12">
                     @error('rut') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
@@ -219,6 +220,23 @@
 
         const companiaId = document.getElementById('compania_id').value;
         if (companiaId) actualizarCargosDisponibles(companiaId);
+    });
+
+    document.getElementById('rut').addEventListener('input', function () {
+        let val = this.value.replace(/\./g, '').replace(/-/g, '').replace(/[^0-9kK]/g, '');
+
+        if (val.length === 0) {
+            this.value = '';
+            return;
+        }
+
+        const dv     = val.slice(-1).toUpperCase();
+        let cuerpo   = val.slice(0, -1);
+
+        // Agregar puntos cada 3 dígitos
+        cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        this.value = cuerpo ? `${cuerpo}-${dv}` : dv;
     });
 </script>
 @endpush
