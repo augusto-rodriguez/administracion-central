@@ -37,7 +37,6 @@
                         <option value="">Todos</option>
                         <option value="maquinista" {{ request('rol') == 'maquinista' ? 'selected' : '' }}>Maquinista</option>
                         <option value="oficial"    {{ request('rol') == 'oficial'    ? 'selected' : '' }}>Oficial</option>
-                        <option value="comandante" {{ request('rol') == 'comandante' ? 'selected' : '' }}>Comandante</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
@@ -64,6 +63,7 @@
                     <th>RUT</th>
                     <th>Compañía</th>
                     <th>Roles</th>
+                    <th>Cargo</th>
                     <th>Teléfono</th>
                     <th>Estado</th>
                     <th></th>
@@ -86,14 +86,25 @@
                                 <span class="badge bg-danger">Maquinista</span>
                             @elseif($rol->rol === 'oficial')
                                 <span class="badge bg-primary">Oficial</span>
-                            @elseif($rol->rol === 'comandante')
-                                <span class="badge bg-dark">
-                                    {{ $rol->rango ? $rol->rango . 'er Cdte.' : 'Comandante' }}
-                                </span>
                             @else
                                 <span class="badge bg-secondary">{{ ucfirst($rol->rol) }}</span>
                             @endif
                         @endforeach
+                        @if($voluntario->roles->where('activo', true)->isEmpty())
+                            <span class="text-muted small">—</span>
+                        @endif
+                    </td>
+                    <td>
+                        @php $cargoActivo = $voluntario->cargosActivos->first(); @endphp
+                        @if($cargoActivo)
+                            @if($cargoActivo->cargo->tipo === 'general')
+                                <span class="badge bg-dark">{{ $cargoActivo->cargo->nombre }}</span>
+                            @else
+                                <span class="badge bg-warning text-dark">{{ $cargoActivo->cargo->nombre }}</span>
+                            @endif
+                        @else
+                            <span class="text-muted small">—</span>
+                        @endif
                     </td>
                     <td>{{ $voluntario->telefono ?? '—' }}</td>
                     <td>
@@ -116,7 +127,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
+                    <td colspan="8" class="text-center text-muted py-4">
                         No hay voluntarios registrados
                     </td>
                 </tr>
@@ -137,7 +148,6 @@ document.getElementById('buscadorNombre').addEventListener('input', function () 
         fila.style.display = nombre.includes(busqueda) ? '' : 'none';
     });
 
-    // Mensaje si no hay resultados
     const sinResultados = [...filas].every(f => f.style.display === 'none');
     let msgVacio = document.getElementById('sinResultadosBusqueda');
 
@@ -145,7 +155,7 @@ document.getElementById('buscadorNombre').addEventListener('input', function () 
         if (!msgVacio) {
             const tr = document.createElement('tr');
             tr.id = 'sinResultadosBusqueda';
-            tr.innerHTML = '<td colspan="7" class="text-center text-muted py-4">' +
+            tr.innerHTML = '<td colspan="8" class="text-center text-muted py-4">' +
                            '<i class="bi bi-search me-2"></i>No se encontraron voluntarios con ese nombre.</td>';
             document.getElementById('tablaVoluntarios').appendChild(tr);
         }

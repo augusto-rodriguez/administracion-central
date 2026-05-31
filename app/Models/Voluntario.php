@@ -53,4 +53,40 @@ class Voluntario extends Model
     {
         return $this->roles->where('activo', true)->pluck('rol')->join(', ');
     }
+
+    // ── Cargos ────────────────────────────────────────────────────────
+
+    public function cargos()
+    {
+        return $this->hasMany(VoluntarioCargo::class);
+    }
+
+    public function cargosActivos()
+    {
+        return $this->hasMany(VoluntarioCargo::class)->where('activo', true);
+    }
+
+    public function cargoActivoEnCompania(int $companiaId): ?VoluntarioCargo
+    {
+        return $this->cargosActivos()
+                    ->where('compania_id', $companiaId)
+                    ->with('cargo')
+                    ->first();
+    }
+
+    public function cargoGeneralActivo(): ?VoluntarioCargo
+    {
+        return $this->cargosActivos()
+                    ->whereNull('compania_id')
+                    ->with('cargo')
+                    ->first();
+    }
+
+    public function tieneCargo(int $cargoId, ?int $companiaId = null): bool
+    {
+        return $this->cargosActivos()
+                    ->where('cargo_id', $cargoId)
+                    ->where('compania_id', $companiaId)
+                    ->exists();
+    }
 }

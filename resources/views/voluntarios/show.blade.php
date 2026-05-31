@@ -22,6 +22,10 @@
                 <i class="bi bi-person me-2"></i>Información Personal
             </div>
             <div class="card-body">
+                @php
+                    $rolOficial  = $voluntario->roles->where('activo', true)->firstWhere('rol', 'oficial');
+                    $cargoActivo = $voluntario->cargosActivos->first();
+                @endphp
                 <table class="table table-sm table-borderless">
                     <tr><th>Nombre</th><td>{{ $voluntario->nombre }}</td></tr>
                     <tr><th>RUT</th><td>{{ $voluntario->rut ?? '—' }}</td></tr>
@@ -41,25 +45,46 @@
                     <tr>
                         <th>Roles</th>
                         <td>
-                            @foreach($voluntario->roles->where('activo', true) as $rol)
+                            @forelse($voluntario->roles->where('activo', true) as $rol)
                                 @if($rol->rol === 'maquinista')
                                     <span class="badge bg-danger">Maquinista</span>
                                 @elseif($rol->rol === 'oficial')
                                     <span class="badge bg-primary">Oficial</span>
-                                @elseif($rol->rol === 'voluntario')
-                                    <span class="badge bg-success">Voluntario</span>
                                 @else
                                     <span class="badge bg-secondary">{{ ucfirst($rol->rol) }}</span>
                                 @endif
-                            @endforeach
+                            @empty
+                                <span class="text-muted small">—</span>
+                            @endforelse
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Cargo</th>
+                        <td>
+                            @if($cargoActivo)
+                                @if($cargoActivo->cargo->tipo === 'general')
+                                    <span class="badge bg-dark">{{ $cargoActivo->cargo->nombre }}</span>
+                                @else
+                                    <span class="badge bg-warning text-dark">
+                                        {{ $cargoActivo->cargo->nombre }}
+                                    </span>
+                                    @if($cargoActivo->compania)
+                                        <div class="small text-muted mt-1">
+                                            {{ $cargoActivo->compania->nombre }}
+                                        </div>
+                                    @endif
+                                @endif
+                                <div class="small text-muted">
+                                    Desde {{ $cargoActivo->fecha_inicio->format('d/m/Y') }}
+                                </div>
+                            @else
+                                <span class="text-muted small">Sin cargo asignado</span>
+                            @endif
                         </td>
                     </tr>
                 </table>
 
-                {{-- Panel autorización salidas — solo si es oficial y es admin/comandante --}}
-                @php
-                    $rolOficial = $voluntario->roles->where('activo', true)->firstWhere('rol', 'oficial');
-                @endphp
+                {{-- Panel autorización salidas --}}
                 @if($rolOficial && (auth()->user()->esAdmin() || auth()->user()->esComandante()))
                 <hr>
                 <div class="d-flex justify-content-between align-items-center">
@@ -101,7 +126,6 @@
                 <span><i class="bi bi-truck me-2"></i>Unidades Autorizadas</span>
             </div>
             <div class="card-body">
-                {{-- Autorizar nueva unidad --}}
                 <form action="{{ route('voluntarios.autorizar-unidad', $voluntario) }}" method="POST" class="mb-3">
                     @csrf
                     <div class="row g-2 align-items-end">
@@ -116,15 +140,6 @@
                                 @endforeach
                             </select>
                         </div>
-                        <!-- <div class="col-md-3">
-                            <label class="form-label fw-bold small">Autorizado por</label>
-                            <input type="text" name="autorizado_por" class="form-control form-control-sm"
-                                   placeholder="Nombre oficial">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold small">Fecha</label>
-                            <input type="date" name="fecha_autorizacion" class="form-control form-control-sm">
-                        </div> -->
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-danger btn-sm w-100">
                                 <i class="bi bi-plus-lg"></i> Autorizar
