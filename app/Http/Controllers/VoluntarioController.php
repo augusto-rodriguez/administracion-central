@@ -37,13 +37,15 @@ class VoluntarioController extends Controller
         $cargosCompania  = Cargo::where('tipo', 'compania')->where('activo', true)->orderBy('orden')->get();
         $cargosGenerales = Cargo::where('tipo', 'general')->where('activo', true)->orderBy('orden')->get();
 
-        $cargosGeneralesOcupados = VoluntarioCargo::whereHas('cargo', fn($q) => $q->where('tipo', 'general'))
+        $cargosGeneralesOcupados = VoluntarioCargo::whereHas('cargo', fn($q) =>
+                $q->where('tipo', 'general')->where('es_unico', true))
             ->whereNull('compania_id')
             ->where('activo', true)
             ->pluck('cargo_id')
             ->toArray();
 
-        $cargosCompaniaOcupados = VoluntarioCargo::whereHas('cargo', fn($q) => $q->where('tipo', 'compania'))
+        $cargosCompaniaOcupados = VoluntarioCargo::whereHas('cargo', fn($q) =>
+                $q->where('tipo', 'compania')->where('es_unico', true))
             ->where('activo', true)
             ->get()
             ->groupBy('cargo_id')
@@ -58,7 +60,6 @@ class VoluntarioController extends Controller
 
     public function store(Request $request)
     {
-        // Unificar los dos selects de cargo en uno solo
         $request->merge([
             'cargo_id' => $request->cargo_compania_id ?: $request->cargo_general_id ?: null,
         ]);
@@ -75,33 +76,34 @@ class VoluntarioController extends Controller
             'cargo_id'          => 'nullable|exists:cargos,id',
         ]);
 
-        // Validar ocupación antes de crear
         if ($request->filled('cargo_id')) {
             $cargo = Cargo::findOrFail($request->cargo_id);
 
-            if ($cargo->esDeCompania()) {
-                $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
-                    ->where('compania_id', $request->compania_id)
-                    ->where('activo', true)
-                    ->exists();
+            if ($cargo->es_unico) {
+                if ($cargo->esDeCompania()) {
+                    $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
+                        ->where('compania_id', $request->compania_id)
+                        ->where('activo', true)
+                        ->exists();
 
-                if ($ocupado) {
-                    return back()->withInput()->withErrors([
-                        'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en esa compañía.",
-                    ]);
+                    if ($ocupado) {
+                        return back()->withInput()->withErrors([
+                            'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en esa compañía.",
+                        ]);
+                    }
                 }
-            }
 
-            if ($cargo->esGeneral()) {
-                $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
-                    ->whereNull('compania_id')
-                    ->where('activo', true)
-                    ->exists();
+                if ($cargo->esGeneral()) {
+                    $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
+                        ->whereNull('compania_id')
+                        ->where('activo', true)
+                        ->exists();
 
-                if ($ocupado) {
-                    return back()->withInput()->withErrors([
-                        'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en el Cuerpo.",
-                    ]);
+                    if ($ocupado) {
+                        return back()->withInput()->withErrors([
+                            'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en el Cuerpo.",
+                        ]);
+                    }
                 }
             }
         }
@@ -110,7 +112,6 @@ class VoluntarioController extends Controller
             'compania_id', 'nombre', 'rut', 'telefono', 'email'
         ));
 
-        // Si tiene cargo, oficial se agrega automáticamente
         $roles = $request->roles ?? [];
         if ($request->filled('cargo_id') && !in_array('oficial', $roles)) {
             $roles[] = 'oficial';
@@ -163,14 +164,16 @@ class VoluntarioController extends Controller
         $cargosCompania  = Cargo::where('tipo', 'compania')->where('activo', true)->orderBy('orden')->get();
         $cargosGenerales = Cargo::where('tipo', 'general')->where('activo', true)->orderBy('orden')->get();
 
-        $cargosGeneralesOcupados = VoluntarioCargo::whereHas('cargo', fn($q) => $q->where('tipo', 'general'))
+        $cargosGeneralesOcupados = VoluntarioCargo::whereHas('cargo', fn($q) =>
+                $q->where('tipo', 'general')->where('es_unico', true))
             ->whereNull('compania_id')
             ->where('activo', true)
             ->where('voluntario_id', '!=', $voluntario->id)
             ->pluck('cargo_id')
             ->toArray();
 
-        $cargosCompaniaOcupados = VoluntarioCargo::whereHas('cargo', fn($q) => $q->where('tipo', 'compania'))
+        $cargosCompaniaOcupados = VoluntarioCargo::whereHas('cargo', fn($q) =>
+                $q->where('tipo', 'compania')->where('es_unico', true))
             ->where('activo', true)
             ->where('voluntario_id', '!=', $voluntario->id)
             ->get()
@@ -186,7 +189,6 @@ class VoluntarioController extends Controller
 
     public function update(Request $request, Voluntario $voluntario)
     {
-        // Unificar los dos selects de cargo en uno solo
         $request->merge([
             'cargo_id' => $request->cargo_compania_id ?: $request->cargo_general_id ?: null,
         ]);
@@ -204,35 +206,36 @@ class VoluntarioController extends Controller
             'cargo_id'          => 'nullable|exists:cargos,id',
         ]);
 
-        // Validar ocupación excluyendo al voluntario actual
         if ($request->filled('cargo_id')) {
             $cargo = Cargo::findOrFail($request->cargo_id);
 
-            if ($cargo->esDeCompania()) {
-                $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
-                    ->where('compania_id', $request->compania_id)
-                    ->where('activo', true)
-                    ->where('voluntario_id', '!=', $voluntario->id)
-                    ->exists();
+            if ($cargo->es_unico) {
+                if ($cargo->esDeCompania()) {
+                    $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
+                        ->where('compania_id', $request->compania_id)
+                        ->where('activo', true)
+                        ->where('voluntario_id', '!=', $voluntario->id)
+                        ->exists();
 
-                if ($ocupado) {
-                    return back()->withInput()->withErrors([
-                        'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en esa compañía.",
-                    ]);
+                    if ($ocupado) {
+                        return back()->withInput()->withErrors([
+                            'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en esa compañía.",
+                        ]);
+                    }
                 }
-            }
 
-            if ($cargo->esGeneral()) {
-                $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
-                    ->whereNull('compania_id')
-                    ->where('activo', true)
-                    ->where('voluntario_id', '!=', $voluntario->id)
-                    ->exists();
+                if ($cargo->esGeneral()) {
+                    $ocupado = VoluntarioCargo::where('cargo_id', $cargo->id)
+                        ->whereNull('compania_id')
+                        ->where('activo', true)
+                        ->where('voluntario_id', '!=', $voluntario->id)
+                        ->exists();
 
-                if ($ocupado) {
-                    return back()->withInput()->withErrors([
-                        'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en el Cuerpo.",
-                    ]);
+                    if ($ocupado) {
+                        return back()->withInput()->withErrors([
+                            'cargo_id' => "El cargo '{$cargo->nombre}' ya tiene un titular activo en el Cuerpo.",
+                        ]);
+                    }
                 }
             }
         }
@@ -247,7 +250,6 @@ class VoluntarioController extends Controller
 
         $voluntario->roles()->delete();
 
-        // Si tiene cargo, oficial se agrega automáticamente
         $roles = $request->roles ?? [];
         if ($request->filled('cargo_id') && !in_array('oficial', $roles)) {
             $roles[] = 'oficial';
@@ -263,13 +265,11 @@ class VoluntarioController extends Controller
             ]);
         }
 
-        // Cerrar cargo activo anterior
         $voluntario->cargosActivos()->update([
             'activo'    => false,
             'fecha_fin' => now()->toDateString(),
         ]);
 
-        // Asignar nuevo cargo si corresponde
         if ($request->filled('cargo_id')) {
             $cargo = Cargo::find($request->cargo_id);
             VoluntarioCargo::create([

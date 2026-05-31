@@ -124,7 +124,8 @@ Route::middleware(['rol'])->group(function () {
             ->only(['index', 'create', 'store', 'show', 'edit', 'update']);
         Route::post('cuarteleros/{cuartelero}/autorizar-unidad',  [App\Http\Controllers\CuarteleroController::class, 'autorizarUnidad'])->name('cuarteleros.autorizar-unidad');
         Route::delete('cuarteleros/{cuartelero}/revocar-unidad',  [App\Http\Controllers\CuarteleroController::class, 'revocarUnidad'])  ->name('cuarteleros.revocar-unidad');
-
+        Route::resource('cargos', App\Http\Controllers\CargoController::class)
+                ->except(['show']);
     });
 
     // ─────────────────────────────────────────────────────────────────

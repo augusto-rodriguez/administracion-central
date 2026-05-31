@@ -13,10 +13,12 @@ class Cargo extends Model
         'orden',
         'descripcion',
         'activo',
+        'es_unico', 
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'es_unico' => 'boolean',
     ];
 
     const TIPO_COMPANIA = 'compania';

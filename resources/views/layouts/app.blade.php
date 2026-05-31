@@ -56,6 +56,10 @@
                class="nav-link {{ request()->is('cuarteleros*') ? 'active' : '' }}">
                 <i class="bi bi-person-gear me-2"></i> Cuarteleros
             </a>
+            <a href="{{ route('cargos.index') }}"
+                class="nav-link {{ request()->is('cargos*') ? 'active' : '' }}">
+                <i class="bi bi-award me-2"></i> Cargos
+            </a>
             <a href="{{ route('unidades.index') }}"
                class="nav-link {{ request()->is('unidades*') ? 'active' : '' }}">
                 <i class="bi bi-truck-front me-2"></i> Unidades
