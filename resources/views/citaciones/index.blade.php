@@ -146,7 +146,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Medio</label>
+                    <label class="form-label fw-bold">Medio de recepción</label>
                     <select name="medio_recepcion_id" class="form-select" required>
                         @foreach($medios as $medio)
                             <option value="{{ $medio->id }}">
