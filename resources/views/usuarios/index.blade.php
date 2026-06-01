@@ -16,7 +16,7 @@
                 <tr>
                     <th>Nombre</th>
                     <th>Email</th>
-                    <th>Rol</th>
+                    <th>Rol de sistema</th>
                     <th>Voluntario vinculado</th>
                     <th>Estado</th>
                     <th></th>
