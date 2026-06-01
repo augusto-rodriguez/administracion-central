@@ -9,10 +9,11 @@ use App\Models\Cuartelero;
 use App\Models\RegistroTurno;
 use App\Models\RegistroTurnoCuartelero;
 use App\Models\GuardiaComandante;
-use App\Models\VoluntarioRol;
+use App\Models\Cargo;
+use App\Models\VoluntarioCargo;
 use App\Models\LibroNovedades;
-use Illuminate\Http\Request;   // ← faltaba
-use Carbon\Carbon;             // ← faltaba
+use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -42,10 +43,26 @@ class DashboardController extends Controller
             ->get();
 
         $guardiaActual = GuardiaComandante::activa();
-        $comandantes   = VoluntarioRol::where('rol', 'comandante')
+
+        // Buscar voluntarios con cargos de comandancia
+        $cargosComandante = Cargo::where('tipo', 'general')
             ->where('activo', true)
-            ->with('voluntario')
-            ->orderBy('rango')
+            ->whereIn('nombre', [
+                'Comandante',
+                '1er Comandante',
+                '2do Comandante',
+                '3er Comandante',
+                'Segundo Comandante',
+                'Tercer Comandante',
+            ])
+            ->orderBy('orden')
+            ->get();
+
+        $comandantes = VoluntarioCargo::whereIn('cargo_id', $cargosComandante->pluck('id'))
+            ->whereNull('compania_id')
+            ->where('activo', true)
+            ->with(['voluntario', 'cargo'])
+            ->orderBy('cargo_id')
             ->get();
 
         $libroActivo = LibroNovedades::where('estado', 'borrador')->latest()->first();
@@ -56,7 +73,7 @@ class DashboardController extends Controller
             'enServicio', 'enServicioCuarteleros',
             'turnosActivos', 'turnosActivosCuarteleros',
             'salidasActivas', 'guardiaActual',
-            'comandantes','libroActivo' 
+            'comandantes', 'libroActivo'
         ));
     }
 
@@ -68,11 +85,8 @@ class DashboardController extends Controller
 
         $ahora = Carbon::now('America/Santiago');
 
-        // Calcular inicio de guardia (domingo anterior a las 21:00)
         $domingoInicio = $ahora->copy()->startOfWeek(Carbon::SUNDAY);
 
-        // Si hoy es domingo pero aún no son las 21:00, la guardia activa
-        // empezó el domingo anterior
         if ($ahora->dayOfWeek === Carbon::SUNDAY && $ahora->hour < 21) {
             $domingoInicio->subWeek();
         }

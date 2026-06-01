@@ -8,15 +8,13 @@ use App\Models\Citacion;
 use App\Models\RegistroTurno;
 use App\Models\RegistroTurnoCuartelero;
 use App\Models\BoletinMaquinista;
-use App\Models\GuardiaComandante;  
-use App\Models\VoluntarioRol;     
-use Carbon\Carbon;                 
+use App\Models\GuardiaComandante;
+use App\Models\Cargo;
+use App\Models\VoluntarioCargo;
+use Carbon\Carbon;
 
 class BoletinController extends Controller
 {
-    // ─────────────────────────────────────────────────────────────────────
-    // INDEX — Historial de boletines
-    // ─────────────────────────────────────────────────────────────────────
     public function index()
     {
         $boletines = Boletin::with(['cuarteleros', 'maquinistas.voluntario', 'maquinistas.unidad'])
@@ -24,15 +22,12 @@ class BoletinController extends Controller
             ->orderByDesc('tipo')
             ->paginate(20);
 
-        // Verificar cuántos boletines hay hoy
         $boletinesHoy = Boletin::whereDate('fecha', today())->count();
         $limiteDiario = $boletinesHoy >= 2;
 
         return view('boletines.index', compact('boletines', 'limiteDiario'));
     }
-    // ─────────────────────────────────────────────────────────────────────
-    // CREATE — Formulario de generación
-    // ─────────────────────────────────────────────────────────────────────
+
     public function create()
     {
         $cuarteleros = RegistroTurnoCuartelero::with('cuartelero.compania')
@@ -51,9 +46,7 @@ class BoletinController extends Controller
             ->orderBy('compania_id')
             ->get();
 
-        // ── Detectar si es domingo PM ────────────────────────────────
         $esDomingoPM  = now('America/Santiago')->dayOfWeek === Carbon::SUNDAY;
-        // $esDomingoPM  = true;
         $comandantes  = collect();
         $guardiaActual = null;
         $proximoComandante = null;
@@ -61,18 +54,37 @@ class BoletinController extends Controller
         if ($esDomingoPM) {
             $guardiaActual = GuardiaComandante::activa();
 
-            $comandantes = VoluntarioRol::where('rol', 'comandante')
+            // Buscar cargos de comandancia (generales)
+            $cargosComandante = Cargo::where('tipo', 'general')
                 ->where('activo', true)
-                ->with('voluntario')
-                ->orderBy('rango')
+                ->whereIn('nombre', [
+                    'Comandante',
+                    '1er Comandante',
+                    '2do Comandante',
+                    '3er Comandante',
+                    'Segundo Comandante',
+                    'Tercer Comandante',
+                ])
+                ->orderBy('orden')
+                ->get();
+
+            $comandantes = VoluntarioCargo::whereIn('cargo_id', $cargosComandante->pluck('id'))
+                ->whereNull('compania_id')
+                ->where('activo', true)
+                ->with(['voluntario', 'cargo'])
+                ->orderBy('cargo_id')
                 ->get();
 
             // Calcular quién sigue según correlativo
-            $rangoActual = $guardiaActual?->voluntario
-                ?->roles->firstWhere('rol', 'comandante')?->rango ?? 0;
+            $cargoActualId = $guardiaActual?->voluntario
+                ?->cargosActivos
+                ->whereNull('compania_id')
+                ->first()?->cargo_id ?? null;
 
-            $siguienteRango = ($rangoActual % 3) + 1;
-            $proximoComandante = $comandantes->firstWhere('rango', $siguienteRango);
+            $idsOrdenados      = $cargosComandante->pluck('id')->values();
+            $indexActual       = $idsOrdenados->search($cargoActualId);
+            $siguienteId       = $idsOrdenados[($indexActual + 1) % $idsOrdenados->count()] ?? null;
+            $proximoComandante = $comandantes->firstWhere('cargo_id', $siguienteId);
         }
 
         return view('boletines.create', compact(
@@ -81,9 +93,6 @@ class BoletinController extends Controller
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // STORE — Guarda y genera el boletín
-    // ─────────────────────────────────────────────────────────────────────
     public function store(Request $request)
     {
         $request->validate([
@@ -146,13 +155,15 @@ class BoletinController extends Controller
                 ]
             );
 
-            // Construir texto para el boletín
-            $rolComandante = VoluntarioRol::where('voluntario_id', $request->nuevo_comandante_id)
-                ->where('rol', 'comandante')
+            // Buscar cargo del nuevo comandante
+            $cargoComandante = VoluntarioCargo::where('voluntario_id', $request->nuevo_comandante_id)
+                ->whereNull('compania_id')
+                ->where('activo', true)
+                ->with(['cargo', 'voluntario'])
                 ->first();
 
-            $ordinal = ['1' => '1ER', '2' => '2DO', '3' => '3ER'][$rolComandante->rango] ?? '';
-            $nombre  = strtoupper($rolComandante->voluntario->nombre ?? '');
+            $nombreCargo = strtoupper($cargoComandante?->cargo->nombre ?? 'COMANDANTE');
+            $nombre      = strtoupper($cargoComandante?->voluntario->nombre ?? '');
 
             Carbon::setLocale('es');
             $desdeTexto = Carbon::parse($fechaInicio)->translatedFormat('l d \\d\\e F');
@@ -160,14 +171,12 @@ class BoletinController extends Controller
 
             $textoGuardia = strtoupper(
                 "ASUME GUARDIA DE COMANDANCIA DESDE HOY {$desdeTexto} AL {$hastaTexto}, " .
-                "{$ordinal} COMANDANTE SR. {$nombre}."
+                "{$nombreCargo} SR. {$nombre}."
             );
 
-            // Guardar en el boletín
             $boletin->update(['texto_guardia' => $textoGuardia]);
         }
 
-        // Generar texto del boletín
         $boletin->load(['cuarteleros.compania', 'maquinistas.voluntario', 'maquinistas.unidad']);
         $textoBoletin = $boletin->generarTexto();
 
@@ -176,15 +185,11 @@ class BoletinController extends Controller
             ->with('boletinGenerado', true);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // SHOW — Ver boletín generado (también abre modal si viene de store)
-    // ─────────────────────────────────────────────────────────────────────
     public function show(Boletin $boletin)
     {
         $boletin->load(['cuarteleros.compania', 'maquinistas.voluntario', 'maquinistas.unidad']);
 
-        // Si no viene de store, generar el texto igual para poder releerlo
-        $textoBoletin = session('textoBoletin') ?? $boletin->generarTexto();
+        $textoBoletin    = session('textoBoletin') ?? $boletin->generarTexto();
         $boletinGenerado = session('boletinGenerado', false);
 
         return view('boletines.show', compact('boletin', 'textoBoletin', 'boletinGenerado'));

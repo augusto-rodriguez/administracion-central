@@ -42,10 +42,10 @@
                             <label class="form-label fw-bold">Turno <span class="text-danger">*</span></label>
                             <select name="tipo" class="form-select @error('tipo') is-invalid @enderror" required>
                                 <option value="am" {{ now()->hour < 17 ? 'selected' : '' }}>
-                                    <i class="bi bi-sun"></i> AM — mañana
+                                    AM — mañana
                                 </option>
                                 <option value="pm" {{ now()->hour >= 17 ? 'selected' : '' }}>
-                                    <i class="bi bi-moon-stars"></i> PM — noche
+                                    PM — noche
                                 </option>
                             </select>
                             @error('tipo') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -93,7 +93,6 @@
                                 <i class="bi bi-person-fill text-danger"></i>
                                 <span>{{ $m->voluntario->nombre ?? 'Sin nombre' }}</span>
                                 @if($m->unidades->isNotEmpty())
-                                    {{-- Mostrar TODAS las unidades, no solo la primera --}}
                                     @foreach($m->unidades as $unidad)
                                         <span class="badge bg-secondary ms-1">{{ $unidad->nombre }}</span>
                                     @endforeach
@@ -131,7 +130,7 @@
                 </div>
             </div>
 
-            {{-- ── CAMBIO DE GUARDIA (solo domingo PM) ───────────────────────── --}}
+            {{-- CAMBIO DE GUARDIA (solo domingo PM) --}}
             @if($esDomingoPM)
             <div class="card mb-4 border-dark" id="bloqueGuardia"
                 style="display: {{ now('America/Santiago')->hour >= 17 ? 'block' : 'none' }};">
@@ -146,18 +145,16 @@
                             @if($guardiaActual)
                                 <br>Guardia actual:
                                 <strong>{{ $guardiaActual->voluntario->nombre }}</strong>
-                                ({{ $guardiaActual->voluntario->roles->firstWhere('rol','comandante')?->rango }}°
-                                Comandante)
+                                ({{ $guardiaActual->voluntario->cargosActivos->whereNull('compania_id')->first()?->cargo->nombre ?? 'Comandante' }})
                             @endif
                             @if($proximoComandante)
                                 <br>Próximo por correlativo:
                                 <strong>{{ $proximoComandante->voluntario->nombre }}</strong>
-                                ({{ $proximoComandante->rango }}° Comandante)
+                                ({{ $proximoComandante->cargo->nombre }})
                             @endif
                         </div>
                     </div>
 
-                    {{-- Checkbox para confirmar cambio --}}
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" name="cambiar_guardia"
                             value="1" id="cambiarGuardia" checked
@@ -167,7 +164,6 @@
                         </label>
                     </div>
 
-                    {{-- Selector de nuevo comandante --}}
                     <div id="selectorComandante">
                         <label class="form-label fw-bold">Nuevo comandante de guardia</label>
                         <select name="nuevo_comandante_id" class="form-select">
@@ -175,7 +171,7 @@
                             @foreach($comandantes as $rol)
                                 <option value="{{ $rol->voluntario->id }}"
                                         {{ $proximoComandante?->voluntario->id == $rol->voluntario->id ? 'selected' : '' }}>
-                                    {{ $rol->rango }}° Comandante — {{ $rol->voluntario->nombre }}
+                                    {{ $rol->cargo->nombre }} — {{ $rol->voluntario->nombre }}
                                 </option>
                             @endforeach
                         </select>
@@ -198,13 +194,12 @@
 
 @push('scripts')
 <script>
-    // Mostrar/ocultar bloque de guardia según turno seleccionado
     document.querySelector('select[name="tipo"]').addEventListener('change', function () {
         const bloqueGuardia = document.getElementById('bloqueGuardia');
         if (!bloqueGuardia) return;
-
         bloqueGuardia.style.display = this.value === 'pm' ? 'block' : 'none';
     });
+
     function toggleSelectorComandante() {
         const checked  = document.getElementById('cambiarGuardia').checked;
         const selector = document.getElementById('selectorComandante');

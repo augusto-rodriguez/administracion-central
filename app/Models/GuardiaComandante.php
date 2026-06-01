@@ -34,7 +34,7 @@ class GuardiaComandante extends Model
         $fechaInicio = $domingoInicio->toDateString();
 
         return static::where('fecha_inicio', $fechaInicio)
-            ->with('voluntario.roles')
+            ->with('voluntario.cargosActivos.cargo')
             ->first();
     }
 }

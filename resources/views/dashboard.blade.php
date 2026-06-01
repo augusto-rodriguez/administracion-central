@@ -14,7 +14,7 @@
                     Cdte. Guardia:
                     <strong class="ms-1">
                         {{ $guardiaActual->voluntario->nombre }}
-                        ({{ $guardiaActual->voluntario->roles->firstWhere('rol', 'comandante')?->rango }}°)
+                        ({{ $guardiaActual->voluntario->cargosActivos->whereNull('compania_id')->first()?->cargo->nombre ?? 'Comandante' }})
                     </strong>
                 </span>
             @else
@@ -60,7 +60,7 @@
                         @foreach($comandantes as $rol)
                             <option value="{{ $rol->voluntario->id }}"
                                     {{ $guardiaActual?->voluntario_id == $rol->voluntario->id ? 'selected' : '' }}>
-                                {{ $rol->rango }}° Cdte. — {{ $rol->voluntario->nombre }}
+                                {{ $rol->cargo->nombre }} — {{ $rol->voluntario->nombre }}
                             </option>
                         @endforeach
                     </select>
@@ -325,7 +325,6 @@
 ═══════════════════════════════════════════════════════════════════════ --}}
 @else
 
-    {{-- ── ALERTA LIBRO DE NOVEDADES ──────────────────────────────────── --}}
     @if($libroActivo)
         <div class="alert alert-success d-flex align-items-center justify-content-between gap-2 mb-4">
             <div class="d-flex align-items-center gap-2">
@@ -362,53 +361,53 @@
     @php
         $accesos = [
             [
-                'titulo'   => 'Puestas en Servicio',
-                'ruta'     => route('turnos.index'),
-                'icono'    => 'bi-clock-history',
-                'color'    => 'danger',
-                'desc'     => 'Registrar entrada y salida de maquinistas',
+                'titulo' => 'Puestas en Servicio',
+                'ruta'   => route('turnos.index'),
+                'icono'  => 'bi-clock-history',
+                'color'  => 'danger',
+                'desc'   => 'Registrar entrada y salida de maquinistas',
             ],
             [
-                'titulo'   => 'Registro Salidas',
-                'ruta'     => route('salidas.index'),
-                'icono'    => 'bi-arrow-up-right-circle',
-                'color'    => 'warning',
-                'desc'     => 'Registrar salidas administrativas y emergencias',
+                'titulo' => 'Registro Salidas',
+                'ruta'   => route('salidas.index'),
+                'icono'  => 'bi-arrow-up-right-circle',
+                'color'  => 'warning',
+                'desc'   => 'Registrar salidas administrativas y emergencias',
             ],
             [
-                'titulo'   => 'Registro Combustible',
-                'ruta'     => route('vouchers-combustible.index'),
-                'icono'    => 'bi-fuel-pump',
-                'color'    => 'success',
-                'desc'     => 'Registrar vouchers y consumo de combustible',
+                'titulo' => 'Registro Combustible',
+                'ruta'   => route('vouchers-combustible.index'),
+                'icono'  => 'bi-fuel-pump',
+                'color'  => 'success',
+                'desc'   => 'Registrar vouchers y consumo de combustible',
             ],
             [
-                'titulo'   => 'Libro de Novedades',
-                'ruta'     => route('libro-novedades.index'),
-                'icono'    => 'bi-journal-text',
-                'color'    => 'primary',
-                'desc'     => 'Gestionar el libro de novedades del turno',
+                'titulo' => 'Libro de Novedades',
+                'ruta'   => route('libro-novedades.index'),
+                'icono'  => 'bi-journal-text',
+                'color'  => 'primary',
+                'desc'   => 'Gestionar el libro de novedades del turno',
             ],
             [
-                'titulo'   => 'Citaciones',
-                'ruta'     => route('citaciones.index'),
-                'icono'    => 'bi-megaphone',
-                'color'    => 'info',
-                'desc'     => 'Ver y registrar citaciones vigentes',
+                'titulo' => 'Citaciones',
+                'ruta'   => route('citaciones.index'),
+                'icono'  => 'bi-megaphone',
+                'color'  => 'info',
+                'desc'   => 'Ver y registrar citaciones vigentes',
             ],
             [
-                'titulo'   => 'Boletines',
-                'ruta'     => route('boletines.index'),
-                'icono'    => 'bi-file-earmark-text',
-                'color'    => 'dark',
-                'desc'     => 'Generar y consultar boletines del turno',
+                'titulo' => 'Boletines',
+                'ruta'   => route('boletines.index'),
+                'icono'  => 'bi-file-earmark-text',
+                'color'  => 'dark',
+                'desc'   => 'Generar y consultar boletines del turno',
             ],
             [
-                'titulo'   => 'Guardias Nocturnas',
-                'ruta'     => route('guardias-nocturnas.index'),
-                'icono'    => 'bi-moon-stars',
-                'color'    => 'dark',
-                'desc'     => 'Registrar y consultar guardias nocturnas',
+                'titulo' => 'Guardias Nocturnas',
+                'ruta'   => route('guardias-nocturnas.index'),
+                'icono'  => 'bi-moon-stars',
+                'color'  => 'dark',
+                'desc'   => 'Registrar y consultar guardias nocturnas',
             ],
         ];
     @endphp
@@ -446,7 +445,6 @@
 
 @push('scripts')
 <script>
-// Hover en tarjetas de acceso operador
 document.querySelectorAll('.acceso-card').forEach(card => {
     card.addEventListener('mouseenter', () => {
         card.style.transform = 'translateY(-4px)';
@@ -458,7 +456,6 @@ document.querySelectorAll('.acceso-card').forEach(card => {
     });
 });
 
-// Cronómetros
 function actualizarCronometros() {
     document.querySelectorAll('.cronometro').forEach(el => {
         const entrada  = parseInt(el.dataset.entrada);
