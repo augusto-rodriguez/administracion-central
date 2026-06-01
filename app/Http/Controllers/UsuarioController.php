@@ -137,4 +137,28 @@ class UsuarioController extends Controller
                 ->update(['puede_autorizar_salidas' => $valor]);
         }
     }
+
+    public function cambiarPassword(Request $request)
+    {
+        $request->validate([
+            'password_actual' => 'required',
+            'password_nuevo'  => 'required|min:8|confirmed',
+        ]);
+
+        $user = auth()->user();
+
+        if (!Hash::check($request->password_actual, $user->password)) {
+            return back()
+                ->with('password_error', 'La contraseña actual no es correcta.')
+                ->with('abrir_modal_usuario', true);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password_nuevo),
+        ]);
+
+        return back()
+            ->with('password_success', 'Contraseña actualizada correctamente.')
+            ->with('abrir_modal_usuario', true);
+    }
 }

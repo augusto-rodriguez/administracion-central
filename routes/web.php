@@ -19,6 +19,10 @@ Route::middleware(['rol'])->group(function () {
     Route::post('dashboard/guardia-comandante', [App\Http\Controllers\DashboardController::class, 'guardarGuardia'])
         ->name('dashboard.guardia-comandante');
 
+    // Mi usuario — disponible para todos los roles
+    Route::put('mi-usuario/password', [App\Http\Controllers\UsuarioController::class, 'cambiarPassword'])
+        ->name('mi-usuario.password');
+
     // Guardias nocturnas — solo lectura (todos los roles)
     Route::get('guardias-nocturnas',           [App\Http\Controllers\GuardiaNocturnaController::class, 'index'])->name('guardias-nocturnas.index');
     Route::get('guardias-nocturnas/{guardia}', [App\Http\Controllers\GuardiaNocturnaController::class, 'show']) ->name('guardias-nocturnas.show');
