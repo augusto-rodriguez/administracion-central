@@ -19,7 +19,7 @@
                     <th>Nombre</th>
                     <th>Dirección</th>
                     <th>Teléfono</th>
-                    <th>Maquinistas</th>
+                    <th>Voluntarios</th>
                     <th>Unidades</th>
                     <th>Estado</th>
                     <th></th>
