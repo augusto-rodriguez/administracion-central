@@ -37,7 +37,7 @@ Route::middleware(['rol'])->group(function () {
     // ─────────────────────────────────────────────────────────────────
     // OPERACIONES (solo operadores — excluye admin y comandante)
     // ─────────────────────────────────────────────────────────────────
-    Route::middleware('rol:operador')->group(function () {
+    Route::middleware('rol:operador,admin')->group(function () {
 
         // Guardias nocturnas — escritura
         Route::prefix('guardias-nocturnas')->name('guardias-nocturnas.')->group(function () {

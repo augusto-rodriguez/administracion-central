@@ -29,7 +29,6 @@
 {{-- Sidebar --}}
 <div class="col-md-2 sidebar px-0">
 
-    <!-- <div class="brand">Administración Central</div> -->
     <div class="brand text-center">
         <img src="{{ asset('images/logo2.png') }}" alt="Logo Bomberos"
             style="width:70px; height:70px; object-fit:contain; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto;">
@@ -46,8 +45,8 @@
             <i class="bi bi-speedometer2 me-2"></i> Inicio
         </a>
 
-        {{-- Comandante --}}
-        @if(auth()->user()->esComandante())
+        {{-- Comandante + Admin --}}
+        @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
             <a href="{{ route('voluntarios.index') }}"
                class="nav-link {{ request()->is('voluntarios*') ? 'active' : '' }}">
                 <i class="bi bi-people me-2"></i> Voluntarios
@@ -78,8 +77,8 @@
             </a>
         @endif
 
-        {{-- ── OPERACIONES (solo operadores) ────────────────────── --}}
-        @if(!auth()->user()->esComandante())
+        {{-- ── OPERACIONES (operadores + admin) ─────────────────── --}}
+        @if(!auth()->user()->esComandante() || auth()->user()->esAdmin())
             <hr style="border-color:#2d2d44;margin:8px 16px;">
             <div style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
                 Operaciones

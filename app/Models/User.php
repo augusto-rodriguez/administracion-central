@@ -29,7 +29,7 @@ class User extends Authenticatable
 
     public function esComandante(): bool
     {
-        return in_array($this->rol, ['admin', 'comandante']);
+        return $this->rol === 'comandante'; // ← sacar 'admin'
     }
 
     public function esOperador(): bool
