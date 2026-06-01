@@ -13,9 +13,13 @@ class CitacionController extends Controller
     {
         $query = Citacion::with(['compania', 'medioRecepcion']);
 
-        // Filtros
+        // Filtro compañía: 'cuerpo' = solo las de todo el cuerpo (NULL), ID = compañía específica
         if ($request->filled('compania_id')) {
-            $query->where('compania_id', $request->compania_id);
+            if ($request->compania_id === 'cuerpo') {
+                $query->whereNull('compania_id');
+            } else {
+                $query->where('compania_id', $request->compania_id);
+            }
         }
 
         if ($request->filled('medio_recepcion_id')) {
@@ -33,10 +37,10 @@ class CitacionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'compania_id'          => 'required|exists:companias,id',
-            'medio_recepcion_id'   => 'required|exists:medios_recepcion_citaciones,id',
-            'mensaje'              => 'required|string',
-            'fecha_citacion'       => 'nullable|date',
+            'compania_id'        => 'nullable|exists:companias,id',   // nullable = todo el cuerpo
+            'medio_recepcion_id' => 'required|exists:medios_recepcion_citaciones,id',
+            'mensaje'            => 'required|string',
+            'fecha_citacion'     => 'nullable|date',
         ]);
 
         Citacion::create($request->only(

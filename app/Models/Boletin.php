@@ -53,18 +53,17 @@ class Boletin extends Model
                 $q->whereNull('fecha_citacion')
                 ->orWhere('fecha_citacion', '>=', now());
             })
+            ->orderByRaw('compania_id IS NULL DESC')
             ->orderBy('compania_id')
             ->get();
 
         if ($citaciones->isNotEmpty()) {
             $texto .= "\nCITACIONES:\n";
             foreach ($citaciones as $c) {
-                $texto .= strtoupper("{$c->compania->nombre}: {$c->mensaje}\n");
+                $nombreCompania = $c->compania ? $c->compania->nombre : 'CUERPO DE BOMBEROS';
+                $texto .= strtoupper("{$nombreCompania}: {$c->mensaje}\n");
             }
         }
-
-        // Cambio de guardia — separado, NO se incluye en el texto plano
-        // Se maneja visualmente en el modal con $boletin->texto_guardia
 
         return $texto;
     }

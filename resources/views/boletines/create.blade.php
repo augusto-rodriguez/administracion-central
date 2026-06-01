@@ -115,7 +115,13 @@
                     @forelse($citaciones as $citacion)
                         <div class="border rounded p-2 mb-2">
                             <span class="fw-bold text-primary">
-                                {{ $citacion->compania->nombre ?? '—' }}:
+                                @if($citacion->compania)
+                                    {{ $citacion->compania->nombre }}:
+                                @else
+                                    <span class="badge bg-danger me-1">
+                                        <i class="bi bi-building me-1"></i>Todo el Cuerpo
+                                    </span>
+                                @endif
                             </span>
                             {{ $citacion->mensaje }}
                         </div>

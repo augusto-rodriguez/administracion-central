@@ -23,8 +23,12 @@
                     <label class="form-label fw-bold">Compañía</label>
                     <select name="compania_id" class="form-select">
                         <option value="">Todas</option>
+                        <option value="cuerpo" {{ request('compania_id') === 'cuerpo' ? 'selected' : '' }}>
+                            🚒 Todo el Cuerpo de Bomberos
+                        </option>
                         @foreach($companias as $compania)
-                            <option value="{{ $compania->id }}" {{ request('compania_id') == $compania->id ? 'selected' : '' }}>
+                            <option value="{{ $compania->id }}"
+                                    {{ request('compania_id') == $compania->id ? 'selected' : '' }}>
                                 {{ $compania->numero }} - {{ $compania->nombre }}
                             </option>
                         @endforeach
@@ -36,7 +40,8 @@
                     <select name="medio_recepcion_id" class="form-select">
                         <option value="">Todos</option>
                         @foreach($medios as $medio)
-                            <option value="{{ $medio->id }}" {{ request('medio_recepcion_id') == $medio->id ? 'selected' : '' }}>
+                            <option value="{{ $medio->id }}"
+                                    {{ request('medio_recepcion_id') == $medio->id ? 'selected' : '' }}>
                                 {{ $medio->nombre }}
                             </option>
                         @endforeach
@@ -76,13 +81,19 @@
                 @forelse($citaciones as $citacion)
                 <tr>
                     <td>
-                        {{ $citacion->fecha_citacion 
-                            ? \Carbon\Carbon::parse($citacion->fecha_citacion)->format('d-m-Y H:i') 
+                        {{ $citacion->fecha_citacion
+                            ? \Carbon\Carbon::parse($citacion->fecha_citacion)->format('d-m-Y H:i')
                             : '—' }}
                     </td>
 
                     <td>
-                        {{ $citacion->compania->numero }} - {{ $citacion->compania->nombre }}
+                        @if($citacion->compania)
+                            {{ $citacion->compania->numero }} - {{ $citacion->compania->nombre }}
+                        @else
+                            <span class="badge bg-danger">
+                                <i class="bi bi-building me-1"></i>Todo el Cuerpo
+                            </span>
+                        @endif
                     </td>
 
                     <td>
@@ -122,7 +133,10 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Compañía</label>
-                    <select name="compania_id" class="form-select" required>
+                    <select name="compania_id" class="form-select">
+                        {{-- value vacío → NULL → todo el cuerpo --}}
+                        <option value="">🚒 Todo el Cuerpo de Bomberos</option>
+                        <option disabled>──────────────────────────────</option>
                         @foreach($companias as $compania)
                             <option value="{{ $compania->id }}">
                                 {{ $compania->numero }} - {{ $compania->nombre }}
@@ -155,6 +169,9 @@
             </div>
 
             <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
                 <button class="btn btn-danger">
                     <i class="bi bi-save me-1"></i>Guardar
                 </button>
