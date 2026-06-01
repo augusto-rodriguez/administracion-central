@@ -325,6 +325,38 @@
 ═══════════════════════════════════════════════════════════════════════ --}}
 @else
 
+    {{-- ── ALERTA LIBRO DE NOVEDADES ──────────────────────────────────── --}}
+    @if($libroActivo)
+        <div class="alert alert-success d-flex align-items-center justify-content-between gap-2 mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-journal-check fs-5"></i>
+                <div>
+                    <strong>Libro de novedades activo:</strong>
+                    {{ $libroActivo->turno_label }} — {{ $libroActivo->fecha->format('d/m/Y') }}
+                    — Operador: {{ $libroActivo->operador->nombre }}
+                </div>
+            </div>
+            <a href="{{ route('libro-novedades.edit', $libroActivo) }}"
+            class="btn btn-sm btn-success text-nowrap">
+                <i class="bi bi-pencil-square me-1"></i>Continuar turno
+            </a>
+        </div>
+    @else
+        <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-journal-x fs-5"></i>
+                <div>
+                    <strong>Sin libro de novedades activo.</strong>
+                    Recuerda iniciar el libro de novedades de tu turno antes de comenzar a operar.
+                </div>
+            </div>
+            <a href="{{ route('libro-novedades.index') }}"
+            class="btn btn-sm btn-warning text-nowrap">
+                <i class="bi bi-play-circle me-1"></i>Iniciar libro
+            </a>
+        </div>
+    @endif
+
     <p class="text-muted mb-4">Selecciona una operación para comenzar.</p>
 
     @php

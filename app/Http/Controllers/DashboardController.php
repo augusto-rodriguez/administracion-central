@@ -10,6 +10,7 @@ use App\Models\RegistroTurno;
 use App\Models\RegistroTurnoCuartelero;
 use App\Models\GuardiaComandante;
 use App\Models\VoluntarioRol;
+use App\Models\LibroNovedades;
 use Illuminate\Http\Request;   // ← faltaba
 use Carbon\Carbon;             // ← faltaba
 
@@ -47,13 +48,15 @@ class DashboardController extends Controller
             ->orderBy('rango')
             ->get();
 
+        $libroActivo = LibroNovedades::where('estado', 'borrador')->latest()->first();
+
         return view('dashboard', compact(
             'totalCompanias', 'totalUnidades',
             'totalVoluntarios', 'totalCuarteleros',
             'enServicio', 'enServicioCuarteleros',
             'turnosActivos', 'turnosActivosCuarteleros',
             'salidasActivas', 'guardiaActual',
-            'comandantes'
+            'comandantes','libroActivo' 
         ));
     }
 
