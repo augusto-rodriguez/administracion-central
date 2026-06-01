@@ -79,7 +79,7 @@
         @endif
 
         {{-- ── OPERACIONES (solo operadores) ────────────────────── --}}
-        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+        @if(!auth()->user()->esComandante())
             <hr style="border-color:#2d2d44;margin:8px 16px;">
             <div style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
                 Operaciones
