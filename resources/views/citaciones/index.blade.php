@@ -75,6 +75,7 @@
                     <th>Compañía</th>
                     <th>Medio</th>
                     <th>Mensaje</th>
+                    <th></th>  {{-- columna acciones --}}
                 </tr>
             </thead>
             <tbody>
@@ -104,6 +105,21 @@
 
                     <td style="max-width: 400px;">
                         {{ Str::limit($citacion->mensaje, 120) }}
+                    </td>
+
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalEditarCitacion"
+                                data-id="{{ $citacion->id }}"
+                                data-compania="{{ $citacion->compania_id ?? '' }}"
+                                data-medio="{{ $citacion->medio_recepcion_id }}"
+                                data-fecha="{{ $citacion->fecha_citacion
+                                    ? \Carbon\Carbon::parse($citacion->fecha_citacion)->format('Y-m-d\TH:i')
+                                    : '' }}"
+                                data-mensaje="{{ $citacion->mensaje }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
                     </td>
                 </tr>
                 @empty
@@ -180,5 +196,84 @@
         </form>
     </div>
 </div>
+
+{{-- MODAL EDITAR --}}
+<div class="modal fade" id="modalEditarCitacion" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="formEditarCitacion" class="modal-content">
+            @csrf
+            @method('PUT')
+
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Citación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Compañía</label>
+                    <select name="compania_id" id="edit_compania_id" class="form-select">
+                        <option value="">🚒 Todo el Cuerpo de Bomberos</option>
+                        <option disabled>──────────────────────────────</option>
+                        @foreach($companias as $compania)
+                            <option value="{{ $compania->id }}">
+                                {{ $compania->numero }} - {{ $compania->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Medio de recepción</label>
+                    <select name="medio_recepcion_id" id="edit_medio_id" class="form-select" required>
+                        @foreach($medios as $medio)
+                            <option value="{{ $medio->id }}">{{ $medio->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Fecha</label>
+                    <input type="datetime-local" name="fecha_citacion" id="edit_fecha" class="form-control">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mensaje</label>
+                    <textarea name="mensaje" id="edit_mensaje" rows="4" class="form-control" required></textarea>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button class="btn btn-danger">
+                    <i class="bi bi-save me-1"></i>Guardar cambios
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.getElementById('modalEditarCitacion').addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+
+        // Apunta el action del form al ID correcto
+        const id = btn.dataset.id;
+        document.getElementById('formEditarCitacion').action = `/citaciones/${id}`;
+
+        // Rellena los campos
+        document.getElementById('edit_compania_id').value = btn.dataset.compania;
+        document.getElementById('edit_medio_id').value    = btn.dataset.medio;
+        document.getElementById('edit_fecha').value       = btn.dataset.fecha;
+        document.getElementById('edit_mensaje').value     = btn.dataset.mensaje;
+    });
+</script>
+@endpush
 
 @endsection

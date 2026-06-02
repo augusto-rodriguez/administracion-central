@@ -66,6 +66,7 @@ Route::middleware(['rol'])->group(function () {
         // Citaciones
         Route::get('citaciones',  [App\Http\Controllers\CitacionController::class, 'index'])->name('citaciones.index');
         Route::post('citaciones', [App\Http\Controllers\CitacionController::class, 'store'])->name('citaciones.store');
+        Route::put('citaciones/{citacion}', [App\Http\Controllers\CitacionController::class, 'update'])->name('citaciones.update');
 
         // Boletines
         Route::get('boletines',              [App\Http\Controllers\BoletinController::class, 'index'])  ->name('boletines.index');

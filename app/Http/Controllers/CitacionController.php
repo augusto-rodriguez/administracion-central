@@ -53,4 +53,24 @@ class CitacionController extends Controller
         return redirect()->route('citaciones.index')
                          ->with('success', 'Citación registrada correctamente.');
     }
+
+    public function update(Request $request, Citacion $citacion)
+    {
+        $request->validate([
+            'compania_id'        => 'nullable|exists:companias,id',
+            'medio_recepcion_id' => 'required|exists:medios_recepcion_citaciones,id',
+            'mensaje'            => 'required|string',
+            'fecha_citacion'     => 'nullable|date',
+        ]);
+
+        $citacion->update($request->only(
+            'compania_id',
+            'medio_recepcion_id',
+            'mensaje',
+            'fecha_citacion'
+        ));
+
+        return redirect()->route('citaciones.index')
+                        ->with('success', 'Citación actualizada correctamente.');
+    }
 }
