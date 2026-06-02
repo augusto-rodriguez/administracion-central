@@ -14,10 +14,29 @@
 
         /* ── Cabecera ── */
         .header {
-            text-align: center;
             border-bottom: 2px solid #1a1a2e;
             padding-bottom: 10px;
             margin-bottom: 14px;
+            width: 100%;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .header-table td {
+            vertical-align: middle;
+            padding: 0;
+        }
+        .header-logo-cell {
+            width: 70px;
+        }
+        .header-logo {
+            width: 65px;
+            height: 65px;
+            object-fit: contain;
+        }
+        .header-texto {
+            text-align: center;
         }
         .header h1 {
             font-size: 15px;
@@ -204,15 +223,28 @@
 
     {{-- Cabecera --}}
     <div class="header">
-        <h1>Guardia Nocturna</h1>
-        <div class="sub">Cuerpo de Bomberos de San Pedro de la Paz</div>
-        <div class="meta">
-            Fecha: <strong>{{ $guardia->fecha->format('d/m/Y') }}</strong>
-            &nbsp;|&nbsp;
-            Cerrada a las: <strong>{{ $guardia->cerrado_at?->format('H:i') ?? '—' }}</strong>
-            &nbsp;|&nbsp;
-            Operador: <strong>{{ $guardia->cerradoPor->nombre ?? '—' }}</strong>
-        </div>
+        <table class="header-table">
+            <tr>
+                <td class="header-logo-cell">
+                    <img class="header-logo"
+                         src="{{ public_path('images/logo_SanPedroDeLaPaz.png') }}"
+                         alt="Logo Bomberos">
+                </td>
+                <td class="header-texto">
+                    <h1>Guardia Nocturna</h1>
+                    <div class="sub">Cuerpo de Bomberos de San Pedro de la Paz</div>
+                    <div class="meta">
+                        Fecha: <strong>{{ $guardia->fecha->format('d/m/Y') }}</strong>
+                        &nbsp;|&nbsp;
+                        Cerrada a las: <strong>{{ $guardia->cerrado_at?->format('H:i') ?? '—' }}</strong>
+                        &nbsp;|&nbsp;
+                        Operador: <strong>{{ $guardia->cerradoPor->nombre ?? '—' }}</strong>
+                    </div>
+                </td>
+                {{-- celda fantasma para centrar el texto --}}
+                <td style="width: 70px;"></td>
+            </tr>
+        </table>
     </div>
 
     {{-- Total voluntarios --}}
@@ -248,7 +280,7 @@
                 <table class="grid-2">
                     <tr>
                         <td>
-                            <div class="seccion-titulo">Oficial a cargo</div>
+                            <div class="seccion-titulo">Oficial/Voluntario a cargo</div>
                             <div class="seccion-valor">{{ $gnCompania->oficialACargo->nombre ?? '—' }}</div>
                         </td>
                         <td>
