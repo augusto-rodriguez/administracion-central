@@ -4,7 +4,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-person-badge me-2"></i>Cuarteleros</h4>
-    @if(auth()->user()->esComandante())
+    @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
     <a href="{{ route('cuarteleros.create') }}" class="btn btn-danger">
         <i class="bi bi-plus-lg me-1"></i>Nuevo Cuartelero
     </a>
