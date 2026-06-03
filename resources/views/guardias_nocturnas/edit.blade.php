@@ -17,8 +17,8 @@
         @php
             $companiasSinReporte = $companias->filter(function($comp) use ($guardia) {
                 $gnComp = $guardia->companias->firstWhere('compania_id', $comp->id);
-                return $gnComp === null || $gnComp->sin_reporte;
-            });
+                    return $gnComp === null || $gnComp->sin_reporte;
+                });
         @endphp
 
         {{-- Formulario oculto que se envía al confirmar --}}
@@ -128,7 +128,7 @@
                     {{-- Oficial a cargo --}}
                     <div class="col-md-6">
                         <label class="form-label fw-bold">
-                            Oficial a cargo <span class="text-danger">*</span>
+                            Oficial/Voluntario a cargo <span class="text-danger">*</span>
                         </label>
                         <select name="oficial_a_cargo_id"
                                 id="oficial_{{ $compania->id }}"
