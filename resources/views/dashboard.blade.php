@@ -39,7 +39,7 @@
 {{-- ── MODAL GUARDIA COMANDANTE ─────────────────────────────────────── --}}
 @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
 <div class="modal fade" id="modalGuardia" tabindex="-1">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white py-2">
                 <h6 class="modal-title mb-0">
