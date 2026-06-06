@@ -37,6 +37,7 @@
                         <option value="Hazmat" {{ $unidad->tipo == 'Hazmat' ? 'selected' : '' }}>Hazmat</option>
                         <option value="Forestal" {{ $unidad->tipo == 'Forestal' ? 'selected' : '' }}>Forestal</option>
                         <option value="Cisterna" {{ $unidad->tipo == 'Cisterna' ? 'selected' : '' }}>Cisterna</option>
+                        <option value="Camioneta" {{ $unidad->tipo == 'Camioneta' ? 'selected' : '' }}>Camioneta</option>
                     </select>
                 </div>
                 <div class="col-md-6">

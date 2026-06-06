@@ -38,6 +38,7 @@
                         <option value="Hazmat" {{ old('tipo') == 'Hazmat' ? 'selected' : '' }}>Hazmat</option>
                         <option value="Forestal" {{ old('tipo') == 'Forestal' ? 'selected' : '' }}>Forestal</option>
                         <option value="Cisterna" {{ old('tipo') == 'Cisterna' ? 'selected' : '' }}>Cisterna</option>
+                        <option value="Camioneta" {{ old('tipo') == 'Camioneta' ? 'selected' : '' }}>Camioneta</option>
                     </select>
                     @error('tipo') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
