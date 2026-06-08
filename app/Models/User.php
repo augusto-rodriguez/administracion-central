@@ -29,11 +29,16 @@ class User extends Authenticatable
 
     public function esComandante(): bool
     {
-        return $this->rol === 'comandante'; // ← sacar 'admin'
+        return $this->rol === 'comandante';
+    }
+
+    public function esCapitanCia(): bool
+    {
+        return $this->rol === 'capitan_cia';
     }
 
     public function esOperador(): bool
     {
-        return in_array($this->rol, ['admin', 'comandante', 'operador']);
+        return in_array($this->rol, ['admin', 'comandante', 'capitan_cia', 'operador']);
     }
 }

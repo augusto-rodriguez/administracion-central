@@ -4,6 +4,8 @@
 
 @section('content')
 
+@php $esCapitan = auth()->user()->esCapitanCia(); @endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-person-gear me-2"></i>Editar Voluntario</h4>
     <a href="{{ route('voluntarios.index') }}" class="btn btn-outline-secondary">
@@ -36,18 +38,26 @@
 
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Compañía <span class="text-danger">*</span></label>
-                    <select name="compania_id" id="compania_id"
-                            class="form-select @error('compania_id') is-invalid @enderror"
-                            onchange="actualizarCargosDisponibles(this.value)"
-                            required>
-                        @foreach($companias as $compania)
-                            <option value="{{ $compania->id }}"
-                                    {{ old('compania_id', $voluntario->compania_id) == $compania->id ? 'selected' : '' }}>
-                                {{ $compania->numero }} - {{ $compania->nombre }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('compania_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    @if($esCapitan)
+                        {{-- Capitán: compañía fija, no editable --}}
+                        <input type="text" class="form-control"
+                               value="{{ $companias->first()->numero }} - {{ $companias->first()->nombre }}"
+                               disabled>
+                        <input type="hidden" name="compania_id" value="{{ $voluntario->compania_id }}">
+                    @else
+                        <select name="compania_id" id="compania_id"
+                                class="form-select @error('compania_id') is-invalid @enderror"
+                                onchange="actualizarCargosDisponibles(this.value)"
+                                required>
+                            @foreach($companias as $compania)
+                                <option value="{{ $compania->id }}"
+                                        {{ old('compania_id', $voluntario->compania_id) == $compania->id ? 'selected' : '' }}>
+                                    {{ $compania->numero }} - {{ $compania->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('compania_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    @endif
                 </div>
 
                 <div class="col-md-3">
@@ -175,6 +185,7 @@
 @push('scripts')
 <script>
     const cargosCompaniaOcupados = @json($cargosCompaniaOcupados);
+    const esCapitan              = {{ $esCapitan ? 'true' : 'false' }};
 
     function sincronizarCargo(origen, tipo) {
         const selectCompania = document.getElementById('cargo_compania_select');
@@ -210,8 +221,8 @@
             if (estaOcupado) option.text += ' (ocupado)';
             if (estaOcupado && option.selected) {
                 option.selected = false;
-                document.getElementById('rol_oficial').disabled            = false;
-                document.getElementById('oficial_auto_tip').style.display  = 'none';
+                document.getElementById('rol_oficial').disabled          = false;
+                document.getElementById('oficial_auto_tip').style.display = 'none';
             }
         });
     }
@@ -228,24 +239,21 @@
             tipOficial.style.display = 'inline';
         }
 
-        const companiaId = document.getElementById('compania_id').value;
-        if (companiaId) actualizarCargosDisponibles(companiaId);
+        // Cargar cargos ocupados según la compañía del voluntario
+        if (esCapitan) {
+            const hiddenCompania = document.querySelector('input[name="compania_id"]');
+            if (hiddenCompania) actualizarCargosDisponibles(hiddenCompania.value);
+        } else {
+            const companiaId = document.getElementById('compania_id')?.value;
+            if (companiaId) actualizarCargosDisponibles(companiaId);
+        }
     });
 
     document.getElementById('rut').addEventListener('input', function () {
         let val = this.value.replace(/\./g, '').replace(/-/g, '').replace(/[^0-9kK]/g, '');
-
-        if (val.length === 0) {
-            this.value = '';
-            return;
-        }
-
-        const dv     = val.slice(-1).toUpperCase();
-        let cuerpo   = val.slice(0, -1);
-
-        // Agregar puntos cada 3 dígitos
-        cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
+        if (val.length === 0) { this.value = ''; return; }
+        const dv   = val.slice(-1).toUpperCase();
+        let cuerpo = val.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         this.value = cuerpo ? `${cuerpo}-${dv}` : dv;
     });
 </script>

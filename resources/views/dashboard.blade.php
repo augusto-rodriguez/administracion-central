@@ -23,7 +23,7 @@
                     Sin comandante de guardia
                 </span>
             @endif
-            @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+            @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !auth()->user()->esCapitanCia())
                 <button class="btn btn-sm btn-outline-dark"
                         data-bs-toggle="modal" data-bs-target="#modalGuardia"
                         title="Cambiar comandante de guardia">
@@ -37,7 +37,7 @@
 </div>
 
 {{-- ── MODAL GUARDIA COMANDANTE ─────────────────────────────────────── --}}
-@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !auth()->user()->esCapitanCia())
 <div class="modal fade" id="modalGuardia" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -79,9 +79,50 @@
 @endif
 
 {{-- ══════════════════════════════════════════════════════════════════════
+     VISTA CAPITÁN DE COMPAÑÍA
+═══════════════════════════════════════════════════════════════════════ --}}
+@if(auth()->user()->esCapitanCia())
+
+    @php
+        $voluntario = auth()->user()->voluntario;
+        $compania   = $voluntario?->compania;
+    @endphp
+
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card text-center shadow-sm">
+                <div class="card-body py-5">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center
+                                justify-content-center mb-4"
+                         style="width:90px;height:90px;">
+                        <i class="bi bi-patch-check-fill text-warning" style="font-size:2.5rem;"></i>
+                    </div>
+
+                    <h3 class="fw-bold mb-1">
+                        Bienvenido, Capitán
+                    </h3>
+
+                    @if($compania)
+                        <p class="text-muted fs-5 mb-3">
+                            {{ $compania->nombre }}
+                        </p>
+                    @endif
+
+                    @if($voluntario)
+                        <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-4 py-2">
+                            <i class="bi bi-person-fill text-secondary"></i>
+                            <span class="fw-bold">{{ $voluntario->nombre }}</span>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+{{-- ══════════════════════════════════════════════════════════════════════
      VISTA ADMIN / COMANDANTE
 ═══════════════════════════════════════════════════════════════════════ --}}
-@if(auth()->user()->esAdmin() || auth()->user()->esComandante())
+@elseif(auth()->user()->esAdmin() || auth()->user()->esComandante())
 
     {{-- Tarjetas resumen --}}
     <div class="row g-4">

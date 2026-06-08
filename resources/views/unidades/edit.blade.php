@@ -3,6 +3,9 @@
 @section('title', 'Editar Unidad')
 
 @section('content')
+
+@php $esCapitan = auth()->user()->esCapitanCia(); @endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-truck-front me-2"></i>Editar Unidad</h4>
     <a href="{{ route('unidades.index') }}" class="btn btn-outline-secondary">
@@ -30,26 +33,34 @@
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Tipo <span class="text-danger">*</span></label>
                     <select name="tipo" class="form-select">
-                        <option value="Bomba" {{ $unidad->tipo == 'Bomba' ? 'selected' : '' }}>Bomba</option>
+                        <option value="Bomba"             {{ $unidad->tipo == 'Bomba'             ? 'selected' : '' }}>Bomba</option>
                         <option value="Bomba Portaescala" {{ $unidad->tipo == 'Bomba Portaescala' ? 'selected' : '' }}>Bomba Portaescala</option>
-                        <option value="Rescate" {{ $unidad->tipo == 'Rescate' ? 'selected' : '' }}>Rescate</option>
-                        <option value="Rescate Tecnico" {{ $unidad->tipo == 'Rescate Tecnico' ? 'selected' : '' }}>Rescate Técnico</option>
-                        <option value="Hazmat" {{ $unidad->tipo == 'Hazmat' ? 'selected' : '' }}>Hazmat</option>
-                        <option value="Forestal" {{ $unidad->tipo == 'Forestal' ? 'selected' : '' }}>Forestal</option>
-                        <option value="Cisterna" {{ $unidad->tipo == 'Cisterna' ? 'selected' : '' }}>Cisterna</option>
-                        <option value="Camioneta" {{ $unidad->tipo == 'Camioneta' ? 'selected' : '' }}>Camioneta</option>
+                        <option value="Rescate"           {{ $unidad->tipo == 'Rescate'           ? 'selected' : '' }}>Rescate</option>
+                        <option value="Rescate Tecnico"   {{ $unidad->tipo == 'Rescate Tecnico'   ? 'selected' : '' }}>Rescate Técnico</option>
+                        <option value="Hazmat"            {{ $unidad->tipo == 'Hazmat'            ? 'selected' : '' }}>Hazmat</option>
+                        <option value="Forestal"          {{ $unidad->tipo == 'Forestal'          ? 'selected' : '' }}>Forestal</option>
+                        <option value="Cisterna"          {{ $unidad->tipo == 'Cisterna'          ? 'selected' : '' }}>Cisterna</option>
+                        <option value="Camioneta"         {{ $unidad->tipo == 'Camioneta'         ? 'selected' : '' }}>Camioneta</option>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Compañía <span class="text-danger">*</span></label>
-                    <select name="compania_id" class="form-select @error('compania_id') is-invalid @enderror">
-                        @foreach($companias as $compania)
-                            <option value="{{ $compania->id }}" {{ $unidad->compania_id == $compania->id ? 'selected' : '' }}>
-                                {{ $compania->numero }} - {{ $compania->nombre }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('compania_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    @if($esCapitan)
+                        {{-- Capitán: compañía fija, no editable --}}
+                        <input type="text" class="form-control"
+                               value="{{ $companias->first()->numero }} - {{ $companias->first()->nombre }}"
+                               disabled>
+                        <input type="hidden" name="compania_id" value="{{ $unidad->compania_id }}">
+                    @else
+                        <select name="compania_id" class="form-select @error('compania_id') is-invalid @enderror">
+                            @foreach($companias as $compania)
+                                <option value="{{ $compania->id }}" {{ $unidad->compania_id == $compania->id ? 'selected' : '' }}>
+                                    {{ $compania->numero }} - {{ $compania->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('compania_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    @endif
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-bold">Descripción</label>

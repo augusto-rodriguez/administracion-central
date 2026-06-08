@@ -3,7 +3,14 @@
 @section('content')
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-file-earmark-bar-graph me-2"></i>Reporte de puestas en servicio/turnos</h4>
+    <h4 class="mb-0">
+        <i class="bi bi-file-earmark-bar-graph me-2"></i>Reporte de puestas en servicio/turnos
+        @if($esCapitan)
+            <span class="text-muted fs-6 fw-normal ms-2">
+                — {{ auth()->user()->voluntario?->compania->nombre }}
+            </span>
+        @endif
+    </h4>
 </div>
 
 {{-- Pestañas --}}
@@ -38,7 +45,11 @@
         @if($tab === 'compania')
         <form method="GET" action="{{ route('reportes.index') }}">
             <input type="hidden" name="tab" value="compania">
+            @if($esCapitan)
+                <input type="hidden" name="compania_id" value="{{ $companiaIdCapitan }}">
+            @endif
             <div class="row g-3 align-items-end">
+                @if(!$esCapitan)
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Compañía <span class="text-danger">*</span></label>
                     <select name="compania_id" class="form-select" required>
@@ -51,6 +62,7 @@
                         @endforeach
                     </select>
                 </div>
+                @endif
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Año <span class="text-danger">*</span></label>
                     <select name="anio" class="form-select" required>
@@ -92,7 +104,8 @@
                         @foreach($voluntarios as $voluntario)
                             <option value="{{ $voluntario->id }}"
                                 {{ request('voluntario_id') == $voluntario->id ? 'selected' : '' }}>
-                                {{ $voluntario->nombre }} — {{ $voluntario->compania->nombre }}
+                                {{ $voluntario->nombre }}
+                                @if(!$esCapitan) — {{ $voluntario->compania->nombre }} @endif
                             </option>
                         @endforeach
                     </select>
@@ -126,7 +139,8 @@
                         @foreach($cuarteleros as $cuartelero)
                             <option value="{{ $cuartelero->id }}"
                                 {{ request('cuartelero_id') == $cuartelero->id ? 'selected' : '' }}>
-                                {{ $cuartelero->nombre }} — {{ $cuartelero->compania->nombre }}
+                                {{ $cuartelero->nombre }}
+                                @if(!$esCapitan) — {{ $cuartelero->compania->nombre }} @endif
                             </option>
                         @endforeach
                     </select>
@@ -158,9 +172,9 @@
 @php
     $horas      = intdiv($totalMinutos, 60);
     $minutos    = $totalMinutos % 60;
-    $compania   = $tab === 'compania'   ? $companias->find(request('compania_id'))     : null;
-    $voluntario = $tab === 'voluntario' ? $voluntarios->find(request('voluntario_id')) : null;
-    $cuartelero = $tab === 'cuartelero' ? $cuarteleros->find(request('cuartelero_id')) : null;
+    $compania   = $tab === 'compania'   ? $companias->find(request('compania_id') ?? $companiaIdCapitan) : null;
+    $voluntario = $tab === 'voluntario' ? $voluntarios->find(request('voluntario_id'))                   : null;
+    $cuartelero = $tab === 'cuartelero' ? $cuarteleros->find(request('cuartelero_id'))                   : null;
 @endphp
 
 <div class="card mb-3">
@@ -255,7 +269,7 @@
     </div>
 </div>
 
-@elseif(request()->hasAny(['compania_id', 'voluntario_id', 'cuartelero_id']))
+@elseif(request()->hasAny(['compania_id', 'voluntario_id', 'cuartelero_id', 'anio']))
 <div class="alert alert-info">
     <i class="bi bi-info-circle me-2"></i>No hay turnos registrados para este período.
 </div>
@@ -265,15 +279,10 @@
 
 @push('scripts')
 <script>
-    // Inicializar Tom Select en select
     const selectMaquinista = new TomSelect('#selectMaquinista', {
         placeholder: 'Buscar maquinista...',
         searchField: ['text'],
         maxOptions: 50,
-        onChange: function(value) {
-            // Disparar el evento change original para que funcionen las unidades
-            document.getElementById('selectMaquinista').dispatchEvent(new Event('change'));
-        }
     });
 </script>
 @endpush

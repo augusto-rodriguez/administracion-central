@@ -15,32 +15,46 @@ class ReporteSalidaController extends Controller
 {
     public function index(Request $request)
     {
-        $companias  = Compania::where('activa', true)->orderBy('numero')->get();
-        $unidades   = Unidad::with('compania')->where('activa', true)->orderBy('nombre')->get();
-        $claves     = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
+        $usuario   = auth()->user();
+        $esCapitan = $usuario->esCapitanCia();
+        $companiaIdCapitan = $esCapitan ? $usuario->voluntario?->compania_id : null;
+
+        $companias = Compania::where('activa', true)->orderBy('numero')->get();
+
+        // Capitán: solo ve unidades de su compañía
+        $unidades = Unidad::with('compania')
+            ->where('activa', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
+            ->orderBy('nombre')
+            ->get();
+
+        $claves = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
 
         $oficiales = Voluntario::with('compania')
             ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
                 ->where('activo', true)
                 ->where('puede_autorizar_salidas', true))
             ->where('activo', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
             ->orderBy('nombre')
             ->get();
 
         $maquinistas = Voluntario::with('compania')
             ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
             ->where('activo', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
             ->orderBy('nombre')
             ->get();
 
         $cuarteleros = \App\Models\Cuartelero::with('compania')
             ->where('activo', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
             ->orderBy('nombre')
             ->get();
 
-        // Voluntarios al mando
         $voluntariosAlMando = Voluntario::with('compania')
             ->where('activo', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
             ->orderBy('nombre')
             ->get();
 
@@ -52,31 +66,31 @@ class ReporteSalidaController extends Controller
             'oficial_id', 'compania_id', 'conductor_id', 'al_mando_id',
         ]);
 
+        // Para capitán, considerar que siempre está "buscando" su compañía
+        if ($esCapitan) {
+            $buscando = true;
+        }
+
         if ($buscando) {
             $query = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando'])
                 ->whereNotNull('llegada_at');
 
-            if ($request->filled('desde')) {
-                $query->whereDate('salida_at', '>=', $request->desde);
+            // Capitán: forzar filtro por su compañía siempre
+            if ($esCapitan) {
+                $query->whereHas('unidad', fn($q) => $q->where('compania_id', $companiaIdCapitan));
+            } else {
+                if ($request->filled('compania_id')) {
+                    $query->whereHas('unidad', fn($q) => $q->where('compania_id', $request->compania_id));
+                }
             }
-            if ($request->filled('hasta')) {
-                $query->whereDate('salida_at', '<=', $request->hasta);
-            }
-            if ($request->filled('compania_id')) {
-                $query->whereHas('unidad', fn($q) => $q->where('compania_id', $request->compania_id));
-            }
-            if ($request->filled('unidad_id')) {
-                $query->where('unidad_id', $request->unidad_id);
-            }
-            if ($request->filled('clave_salida_id')) {
-                $query->where('clave_salida_id', $request->clave_salida_id);
-            }
-            if ($request->filled('oficial_id')) {
-                $query->where('oficial_id', $request->oficial_id);
-            }
-            if ($request->filled('al_mando_id')) {
-                $query->where('al_mando_id', $request->al_mando_id);
-            }
+
+            if ($request->filled('desde'))          $query->whereDate('salida_at', '>=', $request->desde);
+            if ($request->filled('hasta'))          $query->whereDate('salida_at', '<=', $request->hasta);
+            if ($request->filled('unidad_id'))      $query->where('unidad_id', $request->unidad_id);
+            if ($request->filled('clave_salida_id')) $query->where('clave_salida_id', $request->clave_salida_id);
+            if ($request->filled('oficial_id'))     $query->where('oficial_id', $request->oficial_id);
+            if ($request->filled('al_mando_id'))    $query->where('al_mando_id', $request->al_mando_id);
+
             if ($request->filled('conductor_id')) {
                 $partes = explode('_', $request->conductor_id, 2);
                 if ($partes[0] === 'v') {
@@ -101,7 +115,8 @@ class ReporteSalidaController extends Controller
         return view('reportes.salidas', compact(
             'companias', 'unidades', 'claves', 'oficiales',
             'maquinistas', 'cuarteleros', 'voluntariosAlMando',
-            'salidas', 'totalKm', 'totalTiempo', 'buscando'
+            'salidas', 'totalKm', 'totalTiempo', 'buscando',
+            'esCapitan', 'companiaIdCapitan'
         ));
     }
 

@@ -3,7 +3,14 @@
 @section('content')
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-file-earmark-ruled me-2"></i>Reporte de Salidas de Unidades</h4>
+    <h4 class="mb-0">
+        <i class="bi bi-file-earmark-ruled me-2"></i>Reporte de Salidas de Unidades
+        @if($esCapitan)
+            <span class="text-muted fs-6 fw-normal ms-2">
+                — {{ auth()->user()->voluntario?->compania->nombre }}
+            </span>
+        @endif
+    </h4>
 </div>
 
 {{-- Filtros --}}
@@ -13,6 +20,12 @@
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('reportes.salidas') }}">
+
+            {{-- Capitán: compañía fija como hidden --}}
+            @if($esCapitan)
+                <input type="hidden" name="compania_id" value="{{ $companiaIdCapitan }}">
+            @endif
+
             <div class="row g-3 align-items-end">
 
                 <div class="col-md-3">
@@ -23,6 +36,9 @@
                     <label class="form-label fw-bold">Hasta</label>
                     <input type="date" name="hasta" class="form-control" value="{{ request('hasta') }}">
                 </div>
+
+                {{-- Filtro compañía: solo para admin/comandante --}}
+                @if(!$esCapitan)
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Compañía</label>
                     <select name="compania_id" class="form-select">
@@ -34,13 +50,16 @@
                         @endforeach
                     </select>
                 </div>
+                @endif
+
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Unidad</label>
                     <select name="unidad_id" class="form-select">
                         <option value="">Todas</option>
                         @foreach($unidades as $unidad)
                             <option value="{{ $unidad->id }}" {{ request('unidad_id') == $unidad->id ? 'selected' : '' }}>
-                                {{ $unidad->nombre }} — {{ $unidad->compania->nombre }}
+                                {{ $unidad->nombre }}
+                                @if(!$esCapitan) — {{ $unidad->compania->nombre }} @endif
                             </option>
                         @endforeach
                     </select>
@@ -84,7 +103,8 @@
                             @foreach($maquinistas as $maquinista)
                                 <option value="v_{{ $maquinista->id }}"
                                     {{ request('conductor_id') == 'v_'.$maquinista->id ? 'selected' : '' }}>
-                                    {{ $maquinista->nombre }} — {{ $maquinista->compania->nombre }}
+                                    {{ $maquinista->nombre }}
+                                    @if(!$esCapitan) — {{ $maquinista->compania->nombre }} @endif
                                 </option>
                             @endforeach
                         </optgroup>
@@ -92,21 +112,21 @@
                             @foreach($cuarteleros as $cuartelero)
                                 <option value="c_{{ $cuartelero->id }}"
                                     {{ request('conductor_id') == 'c_'.$cuartelero->id ? 'selected' : '' }}>
-                                    {{ $cuartelero->nombre }} — {{ $cuartelero->compania->nombre }}
+                                    {{ $cuartelero->nombre }}
+                                    @if(!$esCapitan) — {{ $cuartelero->compania->nombre }} @endif
                                 </option>
                             @endforeach
                         </optgroup>
                     </select>
                 </div>
-
-                {{-- Filtro Al Mando --}}
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Voluntario al Mando</label>
                     <select name="al_mando_id" id="selectAlMando" class="form-select">
                         <option value="">Todos</option>
                         @foreach($voluntariosAlMando as $voluntario)
                             <option value="{{ $voluntario->id }}" {{ request('al_mando_id') == $voluntario->id ? 'selected' : '' }}>
-                                {{ $voluntario->nombre }} — {{ $voluntario->compania->nombre }}
+                                {{ $voluntario->nombre }}
+                                @if(!$esCapitan) — {{ $voluntario->compania->nombre }} @endif
                             </option>
                         @endforeach
                     </select>
@@ -116,7 +136,7 @@
                     <button type="submit" class="btn btn-danger flex-grow-1">
                         <i class="bi bi-search me-1"></i>Buscar
                     </button>
-                    @if($buscando)
+                    @if($buscando && !$esCapitan)
                     <a href="{{ route('reportes.salidas') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-lg"></i>
                     </a>
@@ -145,7 +165,6 @@
     $totalMins  = $totalTiempo % 60;
 @endphp
 
-{{-- Resumen --}}
 <div class="card mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
         <div>
@@ -174,7 +193,6 @@
     </div>
 </div>
 
-{{-- Tabla --}}
 <div class="card">
     <div class="card-body p-0">
         <table class="table table-hover table-bordered mb-0">
@@ -197,7 +215,9 @@
                 <tr>
                     <td class="fw-bold">
                         {{ $salida->unidad->nombre }}
-                        <div class="text-muted small">{{ $salida->unidad->compania->nombre }}</div>
+                        @if(!$esCapitan)
+                            <div class="text-muted small">{{ $salida->unidad->compania->nombre }}</div>
+                        @endif
                     </td>
                     <td>
                         @if($salida->claveSalida->tipo === 'emergencia')

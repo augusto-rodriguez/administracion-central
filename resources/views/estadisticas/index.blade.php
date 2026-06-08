@@ -3,8 +3,18 @@
 @section('title', 'Estadísticas')
 
 @section('content')
+
+@php $esCapitan = auth()->user()->esCapitanCia(); @endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-trophy me-2"></i>Estadísticas de Maquinistas</h4>
+    <h4 class="mb-0">
+        <i class="bi bi-trophy me-2"></i>Estadísticas de Maquinistas
+        @if($esCapitan)
+            <span class="text-muted fs-6 fw-normal ms-2">
+                — {{ auth()->user()->voluntario?->compania->nombre }}
+            </span>
+        @endif
+    </h4>
 </div>
 
 {{-- Filtros --}}
@@ -14,6 +24,12 @@
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('estadisticas.index') }}">
+
+            {{-- Capitán: compañía fija como hidden --}}
+            @if($esCapitan)
+                <input type="hidden" name="compania_id" value="{{ $companiaIdCapitan }}">
+            @endif
+
             <div class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Año</label>
@@ -32,6 +48,7 @@
                         @endforeach
                     </select>
                 </div>
+                @if(!$esCapitan)
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Compañía <span class="text-muted small">(opcional)</span></label>
                     <select name="compania_id" class="form-select">
@@ -43,15 +60,16 @@
                         @endforeach
                     </select>
                 </div>
+                @endif
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-danger flex-grow-1">
                         <i class="bi bi-search me-1"></i>Buscar
                     </button>
-                    @if(request()->hasAny(['mes', 'compania_id']))
-                    <a href="{{ route('estadisticas.index') }}" class="btn btn-outline-secondary"
-                       title="Limpiar filtros">
-                        <i class="bi bi-x-lg"></i>
-                    </a>
+                    @if(!$esCapitan && request()->hasAny(['mes', 'compania_id']))
+                        <a href="{{ route('estadisticas.index') }}" class="btn btn-outline-secondary"
+                           title="Limpiar filtros">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
                     @endif
                 </div>
             </div>
@@ -65,7 +83,7 @@
     <strong>{{ $mes ? $meses[$mes] : 'Todo el año' }} {{ $anio }}</strong>
     @if($companiaId)
         — <strong>{{ $companias->find($companiaId)->nombre }}</strong>
-    @else
+    @elseif(!$esCapitan)
         — <strong>Todas las compañías</strong>
     @endif
 </div>
@@ -114,7 +132,7 @@
                 <tr>
                     <th width="50">#</th>
                     <th>Maquinista</th>
-                    <th>Compañía</th>
+                    @if(!$esCapitan)<th>Compañía</th>@endif
                     <th>Turnos</th>
                     <th>Total Horas</th>
                     <th>Promedio por turno</th>
@@ -123,11 +141,11 @@
             <tbody>
                 @foreach($rankingGlobal as $i => $item)
                 @php
-                    $h = intdiv($item['total_minutos'], 60);
-                    $m = $item['total_minutos'] % 60;
+                    $h      = intdiv($item['total_minutos'], 60);
+                    $m      = $item['total_minutos'] % 60;
                     $promMin = $item['total_turnos'] > 0 ? intdiv($item['total_minutos'], $item['total_turnos']) : 0;
-                    $promH = intdiv($promMin, 60);
-                    $promM = $promMin % 60;
+                    $promH   = intdiv($promMin, 60);
+                    $promM   = $promMin % 60;
                 @endphp
                 <tr>
                     <td>
@@ -138,7 +156,7 @@
                         @endif
                     </td>
                     <td class="fw-bold">{{ $item['nombre'] }}</td>
-                    <td>{{ $item['compania'] }}</td>
+                    @if(!$esCapitan)<td>{{ $item['compania'] }}</td>@endif
                     <td><span class="badge bg-primary">{{ $item['total_turnos'] }}</span></td>
                     <td><span class="badge bg-danger fs-6">{{ $h }}h {{ $m }}min</span></td>
                     <td><span class="badge bg-secondary">{{ $promH }}h {{ $promM }}min</span></td>
@@ -150,9 +168,8 @@
 </div>
 @endif
 
-{{-- Ranking por compañía --}}
-{{-- Ranking por compañía (solo si no se filtró por una compañía específica) --}}
-@if($rankingPorCompania->isNotEmpty() && !$companiaId)
+{{-- Ranking por compañía: solo para admin/comandante sin filtro de compañía --}}
+@if(!$esCapitan && $rankingPorCompania->isNotEmpty() && !$companiaId)
 <h5 class="mb-3 fw-bold"><i class="bi bi-building me-2"></i>Mejores por Compañía</h5>
 <div class="row g-4">
     @foreach($rankingPorCompania as $item)
@@ -199,7 +216,7 @@
 </div>
 @endif
 
-@if($rankingGlobal->isEmpty() && $rankingPorCompania->isEmpty())
+@if($rankingGlobal->isEmpty())
 <div class="alert alert-info mt-3">
     <i class="bi bi-info-circle me-2"></i>No hay datos para mostrar en este período.
 </div>

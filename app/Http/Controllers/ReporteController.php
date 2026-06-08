@@ -17,27 +17,47 @@ class ReporteController extends Controller
 {
     public function index(Request $request)
     {
+        $usuario    = auth()->user();
+        $esCapitan  = $usuario->esCapitanCia();
+        $companiaIdCapitan = $esCapitan ? $usuario->voluntario?->compania_id : null;
+
         $companias   = Compania::where('activa', true)->orderBy('numero')->get();
-        $voluntarios = Voluntario::with('compania')->where('activo', true)->orderBy('nombre')->get();
-        $cuarteleros = Cuartelero::with('compania')->where('activo', true)->orderBy('nombre')->get();
+
+        // Capitán: solo ve voluntarios y cuarteleros de su compañía
+        $voluntarios = Voluntario::with('compania')
+            ->where('activo', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
+            ->orderBy('nombre')
+            ->get();
+
+        $cuarteleros = Cuartelero::with('compania')
+            ->where('activo', true)
+            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
+            ->orderBy('nombre')
+            ->get();
 
         $turnos       = collect();
         $totalMinutos = 0;
         $tab          = $request->tab ?? 'compania';
 
         $meses = [
-            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo',
-            4 => 'Abril', 5 => 'Mayo', 6 => 'Junio',
-            7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre',
+            1 => 'Enero',    2 => 'Febrero',   3 => 'Marzo',
+            4 => 'Abril',    5 => 'Mayo',       6 => 'Junio',
+            7 => 'Julio',    8 => 'Agosto',     9 => 'Septiembre',
             10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
 
         $anios = range(now()->year, 2025);
 
+        // Para el capitán, forzar siempre compania_id a la suya en tab=compania
+        $companiaIdFiltro = $esCapitan
+            ? $companiaIdCapitan
+            : $request->compania_id;
+
         // Reporte por compañía (maquinistas)
-        if ($tab === 'compania' && $request->filled('compania_id')) {
+        if ($tab === 'compania' && ($request->filled('compania_id') || $esCapitan) && $request->filled('anio')) {
             $query = RegistroTurno::with(['voluntario.compania', 'unidades'])
-                ->whereHas('voluntario', fn($q) => $q->where('compania_id', $request->compania_id))
+                ->whereHas('voluntario', fn($q) => $q->where('compania_id', $companiaIdFiltro))
                 ->whereNotNull('salida_at');
 
             if ($request->filled('mes') && $request->filled('anio')) {
@@ -57,6 +77,11 @@ class ReporteController extends Controller
                 ->where('voluntario_id', $request->voluntario_id)
                 ->whereNotNull('salida_at');
 
+            // Capitán: validar que el voluntario sea de su compañía
+            if ($esCapitan) {
+                $query->whereHas('voluntario', fn($q) => $q->where('compania_id', $companiaIdCapitan));
+            }
+
             if ($request->filled('desde') && $request->filled('hasta')) {
                 $query->whereDate('entrada_at', '>=', $request->desde)
                       ->whereDate('entrada_at', '<=', $request->hasta);
@@ -66,11 +91,15 @@ class ReporteController extends Controller
             $totalMinutos = $turnos->sum('total_minutos');
         }
 
-        // Reporte por cuartelero
+        // Reporte por cuartelero (capitán también puede ver los de su compañía)
         if ($tab === 'cuartelero' && $request->filled('cuartelero_id')) {
             $query = RegistroTurnoCuartelero::with(['cuartelero.compania', 'unidades'])
                 ->where('cuartelero_id', $request->cuartelero_id)
                 ->whereNotNull('salida_at');
+
+            if ($esCapitan) {
+                $query->whereHas('cuartelero', fn($q) => $q->where('compania_id', $companiaIdCapitan));
+            }
 
             if ($request->filled('desde') && $request->filled('hasta')) {
                 $query->whereDate('entrada_at', '>=', $request->desde)
@@ -83,7 +112,8 @@ class ReporteController extends Controller
 
         return view('reportes.index', compact(
             'companias', 'voluntarios', 'cuarteleros', 'turnos',
-            'totalMinutos', 'anios', 'meses', 'tab'
+            'totalMinutos', 'anios', 'meses', 'tab',
+            'esCapitan', 'companiaIdCapitan'
         ));
     }
 
@@ -140,6 +170,7 @@ class ReporteController extends Controller
             $filename
         );
     }
+
     public function combustible(Request $request)
     {
         $companias = Compania::where('activa', true)->orderBy('numero')->get();
@@ -152,33 +183,23 @@ class ReporteController extends Controller
             10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
 
-        $anio      = $request->anio ?? now()->year;
-        $mes       = $request->mes;
+        $anio       = $request->anio ?? now()->year;
+        $mes        = $request->mes;
         $companiaId = $request->compania_id;
 
-        // Query base
         $query = \App\Models\VoucherCombustible::with(['unidad.compania'])
             ->whereYear('fecha_carga', $anio);
 
-        if ($mes) {
-            $query->whereMonth('fecha_carga', $mes);
-        }
-
-        if ($companiaId) {
-            $query->whereHas('unidad', fn($q) => $q->where('compania_id', $companiaId));
-        }
+        if ($mes) $query->whereMonth('fecha_carga', $mes);
+        if ($companiaId) $query->whereHas('unidad', fn($q) => $q->where('compania_id', $companiaId));
 
         $vouchers = $query->orderBy('fecha_carga', 'asc')->get();
 
-        // ── Resumen ejecutivo ──────────────────────────────────────────
-        $totalGasto   = $vouchers->sum('total');
-        $totalLitros  = $vouchers->sum('litros');
-        $totalVouchers = $vouchers->count();
-        $precioPromedio = $totalLitros > 0
-            ? round($totalGasto / $totalLitros)
-            : 0;
+        $totalGasto     = $vouchers->sum('total');
+        $totalLitros    = $vouchers->sum('litros');
+        $totalVouchers  = $vouchers->count();
+        $precioPromedio = $totalLitros > 0 ? round($totalGasto / $totalLitros) : 0;
 
-        // Gasto por mes (para gráfico evolución)
         $gastoPorMes = $vouchers->groupBy(fn($v) => $v->fecha_carga->month)
             ->map(fn($group) => [
                 'total'  => $group->sum('total'),
@@ -186,15 +207,13 @@ class ReporteController extends Controller
                 'count'  => $group->count(),
             ]);
 
-        // Gasto por compañía
         $gastoPorCompania = $vouchers->groupBy(fn($v) => $v->unidad->compania->nombre)
             ->map(fn($group) => [
-                'total'   => $group->sum('total'),
-                'litros'  => $group->sum('litros'),
-                'count'   => $group->count(),
+                'total'  => $group->sum('total'),
+                'litros' => $group->sum('litros'),
+                'count'  => $group->count(),
             ])->sortByDesc('total');
 
-        // Ranking unidades más costosas
         $rankingUnidades = $vouchers->groupBy(fn($v) => $v->unidad->nombre)
             ->map(fn($group) => [
                 'unidad'   => $group->first()->unidad->nombre,
@@ -204,7 +223,6 @@ class ReporteController extends Controller
                 'count'    => $group->count(),
             ])->sortByDesc('total')->take(10);
 
-        // Evolución precio promedio por mes
         $precioPorMes = $vouchers->groupBy(fn($v) => $v->fecha_carga->month)
             ->map(fn($group) => $group->sum('litros') > 0
                 ? round($group->sum('total') / $group->sum('litros'))
@@ -231,31 +249,20 @@ class ReporteController extends Controller
             10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
 
-        $anio      = $request->anio ?? now()->year;
-        $mes       = $request->mes ?? null;
+        $anio       = $request->anio ?? now()->year;
+        $mes        = $request->mes ?? null;
         $companiaId = $request->compania_id ?? null;
 
-        // ── Query base de guardias cerradas ──────────────────────────
         $queryBase = \App\Models\GuardiaNocturna::where('estado', 'cerrada')
             ->whereYear('fecha', $anio);
-
-        if ($mes) {
-            $queryBase->whereMonth('fecha', $mes);
-        }
-
+        if ($mes) $queryBase->whereMonth('fecha', $mes);
         $guardiaIds = $queryBase->pluck('id');
 
-        // ── Query base de companias ───────────────────────────────────
         $queryCompanias = \App\Models\GuardiaNocturnaCompania::whereIn('guardia_nocturna_id', $guardiaIds)
             ->where('sin_reporte', false);
-
-        if ($companiaId) {
-            $queryCompanias->where('compania_id', $companiaId);
-        }
-
+        if ($companiaId) $queryCompanias->where('compania_id', $companiaId);
         $gnCompaniaIds = $queryCompanias->pluck('id');
 
-        // ── 1. Ranking asistencia voluntarios ────────────────────────
         $rankingAsistencia = \App\Models\GuardiaNocturnaVoluntario::whereIn('guardia_nocturna_compania_id', $gnCompaniaIds)
             ->with(['voluntario.compania', 'guardiaCompania.compania'])
             ->get()
@@ -265,11 +272,8 @@ class ReporteController extends Controller
                 'compania' => $regs->first()->voluntario->compania->nombre ?? '—',
                 'total'    => $regs->count(),
             ])
-            ->sortByDesc('total')
-            ->take(20)
-            ->values();
+            ->sortByDesc('total')->take(20)->values();
 
-        // ── 2. Oficiales más frecuentes a cargo ───────────────────────
         $rankingOficiales = \App\Models\GuardiaNocturnaCompania::whereIn('id', $gnCompaniaIds)
             ->whereNotNull('oficial_a_cargo_id')
             ->with(['oficialACargo', 'compania'])
@@ -280,51 +284,38 @@ class ReporteController extends Controller
                 'compania' => $regs->first()->compania->nombre ?? '—',
                 'total'    => $regs->count(),
             ])
-            ->sortByDesc('total')
-            ->take(20)
-            ->values();
+            ->sortByDesc('total')->take(20)->values();
 
-        // ── 3. Resumen por compañía ───────────────────────────────────
         $resumenCompanias = \App\Models\GuardiaNocturnaCompania::whereIn('guardia_nocturna_id', $guardiaIds)
-            ->with('compania')
-            ->get()
+            ->with('compania')->get()
             ->groupBy('compania_id')
             ->map(fn($regs) => [
-                'compania'         => $regs->first()->compania->nombre ?? '—',
-                'numero'           => $regs->first()->compania->numero ?? '—',
-                'total_guardias'   => $regs->count(),
-                'sin_reporte'      => $regs->where('sin_reporte', true)->count(),
-                'con_reporte'      => $regs->where('sin_reporte', false)->count(),
-                'promedio_vol'     => round(
+                'compania'       => $regs->first()->compania->nombre ?? '—',
+                'numero'         => $regs->first()->compania->numero ?? '—',
+                'total_guardias' => $regs->count(),
+                'sin_reporte'    => $regs->where('sin_reporte', true)->count(),
+                'con_reporte'    => $regs->where('sin_reporte', false)->count(),
+                'promedio_vol'   => round(
                     $regs->where('sin_reporte', false)->map(
                         fn($r) => $r->voluntarios()->count()
                     )->avg() ?? 0, 1
                 ),
-            ])
-            ->sortBy('numero')
-            ->values();
+            ])->sortBy('numero')->values();
 
-        // ── 4. Maquinistas más frecuentes en unidades ─────────────────
         $rankingMaquinistas = \App\Models\GuardiaNocturnaUnidad::whereIn('guardia_nocturna_compania_id', $gnCompaniaIds)
             ->whereNotNull('maquinista_id')
-            ->with(['maquinista.compania', 'unidad'])
-            ->get()
+            ->with(['maquinista.compania', 'unidad'])->get()
             ->groupBy('maquinista_id')
             ->map(fn($regs) => [
                 'nombre'   => $regs->first()->maquinista->nombre ?? '—',
                 'compania' => $regs->first()->maquinista->compania->nombre ?? '—',
                 'total'    => $regs->count(),
                 'unidades' => $regs->pluck('unidad.nombre')->unique()->implode(', '),
-            ])
-            ->sortByDesc('total')
-            ->take(20)
-            ->values();
+            ])->sortByDesc('total')->take(20)->values();
 
-        // ── 5. Evolución mensual ──────────────────────────────────────
         $evolucionMensual = \App\Models\GuardiaNocturna::where('estado', 'cerrada')
             ->whereYear('fecha', $anio)
-            ->with(['companias.voluntarios'])
-            ->get()
+            ->with(['companias.voluntarios'])->get()
             ->groupBy(fn($g) => $g->fecha->month)
             ->map(fn($guardias) => [
                 'promedio_vol' => round(
@@ -335,9 +326,7 @@ class ReporteController extends Controller
             ]);
 
         foreach (range(1, 12) as $m) {
-            if (!isset($evolucionMensual[$m])) {
-                $evolucionMensual[$m] = ['promedio_vol' => 0];
-            }
+            if (!isset($evolucionMensual[$m])) $evolucionMensual[$m] = ['promedio_vol' => 0];
         }
         $evolucionMensual = collect($evolucionMensual)->sortKeys();
 
@@ -352,7 +341,7 @@ class ReporteController extends Controller
         ->orderByDesc('fecha')
         ->paginate(20)
         ->withQueryString();
-        
+
         return view('reportes.guardias_nocturnas', compact(
             'companias', 'anios', 'meses',
             'anio', 'mes', 'companiaId',

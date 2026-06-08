@@ -3,14 +3,27 @@
 @section('title', 'Unidades')
 
 @section('content')
+
+@php $esCapitan = auth()->user()->esCapitanCia(); @endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-truck-front me-2"></i>Unidades</h4>
-    <a href="{{ route('unidades.create') }}" class="btn btn-danger">
-        <i class="bi bi-plus-lg me-1"></i>Nueva Unidad
-    </a>
+    <h4 class="mb-0">
+        <i class="bi bi-truck-front me-2"></i>Unidades
+        @if($esCapitan)
+            <span class="text-muted fs-6 fw-normal ms-2">
+                — {{ auth()->user()->voluntario?->compania->nombre }}
+            </span>
+        @endif
+    </h4>
+    @if(!$esCapitan)
+        <a href="{{ route('unidades.create') }}" class="btn btn-danger">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Unidad
+        </a>
+    @endif
 </div>
 
-{{-- Filtro por compañía --}}
+{{-- Filtro por compañía — solo admin/comandante --}}
+@if(!$esCapitan)
 <div class="card mb-4">
     <div class="card-body py-2">
         <form method="GET" action="{{ route('unidades.index') }}" class="d-flex align-items-center gap-3">
@@ -32,6 +45,11 @@
         </form>
     </div>
 </div>
+@else
+<div class="mb-3">
+    <span class="text-muted small">{{ $unidades->count() }} unidad(es)</span>
+</div>
+@endif
 
 <div class="card">
     <div class="card-body p-0">
@@ -66,13 +84,15 @@
                         <a href="{{ route('unidades.edit', $unidad) }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-pencil"></i>
                         </a>
-                        <form action="{{ route('unidades.destroy', $unidad) }}" method="POST" class="d-inline"
-                              onsubmit="return confirm('¿Eliminar esta unidad?')">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
+                        @if(!$esCapitan)
+                            <form action="{{ route('unidades.destroy', $unidad) }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('¿Eliminar esta unidad?')">
+                                @csrf @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
                 @empty

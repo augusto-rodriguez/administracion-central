@@ -14,24 +14,36 @@ class VoluntarioController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Voluntario::with(['compania', 'roles', 'cargosActivos.cargo', 'unidadesAutorizadas']);
+        $usuario = auth()->user();
+        $query   = Voluntario::with(['compania', 'roles', 'cargosActivos.cargo', 'unidadesAutorizadas']);
 
-        if ($request->filled('compania_id')) {
-            $query->where('compania_id', $request->compania_id);
+        // Capitán de Cía: solo ve los voluntarios de su propia compañía, sin opción de cambiar el filtro
+        if ($usuario->esCapitanCia()) {
+            $companiaId = $usuario->voluntario?->compania_id;
+            $query->where('compania_id', $companiaId);
+        } else {
+            // Admin / Comandante: pueden filtrar por compañía libremente
+            if ($request->filled('compania_id')) {
+                $query->where('compania_id', $request->compania_id);
+            }
         }
+
         if ($request->filled('rol')) {
             $query->whereHas('roles', fn($q) => $q->where('rol', $request->rol)->where('activo', true));
         }
 
         $voluntarios = $query->orderBy('nombre')->get();
-        $companias = Compania::where('activa', true)->where('numero', '!=', 0)->orderBy('numero')->get();
+        $companias   = Compania::where('activa', true)->where('numero', '!=', 0)->orderBy('numero')->get();
 
         return view('voluntarios.index', compact('voluntarios', 'companias'));
     }
 
     public function create()
     {
-        $companias        = Compania::where('activa', true)->orderBy('numero')->get();
+        $usuario   = auth()->user();
+        $companias = $usuario->esCapitanCia()
+            ? Compania::where('id', $usuario->voluntario?->compania_id)->get()
+            : Compania::where('activa', true)->orderBy('numero')->get();
         $rolesDisponibles = ['maquinista', 'oficial'];
 
         $cargosCompania  = Cargo::where('tipo', 'compania')->where('activo', true)->orderBy('orden')->get();
@@ -156,7 +168,14 @@ class VoluntarioController extends Controller
 
     public function edit(Voluntario $voluntario)
     {
-        $companias        = Compania::where('activa', true)->orderBy('numero')->get();
+        $usuario   = auth()->user();
+        // Capitán: solo puede editar voluntarios de su propia compañía
+        if ($usuario->esCapitanCia() && $voluntario->compania_id !== $usuario->voluntario?->compania_id) {
+            abort(403);
+        }
+        $companias = $usuario->esCapitanCia()
+            ? Compania::where('id', $usuario->voluntario?->compania_id)->get()
+            : Compania::where('activa', true)->orderBy('numero')->get();
         $rolesDisponibles = ['maquinista', 'oficial'];
         $voluntario->load(['roles', 'cargosActivos.cargo']);
 

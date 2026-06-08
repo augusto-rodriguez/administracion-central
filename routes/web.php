@@ -38,8 +38,9 @@ Route::middleware(['rol'])->group(function () {
     Route::get('estadisticas',                  [App\Http\Controllers\EstadisticaController::class, 'index'])         ->name('estadisticas.index');
     Route::get('guardias-nocturnas/{guardia}/pdf', [App\Http\Controllers\GuardiaNocturnaController::class, 'exportarPdf'])->name('guardias-nocturnas.pdf');
     Route::get('libro-novedades/{libroNovedade}/pdf', [App\Http\Controllers\LibroNovedadesController::class, 'exportarPdf'])->name('libro-novedades.pdf');
+
     // ─────────────────────────────────────────────────────────────────
-    // OPERACIONES (solo operadores — excluye admin y comandante)
+    // OPERACIONES (operadores + admin)
     // ─────────────────────────────────────────────────────────────────
     Route::middleware('rol:operador,admin')->group(function () {
 
@@ -107,12 +108,9 @@ Route::middleware(['rol'])->group(function () {
     });
 
     // ─────────────────────────────────────────────────────────────────
-    // ADMIN Y COMANDANTE
+    // ADMIN, COMANDANTE Y CAPITÁN CÍA
     // ─────────────────────────────────────────────────────────────────
-    Route::middleware('rol:admin,comandante')->group(function () {
-
-        Route::get('reportes/combustible',        [App\Http\Controllers\ReporteController::class, 'combustible'])        ->name('reportes.combustible');
-        Route::get('reportes/guardias-nocturnas', [App\Http\Controllers\ReporteController::class, 'guardiasNocturnas'])  ->name('reportes.guardias-nocturnas');
+    Route::middleware('rol:admin,comandante,capitan_cia')->group(function () {
 
         Route::resource('voluntarios', App\Http\Controllers\VoluntarioController::class);
         Route::post('voluntarios/{voluntario}/autorizar-unidad',   [App\Http\Controllers\VoluntarioController::class, 'autorizarUnidad'])  ->name('voluntarios.autorizar-unidad');
@@ -121,6 +119,16 @@ Route::middleware(['rol'])->group(function () {
 
         Route::resource('unidades', App\Http\Controllers\UnidadController::class)
             ->parameters(['unidades' => 'unidad']);
+
+    });
+
+    // ─────────────────────────────────────────────────────────────────
+    // ADMIN Y COMANDANTE
+    // ─────────────────────────────────────────────────────────────────
+    Route::middleware('rol:admin,comandante')->group(function () {
+
+        Route::get('reportes/combustible',        [App\Http\Controllers\ReporteController::class, 'combustible'])        ->name('reportes.combustible');
+        Route::get('reportes/guardias-nocturnas', [App\Http\Controllers\ReporteController::class, 'guardiasNocturnas'])  ->name('reportes.guardias-nocturnas');
 
         Route::resource('claves-salida', App\Http\Controllers\ClaveSalidaController::class)
             ->only(['index', 'create', 'store', 'edit', 'update']);
@@ -139,7 +147,7 @@ Route::middleware(['rol'])->group(function () {
     Route::middleware('rol:admin')->group(function () {
         Route::resource('companias', App\Http\Controllers\CompaniaController::class);
         Route::resource('usuarios', App\Http\Controllers\UsuarioController::class)
-            ->only(['index', 'create', 'store', 'edit', 'update']);
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     });
 
 });

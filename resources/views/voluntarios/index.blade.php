@@ -2,11 +2,22 @@
 @section('title', 'Voluntarios')
 @section('content')
 
+@php $esCapitan = auth()->user()->esCapitanCia(); @endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-people me-2"></i>Voluntarios</h4>
-    <a href="{{ route('voluntarios.create') }}" class="btn btn-danger">
-        <i class="bi bi-plus-lg me-1"></i>Nuevo Voluntario
-    </a>
+    <h4 class="mb-0">
+        <i class="bi bi-people me-2"></i>Voluntarios
+        @if($esCapitan)
+            <span class="text-muted fs-6 fw-normal ms-2">
+                — {{ auth()->user()->voluntario?->compania->nombre }}
+            </span>
+        @endif
+    </h4>
+    @if(!$esCapitan)
+        <a href="{{ route('voluntarios.create') }}" class="btn btn-danger">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Voluntario
+        </a>
+    @endif
 </div>
 
 {{-- Filtros --}}
@@ -19,18 +30,21 @@
                     <input type="text" id="buscadorNombre" class="form-control"
                            placeholder="Escribe un nombre...">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Compañía</label>
-                    <select name="compania_id" class="form-select">
-                        <option value="">Todas</option>
-                        @foreach($companias as $compania)
-                            <option value="{{ $compania->id }}"
-                                    {{ request('compania_id') == $compania->id ? 'selected' : '' }}>
-                                {{ $compania->numero }} - {{ $compania->nombre }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                {{-- El filtro de compañía solo aplica a admin/comandante --}}
+                @if(!$esCapitan)
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Compañía</label>
+                        <select name="compania_id" class="form-select">
+                            <option value="">Todas</option>
+                            @foreach($companias as $compania)
+                                <option value="{{ $compania->id }}"
+                                        {{ request('compania_id') == $compania->id ? 'selected' : '' }}>
+                                    {{ $compania->numero }} - {{ $compania->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Rol</label>
                     <select name="rol" class="form-select">

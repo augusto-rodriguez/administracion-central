@@ -44,6 +44,8 @@
                                     data-email="{{ $voluntario->email ?? '' }}"
                                     data-es-comandante="{{ $esComandante ? '1' : '0' }}"
                                     data-rango="{{ $rangoComandante ?? '' }}"
+                                    data-compania-id="{{ $voluntario->compania_id }}"
+                                    data-compania-nombre="{{ $voluntario->compania->nombre }}"
                                     {{ old('voluntario_id') == $voluntario->id ? 'selected' : '' }}>
                                 {{ $voluntario->nombre }} — {{ $voluntario->compania->nombre }}
                                 @if($esComandante)
@@ -56,9 +58,14 @@
                 </div>
             </div>
 
+            {{-- Alerta capitán duplicado --}}
+            <div id="alertaCapitan" class="alert alert-danger gap-2 align-items-center mb-4 d-none">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <div id="alertaCapitanTexto"></div>
+            </div>
+
             {{-- Alerta comandante detectado --}}
-            <div id="alertaComandante" class="alert alert-success d-flex gap-2 align-items-center mb-4"
-                 style="display:none !important;">
+            <div id="alertaComandante" class="alert alert-success gap-2 align-items-center mb-4 d-none">
                 <i class="bi bi-shield-fill-check fs-5"></i>
                 <div id="alertaComandanteTexto"></div>
             </div>
@@ -95,8 +102,9 @@
                     <label class="form-label fw-bold">Rol <span class="text-danger">*</span></label>
                     <select id="selectRol" name="rol"
                             class="form-select @error('rol') is-invalid @enderror" required>
-                        <option value="operador"   {{ old('rol') == 'operador'   ? 'selected' : '' }}>Operador</option>
-                        <option value="comandante" {{ old('rol') == 'comandante' ? 'selected' : '' }}>Comandante</option>
+                        <option value="operador"    {{ old('rol') == 'operador'    ? 'selected' : '' }}>Operador</option>
+                        <option value="capitan_cia" {{ old('rol') == 'capitan_cia' ? 'selected' : '' }}>Capitán Cía</option>
+                        <option value="comandante"  {{ old('rol') == 'comandante'  ? 'selected' : '' }}>Comandante</option>
                     </select>
                     @error('rol') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
@@ -115,12 +123,53 @@
 <script>
 const ordinal = { '1': '1er', '2': '2do', '3': '3er' };
 
+// Mapa compania_id → nombre del capitán actual (viene del servidor)
+const capitanesPorCompania = @json(
+    \App\Models\User::where('rol', 'capitan_cia')
+        ->whereNotNull('voluntario_id')
+        ->with('voluntario')
+        ->get()
+        ->keyBy(fn($u) => $u->voluntario->compania_id)
+        ->map(fn($u) => $u->voluntario->nombre)
+);
+
+function verificarCapitanDuplicado(companiaId) {
+    const alerta    = document.getElementById('alertaCapitan');
+    const alertaTxt = document.getElementById('alertaCapitanTexto');
+    const btnSubmit = document.querySelector('button[type="submit"]');
+    const rol       = document.getElementById('selectRol').value;
+
+    if (rol === 'capitan_cia' && companiaId && capitanesPorCompania[companiaId]) {
+        alertaTxt.innerHTML = `
+            <strong>Capitán ya asignado.</strong>
+            La compañía de este voluntario ya tiene un Capitán de Cía:
+            <strong>${capitanesPorCompania[companiaId]}</strong>.
+            Solo puede haber un Capitán por compañía.
+        `;
+        alerta.classList.remove('d-none');
+        alerta.classList.add('d-flex');
+        btnSubmit.disabled = true;
+    } else {
+        alerta.classList.add('d-none');
+        alerta.classList.remove('d-flex');
+        btnSubmit.disabled = false;
+    }
+}
+
+document.getElementById('selectRol').addEventListener('change', function () {
+    const selected    = document.getElementById('selectVoluntario').options[
+                            document.getElementById('selectVoluntario').selectedIndex];
+    const companiaId  = selected.dataset.companiaId ?? '';
+    verificarCapitanDuplicado(companiaId);
+});
+
 document.getElementById('selectVoluntario').addEventListener('change', function () {
     const selected     = this.options[this.selectedIndex];
     const nombre       = selected.dataset.nombre       ?? '';
     const email        = selected.dataset.email        ?? '';
     const esComandante = selected.dataset.esComandante === '1';
     const rango        = selected.dataset.rango        ?? '';
+    const companiaId   = selected.dataset.companiaId   ?? '';
 
     const alerta    = document.getElementById('alertaComandante');
     const alertaTxt = document.getElementById('alertaComandanteTexto');
@@ -131,11 +180,9 @@ document.getElementById('selectVoluntario').addEventListener('change', function 
         if (email) document.getElementById('inputEmail').value = email;
 
         if (esComandante) {
-            // Seleccionar rol comandante automáticamente
             selectRol.value = 'comandante';
             selectRol.setAttribute('readonly', true);
 
-            // Mostrar alerta
             const ord = ordinal[rango] ?? rango + '°';
             alertaTxt.innerHTML = `
                 <strong>Comandante detectado.</strong>
@@ -143,18 +190,33 @@ document.getElementById('selectVoluntario').addEventListener('change', function 
                 <strong>${ord} Comandante</strong>.
                 Se ha asignado automáticamente el rol de Comandante.
             `;
-            alerta.style.removeProperty('display');
+            alerta.classList.remove('d-none');
+            alerta.classList.add('d-flex');
         } else {
             selectRol.value = 'operador';
             selectRol.removeAttribute('readonly');
-            alerta.style.display = 'none';
+            alerta.classList.add('d-none');
+            alerta.classList.remove('d-flex');
         }
     } else {
         document.getElementById('inputNombre').value = '';
         document.getElementById('inputEmail').value  = '';
         selectRol.value = 'operador';
         selectRol.removeAttribute('readonly');
-        alerta.style.display = 'none';
+        alerta.classList.add('d-none');
+        alerta.classList.remove('d-flex');
+    }
+
+    // Verificar conflicto de capitán con el nuevo voluntario seleccionado
+    verificarCapitanDuplicado(companiaId);
+});
+
+// Al cargar la página, si hay un voluntario preseleccionado (old() tras error de validación)
+// disparar la lógica manualmente para que las alertas muestren contenido correcto
+document.addEventListener('DOMContentLoaded', function () {
+    const selectVoluntario = document.getElementById('selectVoluntario');
+    if (selectVoluntario.value) {
+        selectVoluntario.dispatchEvent(new Event('change'));
     }
 });
 </script>

@@ -38,8 +38,9 @@
                 <div class="col-md-2">
                     <label class="form-label fw-bold">Rol <span class="text-danger">*</span></label>
                     <select name="rol" class="form-select" required {{ $usuario->rol == 'admin' ? 'disabled' : '' }}>
-                        <option value="operador"   {{ $usuario->rol == 'operador'   ? 'selected' : '' }}>Operador</option>
-                        <option value="comandante" {{ $usuario->rol == 'comandante' ? 'selected' : '' }}>Comandante</option>
+                        <option value="operador"    {{ $usuario->rol == 'operador'    ? 'selected' : '' }}>Operador</option>
+                        <option value="capitan_cia" {{ $usuario->rol == 'capitan_cia' ? 'selected' : '' }}>Capitán Cía</option>
+                        <option value="comandante"  {{ $usuario->rol == 'comandante'  ? 'selected' : '' }}>Comandante</option>
                         @if($usuario->rol == 'admin')
                             <option value="admin" selected>Administrador</option>
                         @endif

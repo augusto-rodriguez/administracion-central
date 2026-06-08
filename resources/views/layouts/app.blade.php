@@ -45,12 +45,16 @@
             <i class="bi bi-speedometer2 me-2"></i> Inicio
         </a>
 
-        {{-- Comandante + Admin --}}
-        @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
+        {{-- Comandante + Admin + Capitán Cía --}}
+        @if(auth()->user()->esComandante() || auth()->user()->esAdmin() || auth()->user()->esCapitanCia())
             <a href="{{ route('voluntarios.index') }}"
                class="nav-link {{ request()->is('voluntarios*') ? 'active' : '' }}">
                 <i class="bi bi-people me-2"></i> Voluntarios
             </a>
+        @endif
+
+        {{-- Comandante + Admin (no Capitán Cía) --}}
+        @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
             <a href="{{ route('cuarteleros.index') }}"
                class="nav-link {{ request()->is('cuarteleros*') ? 'active' : '' }}">
                 <i class="bi bi-person-gear me-2"></i> Cuarteleros
@@ -59,10 +63,18 @@
                 class="nav-link {{ request()->is('cargos*') ? 'active' : '' }}">
                 <i class="bi bi-award me-2"></i> Cargos
             </a>
+        @endif
+
+        {{-- Comandante + Admin + Capitán Cía --}}
+        @if(auth()->user()->esComandante() || auth()->user()->esAdmin() || auth()->user()->esCapitanCia())
             <a href="{{ route('unidades.index') }}"
                class="nav-link {{ request()->is('unidades*') ? 'active' : '' }}">
                 <i class="bi bi-truck-front me-2"></i> Unidades
             </a>
+        @endif
+
+        {{-- Comandante + Admin (no Capitán Cía) --}}
+        @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
             <a href="{{ route('claves-salida.index') }}"
                class="nav-link {{ request()->is('claves-salida*') ? 'active' : '' }}">
                 <i class="bi bi-tag me-2"></i> Claves de Salida
@@ -78,7 +90,7 @@
         @endif
 
         {{-- ── OPERACIONES (operadores + admin) ─────────────────── --}}
-        @if(!auth()->user()->esComandante() || auth()->user()->esAdmin())
+        @if(!auth()->user()->esComandante() && !auth()->user()->esCapitanCia() || auth()->user()->esAdmin())
             <hr style="border-color:#2d2d44;margin:8px 16px;">
             <div style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
                 Operaciones
@@ -120,6 +132,7 @@
             Reportes
         </div>
 
+        {{-- Maquinistas y Salidas: todos los roles --}}
         <a href="{{ route('reportes.index') }}"
            class="nav-link ps-4 {{ request()->is('reportes') || request()->is('reportes?*') ? 'active' : '' }}">
             <i class="bi bi-person-badge me-2"></i> Maquinistas
@@ -129,14 +142,19 @@
             <i class="bi bi-arrow-up-right-circle me-2"></i> Salidas
         </a>
 
+        {{-- Reportes extendidos: Admin + Comandante + Capitán Cía --}}
+        @if(auth()->user()->esAdmin() || auth()->user()->esComandante() || auth()->user()->esCapitanCia())
+            <a href="{{ route('estadisticas.index') }}"
+                class="nav-link ps-4 {{ request()->is('estadisticas*') ? 'active' : '' }}">
+                <i class="bi bi-trophy me-2"></i> Estadísticas Maquinistas
+            </a>
+        @endif
+
+        {{-- Reportes solo Admin + Comandante --}}
         @if(auth()->user()->esAdmin() || auth()->user()->esComandante())
             <a href="{{ route('reportes.combustible') }}"
                 class="nav-link ps-4 {{ request()->is('reportes/combustible*') ? 'active' : '' }}">
                 <i class="bi bi-fuel-pump me-2"></i> Estadísticas Combustible
-            </a>
-            <a href="{{ route('estadisticas.index') }}"
-                class="nav-link ps-4 {{ request()->is('estadisticas*') ? 'active' : '' }}">
-                <i class="bi bi-trophy me-2"></i> Estadísticas Maquinistas
             </a>
             <a href="{{ route('reportes.guardias-nocturnas') }}"
                 class="nav-link ps-4 {{ request()->is('reportes/guardias-nocturnas*') ? 'active' : '' }}">
@@ -302,12 +320,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function(){
-        document.querySelectorAll('.show-toast').forEach(function(el){
-            new bootstrap.Toast(el, { delay: 4000 }).show();
-        });
-    });
-
     document.addEventListener("DOMContentLoaded", function(){
         document.querySelectorAll('.show-toast').forEach(function(el){
             new bootstrap.Toast(el, { delay: 4000 }).show();
