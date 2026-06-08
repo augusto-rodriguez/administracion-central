@@ -70,6 +70,7 @@ class VoluntarioController extends Controller
             'rut'               => 'nullable|string|unique:voluntarios,rut',
             'telefono'          => 'nullable|string|max:20',
             'email'             => 'nullable|email|max:255',
+            'clave_actual'      => 'nullable|string|max:5',
             'roles'             => 'nullable|array',
             'cargo_compania_id' => 'nullable|exists:cargos,id',
             'cargo_general_id'  => 'nullable|exists:cargos,id',
@@ -109,7 +110,7 @@ class VoluntarioController extends Controller
         }
 
         $voluntario = Voluntario::create($request->only(
-            'compania_id', 'nombre', 'rut', 'telefono', 'email'
+            'compania_id', 'nombre', 'rut', 'telefono', 'email', 'clave_actual'
         ));
 
         $roles = $request->roles ?? [];
@@ -199,6 +200,7 @@ class VoluntarioController extends Controller
             'rut'               => 'nullable|string|unique:voluntarios,rut,' . $voluntario->id,
             'telefono'          => 'nullable|string|max:20',
             'email'             => 'nullable|email|max:255',
+            'clave_actual'      => 'nullable|string|max:5',
             'roles'             => 'nullable|array',
             'activo'            => 'boolean',
             'cargo_compania_id' => 'nullable|exists:cargos,id',
@@ -241,7 +243,7 @@ class VoluntarioController extends Controller
         }
 
         $voluntario->update($request->only(
-            'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo'
+            'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo', 'clave_actual'
         ));
 
         $puedeAutorizarAntes = $voluntario->roles()

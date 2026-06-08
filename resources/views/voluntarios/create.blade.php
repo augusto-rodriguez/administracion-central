@@ -63,6 +63,16 @@
                            value="{{ old('email') }}" placeholder="correo@ejemplo.cl">
                 </div>
 
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Clave Actual</label>
+                    <input type="text" name="clave_actual" 
+                        class="form-control @error('clave_actual') is-invalid @enderror"
+                        value="{{ old('clave_actual') }}" 
+                        placeholder=""
+                        maxlength="5">
+                    @error('clave_actual') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
                 {{-- Roles --}}
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Roles</label>

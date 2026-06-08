@@ -9,7 +9,7 @@ class Voluntario extends Model
     protected $table = 'voluntarios';
 
     protected $fillable = [
-        'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo'
+        'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo', 'clave_actual'
     ];
 
     public function compania()

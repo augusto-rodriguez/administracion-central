@@ -44,8 +44,17 @@ class Boletin extends Model
         $texto .= "\nMAQUINISTAS EN SERVICIO:\n";
         foreach ($this->maquinistas as $m) {
             $unidades = $m->unidades_texto ?: $m->unidad->nombre;
-            $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$m->voluntario->nombre}\n");
+            if ($m->voluntario->clave_actual) {
+                $texto .= strtoupper("{$unidades} {$m->estado} {$m->voluntario->clave_actual}\n");
+            } else {
+                $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$m->voluntario->nombre}\n");
+            }
         }
+        // $texto .= "\nMAQUINISTAS EN SERVICIO:\n";
+        // foreach ($this->maquinistas as $m) {
+        //     $unidades = $m->unidades_texto ?: $m->unidad->nombre;
+        //     $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$m->voluntario->nombre}\n");
+        // }
 
         // Citaciones
         $citaciones = Citacion::with('compania')

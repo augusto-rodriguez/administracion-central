@@ -63,6 +63,16 @@
                 </div>
 
                 <div class="col-md-3">
+                    <label class="form-label fw-bold">Clave Actual</label>
+                    <input type="text" name="clave_actual"
+                        class="form-control @error('clave_actual') is-invalid @enderror"
+                        value="{{ old('clave_actual', $voluntario->clave_actual) }}"
+                        placeholder="Ej: "
+                        maxlength="5">
+                    @error('clave_actual') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="col-md-3">
                     <label class="form-label fw-bold">Estado</label>
                     <select name="activo" class="form-select">
                         <option value="1" {{ old('activo', $voluntario->activo) ? 'selected' : '' }}>Activo</option>
