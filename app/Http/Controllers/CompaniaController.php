@@ -9,7 +9,10 @@ class CompaniaController extends Controller
 {
     public function index()
     {
-        $companias = Compania::withCount(['voluntarios', 'unidades'])->get();
+        $companias = Compania::where('numero', '!=', 0)
+            ->withCount(['voluntarios', 'unidades'])
+            ->orderBy('numero')
+            ->get();
         return view('companias.index', compact('companias'));
     }
 

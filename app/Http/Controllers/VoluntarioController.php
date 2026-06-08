@@ -24,7 +24,7 @@ class VoluntarioController extends Controller
         }
 
         $voluntarios = $query->orderBy('nombre')->get();
-        $companias   = Compania::where('activa', true)->orderBy('numero')->get();
+        $companias = Compania::where('activa', true)->where('numero', '!=', 0)->orderBy('numero')->get();
 
         return view('voluntarios.index', compact('voluntarios', 'companias'));
     }
