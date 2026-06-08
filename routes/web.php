@@ -88,7 +88,7 @@ Route::middleware(['rol'])->group(function () {
             return redirect()->route('salidas.index');
         })->name('salidas.retornar-turno-cuartelero-cancelar');
         Route::post('salidas/retornar-turno-cuartelero', [App\Http\Controllers\SalidaUnidadController::class, 'retornarTurnoCuartelero'])->name('salidas.retornar-turno-cuartelero');
-        Route::resource('salidas', App\Http\Controllers\SalidaUnidadController::class)->only(['index', 'store', 'show']);
+        Route::resource('salidas', App\Http\Controllers\SalidaUnidadController::class)->only(['index', 'store', 'show','edit', 'update']);
         Route::post('salidas/{salida}/llegada', [App\Http\Controllers\SalidaUnidadController::class, 'registrarLlegada'])->name('salidas.llegada');
 
         // Turnos cuarteleros

@@ -62,4 +62,9 @@ class SalidaUnidad extends Model
         $mins    = $minutos % 60;
         return "{$horas}h {$mins}min";
     }
+
+    public function esEditable(): bool
+    {
+        return $this->salida_at->diffInHours(now()) < 12;
+    }
 }

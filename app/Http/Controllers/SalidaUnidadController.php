@@ -380,4 +380,75 @@ class SalidaUnidadController extends Controller
         return redirect()->route('salidas.index')
             ->with('success', 'Turno del cuartelero retomado con todas sus unidades.');
     }
+
+    public function edit(SalidaUnidad $salida)
+    {
+        abort_if(!$salida->esEditable(), 403, 'El período de edición de 12 horas ha expirado.');
+
+        $salida->load(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando']);
+
+        $claves   = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
+        $oficiales = Voluntario::with('compania')
+            ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
+                ->where('activo', true)
+                ->where('puede_autorizar_salidas', true))
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+        $voluntariosAlMando = Voluntario::with('compania')
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+
+        return view('salidas.edit', compact('salida', 'claves', 'oficiales', 'voluntariosAlMando'));
+    }
+
+    public function update(Request $request, SalidaUnidad $salida)
+    {
+        abort_if(!$salida->esEditable(), 403, 'El período de edición de 12 horas ha expirado.');
+
+        $request->validate([
+            'clave_salida_id'   => 'required|exists:claves_salida,id',
+            'direccion'         => 'required|string|max:255',
+            'oficial_id'        => 'nullable|exists:voluntarios,id',
+            'al_mando_id'       => 'required|exists:voluntarios,id',
+            'cantidad_personal' => 'nullable|integer|min:1',
+            'observaciones'     => 'nullable|string',
+            'salida_at'         => 'required|date|before_or_equal:now',
+        ]);
+
+        $clave = ClaveSalida::find($request->clave_salida_id);
+
+        if ($clave->tipo === 'administrativa' && !$request->oficial_id) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Las salidas administrativas requieren un oficial autorizante.');
+        }
+
+        // Verificar al mando no tiene otra salida activa (excepto esta misma)
+        $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
+            ->whereNull('llegada_at')
+            ->where('id', '!=', $salida->id)
+            ->first();
+
+        if ($salidaAlMando) {
+            $voluntario = Voluntario::find($request->al_mando_id);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa.");
+        }
+
+        $salida->update([
+            'clave_salida_id'   => $request->clave_salida_id,
+            'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
+            'al_mando_id'       => $request->al_mando_id,
+            'direccion'         => $request->direccion,
+            'cantidad_personal' => $request->cantidad_personal,
+            'salida_at'         => \Carbon\Carbon::parse($request->salida_at),
+            'observaciones'     => $request->observaciones,
+        ]);
+
+        return redirect()->route('salidas.index')
+            ->with('success', 'Salida actualizada correctamente.');
+    }
 }

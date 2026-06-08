@@ -266,9 +266,14 @@
 
 @if($totalEnServicio)
 <div class="card mb-4">
-    <div class="card-header bg-white fw-bold">
-        <i class="bi bi-activity text-danger me-2"></i>En Servicio Ahora
-        <span class="badge bg-danger ms-1">{{ $totalEnServicio }}</span>
+    <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <div>
+            <i class="bi bi-activity text-danger me-2"></i>En Servicio Ahora
+            <span class="badge bg-danger ms-1">{{ $totalEnServicio }}</span>
+        </div>
+        <span class="text-muted small fw-normal">
+            <i class="bi bi-info-circle me-1"></i>Puedes hacer click en el nombre de la unidad para quitarla del turno actual
+        </span>
     </div>
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
