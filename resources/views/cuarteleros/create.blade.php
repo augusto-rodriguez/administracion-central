@@ -39,20 +39,31 @@
                             class="form-select @error('compania_id') is-invalid @enderror" required>
                         <option value="">Seleccionar...</option>
                         @foreach($companias as $compania)
+                            @php $ocupada = in_array($compania->id, $companiasOcupadas); @endphp
                             <option value="{{ $compania->id }}"
-                                {{ old('compania_id') == $compania->id ? 'selected' : '' }}>
-                                {{ $compania->nombre }}
+                                {{ old('compania_id') == $compania->id ? 'selected' : '' }}
+                                {{ $ocupada ? 'disabled' : '' }}>
+                                {{ $compania->nombre }}{{ $ocupada ? ' (ya tiene cuartelero activo)' : '' }}
                             </option>
                         @endforeach
                     </select>
                     @error('compania_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Fecha de inicio <span class="text-danger">*</span></label>
+                    <input type="date" name="fecha_inicio"
+                           class="form-control @error('fecha_inicio') is-invalid @enderror"
+                           value="{{ old('fecha_inicio', date('Y-m-d')) }}" required>
+                    @error('fecha_inicio') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
             </div>
+
             <div class="alert alert-info mt-3">
                 <i class="bi bi-info-circle me-1"></i>
                 Al crear el cuartelero se autorizarán automáticamente todas las unidades activas de su compañía.
                 Puedes modificarlas desde el detalle del cuartelero.
             </div>
+
             <div class="mt-3">
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-save me-1"></i>Registrar Cuartelero

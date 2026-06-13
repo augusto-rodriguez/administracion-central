@@ -45,13 +45,14 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Estado</label>
-                    <select name="activo" class="form-select">
-                        <option value="1" {{ $cuartelero->activo ? 'selected' : '' }}>Activo</option>
-                        <option value="0" {{ !$cuartelero->activo ? 'selected' : '' }}>Inactivo</option>
-                    </select>
+                    <label class="form-label fw-bold">Fecha de inicio <span class="text-danger">*</span></label>
+                    <input type="date" name="fecha_inicio"
+                           class="form-control @error('fecha_inicio') is-invalid @enderror"
+                           value="{{ old('fecha_inicio', $cuartelero->fecha_inicio?->format('Y-m-d')) }}" required>
+                    @error('fecha_inicio') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             </div>
+
             <div class="mt-4">
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-save me-1"></i>Actualizar
