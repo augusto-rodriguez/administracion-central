@@ -21,6 +21,7 @@
                     <th>Teléfono</th>
                     <th>Voluntarios</th>
                     <th>Unidades</th>
+                    <th>Especialidades</th>
                     <th>Estado</th>
                     <th></th>
                 </tr>
@@ -34,6 +35,13 @@
                     <td>{{ $compania->telefono ?? '—' }}</td>
                     <td><span class="badge bg-success">{{ $compania->voluntarios_count }}</span></td>
                     <td><span class="badge bg-primary">{{ $compania->unidades_count }}</span></td>
+                    <td>
+                        @forelse($compania->especialidades as $esp)
+                            <span class="badge bg-info text-dark">{{ $esp->nombre }}</span>
+                        @empty
+                            <span class="text-muted">—</span>
+                        @endforelse
+                    </td>
                     <td>
                         @if($compania->activa)
                             <span class="badge bg-success">Activa</span>
@@ -56,7 +64,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No hay compañías registradas</td>
+                    <td colspan="9" class="text-center text-muted py-4">No hay compañías registradas</td>
                 </tr>
                 @endforelse
             </tbody>

@@ -29,4 +29,8 @@ class Compania extends Model
     {
         return $this->hasMany(Cuartelero::class);
     }
+    public function especialidades()
+    {
+        return $this->belongsToMany(Especialidad::class, 'compania_especialidad');
+    }
 }

@@ -44,7 +44,32 @@
                         <option value="0" {{ !$compania->activa ? 'selected' : '' }}>Inactiva</option>
                     </select>
                 </div>
+
+                {{-- Especialidades --}}
+                @if($especialidades->isNotEmpty())
+                <div class="col-12">
+                    <label class="form-label fw-bold">Especialidades</label>
+                    <div class="d-flex flex-wrap gap-3">
+                        @foreach($especialidades as $especialidad)
+                            @php
+                                $seleccionadas = old('especialidades', $compania->especialidades->pluck('id')->toArray());
+                            @endphp
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="especialidades[]"
+                                       value="{{ $especialidad->id }}"
+                                       id="esp_{{ $especialidad->id }}"
+                                       {{ in_array($especialidad->id, $seleccionadas) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="esp_{{ $especialidad->id }}">
+                                    {{ $especialidad->nombre }}
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
+
             <div class="mt-4">
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-save me-1"></i>Actualizar Compañía

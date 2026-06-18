@@ -37,7 +37,29 @@
                     <input type="text" name="telefono" class="form-control"
                            value="{{ old('telefono') }}" placeholder="Ej: +56 9 1234 5678">
                 </div>
+
+                {{-- Especialidades --}}
+                @if($especialidades->isNotEmpty())
+                <div class="col-12">
+                    <label class="form-label fw-bold">Especialidades</label>
+                    <div class="d-flex flex-wrap gap-3">
+                        @foreach($especialidades as $especialidad)
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="especialidades[]"
+                                       value="{{ $especialidad->id }}"
+                                       id="esp_{{ $especialidad->id }}"
+                                       {{ in_array($especialidad->id, old('especialidades', [])) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="esp_{{ $especialidad->id }}">
+                                    {{ $especialidad->nombre }}
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
+
             <div class="mt-4">
                 <button type="submit" class="btn btn-danger">
                     <i class="bi bi-save me-1"></i>Guardar Compañía
