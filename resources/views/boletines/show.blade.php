@@ -147,8 +147,7 @@
                             @elseif(str_starts_with($linea, 'CITACIONES') || str_starts_with($linea, 'GUARDIA') || str_starts_with($linea, 'FINALIZA'))
                                 @php $enSeccion = false; @endphp
                             @elseif($enSeccion && trim($linea))
-                                <p class="mb-1 ps-2 {{ in_array($seccionActual, ['maquinistas', 'fuera']) ? 'fw-bold' : '' }}"
-                                style="font-size: {{ $seccionActual === 'maquinistas' ? '0.92rem' : ($seccionActual === 'fuera' ? '0.92rem' : '0.82rem') }};">
+                                <p class="mb-1 ps-2 fw-bold" style="font-size: 0.92rem;">
                                     @if($seccionActual === 'turno')
                                         <i class="bi bi-person-fill text-secondary me-1"></i>
                                     @elseif($seccionActual === 'maquinistas')
