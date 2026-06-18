@@ -98,7 +98,6 @@
                 <i class="bi bi-info-circle me-1"></i>
                 La hora de puesta en servicio se registra automáticamente. Si necesita ajustar la fecha u hora de entrada, utilice el botón <i class="bi bi-clock-history"></i> al final de la fila.
             </p>
-            {{-- Campo oculto de hora — solo se envía si el operador lo ajustó --}}
             <input type="hidden" name="entrada_at" id="entradaAtMaquinista" value="">
             <div class="row g-3">
                 <div class="col-md-4">
@@ -129,7 +128,7 @@
                            placeholder="Opcional..." value="{{ old('observaciones') }}">
                 </div>
                 <div class="col-md-1 d-flex flex-column">
-                    <label class="form-label fw-bold" style="visibility:hidden">‎</label>
+                    <label class="form-label fw-bold" style="visibility:hidden">&#8204;</label>
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm"
                             id="btnAjusteHoraMaquinista"
@@ -140,7 +139,6 @@
                 </div>
             </div>
 
-            {{-- Panel ajuste hora (oculto por defecto) --}}
             <div id="panelHoraMaquinista" class="mt-3 p-3 border rounded bg-light" style="display:none">
                 <div class="d-flex align-items-end gap-3 flex-wrap">
                     <div>
@@ -180,7 +178,6 @@
                 <i class="bi bi-info-circle me-1"></i>
                 La hora de puesta en servicio se registra automáticamente. Si necesita ajustar la fecha u hora de entrada, utilice el botón <i class="bi bi-clock-history"></i> al final de la fila.
             </p>
-            {{-- Campo oculto de hora — solo se envía si el operador lo ajustó --}}
             <input type="hidden" name="entrada_at" id="entradaAtCuartelero" value="">
             <div class="row g-3">
                 <div class="col-md-4">
@@ -209,7 +206,7 @@
                     <input type="text" name="observaciones" class="form-control" placeholder="Opcional...">
                 </div>
                 <div class="col-md-1 d-flex flex-column">
-                    <label class="form-label fw-bold" style="visibility:hidden">‎</label>
+                    <label class="form-label fw-bold" style="visibility:hidden">&#8204;</label>
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm"
                             id="btnAjusteHoraCuartelero"
@@ -220,7 +217,6 @@
                 </div>
             </div>
 
-            {{-- Panel ajuste hora (oculto por defecto) --}}
             <div id="panelHoraCuartelero" class="mt-3 p-3 border rounded bg-light" style="display:none">
                 <div class="d-flex align-items-end gap-3 flex-wrap">
                     <div>
@@ -341,12 +337,15 @@
                     </td>
                     <td>{{ $turno->observaciones ?? '—' }}</td>
                     <td>
-                        <form action="{{ route('turnos.salida', $turno) }}" method="POST">
-                            @csrf
-                            <button class="btn btn-sm btn-danger" onclick="return confirm('¿Registrar salida?')">
-                                <i class="bi bi-box-arrow-right me-1"></i>Salida
-                            </button>
-                        </form>
+                        {{-- Botón Salida con confirmación de hora --}}
+                        <button type="button" class="btn btn-sm btn-danger btn-salida-turno"
+                                data-turno-id="{{ $turno->id }}"
+                                data-tipo="maquinista"
+                                data-action="{{ route('turnos.salida', $turno) }}"
+                                data-nombre="{{ $turno->voluntario->nombre }}"
+                                data-entrada="{{ $turno->entrada_at->format('d/m/Y H:i') }}">
+                            <i class="bi bi-box-arrow-right me-1"></i>Salida
+                        </button>
                     </td>
                 </tr>
                 @endforeach
@@ -402,12 +401,15 @@
                     </td>
                     <td>{{ $turno->observaciones ?? '—' }}</td>
                     <td>
-                        <form action="{{ route('cuarteleros.turnos.salida', $turno) }}" method="POST">
-                            @csrf
-                            <button class="btn btn-sm btn-primary" onclick="return confirm('¿Registrar salida?')">
-                                <i class="bi bi-box-arrow-right me-1"></i>Salida
-                            </button>
-                        </form>
+                        {{-- Botón Salida con confirmación de hora --}}
+                        <button type="button" class="btn btn-sm btn-primary btn-salida-turno"
+                                data-turno-id="{{ $turno->id }}"
+                                data-tipo="cuartelero"
+                                data-action="{{ route('cuarteleros.turnos.salida', $turno) }}"
+                                data-nombre="{{ $turno->cuartelero->nombre }}"
+                                data-entrada="{{ $turno->entrada_at->format('d/m/Y H:i') }}">
+                            <i class="bi bi-box-arrow-right me-1"></i>Salida
+                        </button>
                     </td>
                 </tr>
                 @endforeach
@@ -416,6 +418,42 @@
     </div>
 </div>
 @endif
+
+{{-- Modal único de confirmación de hora de salida --}}
+<div class="modal fade" id="modalConfirmarSalida" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-box-arrow-right me-2"></i>Registrar Salida
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1 small text-muted">Conductor:</p>
+                <p class="fw-bold mb-1" id="modalSalidaNombre">—</p>
+                <p class="mb-3 small text-muted">Entrada: <span id="modalSalidaEntrada">—</span></p>
+
+                <label class="form-label fw-bold small">Hora de salida</label>
+                <input type="time" id="modalInputHoraSalida" class="form-control mb-1">
+                <div class="text-muted small" id="modalHoraIndicador">
+                    <i class="bi bi-arrow-repeat me-1"></i>Hora actual
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarSalidaTurno">
+                    <i class="bi bi-check-lg me-1"></i>Confirmar salida
+                </button>
+            </div>
+            {{-- Formulario oculto que se envía al confirmar --}}
+            <form id="formSalidaTurno" method="POST" style="display:none">
+                @csrf
+                <input type="hidden" name="salida_at" id="salidaAtTurno">
+            </form>
+        </div>
+    </div>
+</div>
 
 {{-- Historial unificado --}}
 <div class="card">
@@ -505,23 +543,9 @@ const unidadesPorCuartelero = {
     @endforeach
 };
 
-// Inicializar popovers de unidades
-document.querySelectorAll('.unidad-badge').forEach(el => {
-    new bootstrap.Popover(el, { container: 'body' });
-});
-
 // Inicializar tooltips
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
     new bootstrap.Tooltip(el);
-});
-
-// Cerrar popovers al hacer clic fuera
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.unidad-badge') && !e.target.closest('.popover')) {
-        document.querySelectorAll('.unidad-badge').forEach(el => {
-            bootstrap.Popover.getInstance(el)?.hide();
-        });
-    }
 });
 
 // Alternar formularios según tipo
@@ -534,7 +558,7 @@ document.querySelectorAll('input[name="tipo_conductor"]').forEach(radio => {
     });
 });
 
-// Inicializar Tom Select en ambos selects
+// Tom Select
 const tsVoluntario = new TomSelect('#selectVoluntario', {
     placeholder: 'Buscar voluntario...',
     searchField: ['text'],
@@ -605,12 +629,11 @@ document.getElementById('selectCuartelero').addEventListener('change', function(
     `).join('');
 });
 
-// ─── Ajuste de hora de entrada ───────────────────────────────────────────────
+// ─── Ajuste de hora de entrada ────────────────────────────────────────────────
 
 function horaActualLocal() {
     const now = new Date();
     now.setSeconds(0, 0);
-    // Formato YYYY-MM-DDTHH:MM ajustado a la zona local
     const pad = n => String(n).padStart(2, '0');
     return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
@@ -622,7 +645,6 @@ function formatearHoraLegible(datetimeLocal) {
     return `${dia}/${mes}/${anio} ${hora}`;
 }
 
-// Configurar lógica de ajuste para un formulario dado
 function configurarAjusteHora({ btnAbrir, panelId, inputId, campoOcultoId, confirmId, cancelId, indicadorId }) {
     const panel      = document.getElementById(panelId);
     const input      = document.getElementById(inputId);
@@ -631,43 +653,33 @@ function configurarAjusteHora({ btnAbrir, panelId, inputId, campoOcultoId, confi
     const btnCancel  = document.getElementById(cancelId);
     const indicador  = document.getElementById(indicadorId);
 
-    // Abrir panel y pre-rellenar con hora actual
     btnAbrir.addEventListener('click', () => {
         input.value = horaActualLocal();
-        input.max   = horaActualLocal(); // no permitir hora futura
+        input.max   = horaActualLocal();
         panel.style.display = 'block';
         btnAbrir.classList.add('active', 'btn-warning');
         btnAbrir.classList.remove('btn-outline-secondary');
         input.focus();
     });
 
-    // Confirmar ajuste: guardar en campo oculto y mostrar indicador
     btnConfirm.addEventListener('click', () => {
         if (!input.value) return;
-
-        // Actualizar max por si pasó tiempo desde que abrió
         const ahora = horaActualLocal();
         if (input.value > ahora) {
             alert('No puedes seleccionar una hora futura.');
             input.value = ahora;
             return;
         }
-
         campoOcul.value = input.value;
         panel.style.display = 'none';
-
-        // Mostrar indicador de hora ajustada junto al botón
         const legible = formatearHoraLegible(input.value);
         indicador.querySelector('span').textContent = `Hora ajustada: ${legible}`;
         indicador.style.display = 'inline-block';
-
-        // Cambiar botón a estado "ajustado"
         btnAbrir.title = `Hora ajustada: ${legible} — clic para cambiar`;
         bootstrap.Tooltip.getInstance(btnAbrir)?.dispose();
         new bootstrap.Tooltip(btnAbrir);
     });
 
-    // Cancelar: cerrar panel y limpiar campo oculto si no había confirmado antes
     btnCancel.addEventListener('click', () => {
         panel.style.display = 'none';
         if (!campoOcul.value) {
@@ -695,6 +707,92 @@ configurarAjusteHora({
     confirmId:     'btnConfirmarHoraCuartelero',
     cancelId:      'btnCancelarHoraCuartelero',
     indicadorId:   'horaAjustadaCuartelero',
+});
+
+// ─── Modal de confirmación de hora de SALIDA de turno ────────────────────────
+
+const modalConfirmarSalida = new bootstrap.Modal(document.getElementById('modalConfirmarSalida'));
+const inputHoraSalidaModal = document.getElementById('modalInputHoraSalida');
+const horaSalidaIndicador  = document.getElementById('modalHoraIndicador');
+const formSalidaTurno      = document.getElementById('formSalidaTurno');
+const salidaAtInput        = document.getElementById('salidaAtTurno');
+
+let horaSalidaModificada = false;
+let tickSalidaInterval   = null;
+
+function horaActualHHMM() {
+    const ahora = new Date();
+    return String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
+}
+
+function fechaHoyLocal() {
+    const hoy = new Date();
+    return `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+}
+
+function sincronizarSalidaOculto(hora) {
+    salidaAtInput.value = `${fechaHoyLocal()} ${hora}:00`;
+}
+
+function tickSalida() {
+    if (!horaSalidaModificada) {
+        const ahora = horaActualHHMM();
+        inputHoraSalidaModal.value = ahora;
+        sincronizarSalidaOculto(ahora);
+        horaSalidaIndicador.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
+    }
+}
+
+// Al hacer clic en cualquier botón "Salida" de la tabla
+document.querySelectorAll('.btn-salida-turno').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Poblar datos del modal
+        document.getElementById('modalSalidaNombre').textContent  = this.dataset.nombre;
+        document.getElementById('modalSalidaEntrada').textContent = this.dataset.entrada;
+
+        // Apuntar el formulario oculto a la acción correcta
+        formSalidaTurno.action = this.dataset.action;
+
+        // Resetear estado del input de hora
+        horaSalidaModificada = false;
+        tickSalida();
+
+        // Iniciar el tick automático mientras el modal esté abierto
+        clearInterval(tickSalidaInterval);
+        tickSalidaInterval = setInterval(tickSalida, 30000);
+
+        modalConfirmarSalida.show();
+    });
+});
+
+// El usuario toca el input → dejar de actualizar automáticamente
+inputHoraSalidaModal.addEventListener('change', function() {
+    const ahora = horaActualHHMM();
+    if (this.value > ahora) {
+        this.value = ahora;
+        horaSalidaIndicador.innerHTML = '<i class="bi bi-exclamation-triangle me-1 text-warning"></i>No puedes seleccionar una hora futura';
+        horaSalidaModificada = false;
+        return;
+    }
+    horaSalidaModificada = true;
+    sincronizarSalidaOculto(this.value);
+    if (this.value === ahora) {
+        horaSalidaIndicador.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
+        horaSalidaModificada = false;
+    } else {
+        horaSalidaIndicador.innerHTML = `<i class="bi bi-clock-history me-1 text-warning"></i><strong>Hora ajustada: ${this.value}</strong>`;
+    }
+});
+
+// Confirmar y enviar
+document.getElementById('btnConfirmarSalidaTurno').addEventListener('click', function() {
+    formSalidaTurno.submit();
+});
+
+// Al cerrar el modal, limpiar el intervalo
+document.getElementById('modalConfirmarSalida').addEventListener('hidden.bs.modal', function() {
+    clearInterval(tickSalidaInterval);
+    horaSalidaModificada = false;
 });
 
 // ─── Cronómetros ─────────────────────────────────────────────────────────────
