@@ -95,6 +95,11 @@ class SalidaUnidadController extends Controller
 
     public function store(Request $request)
     {
+        // ── Modo salida conjunta: delegar al método especializado ──
+        if ($request->has('unidades') && is_array($request->unidades)) {
+            return $this->storeConjunta($request);
+        }
+
         $request->validate([
             'unidad_id'         => 'required|exists:unidades,id',
             'clave_salida_id'   => 'required|exists:claves_salida,id',
@@ -247,6 +252,154 @@ class SalidaUnidadController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Salida registrada exitosamente.');
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SALIDA CONJUNTA
+    // ─────────────────────────────────────────────────────────────────────
+
+    private function resolverConductorParaUnidad(string $conductorId, string $conductorLibreInput, int $unidadId): array|\Illuminate\Http\RedirectResponse
+    {
+        if (!$conductorId) {
+            return ['voluntario_id' => null, 'conductor_libre' => $conductorLibreInput ?: null];
+        }
+
+        $partes = explode('_', $conductorId, 2);
+        $tipo   = $partes[0];
+        $id     = $partes[1] ?? null;
+
+        if ($tipo === 'v' && $id) {
+            $turnoActivo = \App\Models\RegistroTurno::whereNull('salida_at')
+                ->where('voluntario_id', $id)
+                ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
+                ->first();
+
+            if (!$turnoActivo) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'El maquinista seleccionado no está en turno activo con esa unidad.');
+            }
+
+            $yaEnSalida = SalidaUnidad::where('voluntario_id', $id)->whereNull('llegada_at')->first();
+            if ($yaEnSalida) {
+                $vol = Voluntario::find($id);
+                return redirect()->back()->withInput()
+                    ->with('error', "El maquinista {$vol->nombre} ya tiene una salida activa.");
+            }
+
+            return ['voluntario_id' => $id, 'conductor_libre' => null];
+
+        } elseif ($tipo === 'c' && $id) {
+            $turnoActivo = \App\Models\RegistroTurnoCuartelero::whereNull('salida_at')
+                ->where('cuartelero_id', $id)
+                ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
+                ->first();
+
+            if (!$turnoActivo) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'El cuartelero seleccionado no está en turno activo con esa unidad.');
+            }
+
+            $cuartelero = \App\Models\Cuartelero::find($id);
+            $yaEnSalida = SalidaUnidad::where('conductor_libre', '[Cuartelero] ' . $cuartelero->nombre)
+                ->whereNull('llegada_at')->first();
+
+            if ($yaEnSalida) {
+                return redirect()->back()->withInput()
+                    ->with('error', "El cuartelero {$cuartelero->nombre} ya tiene una salida activa.");
+            }
+
+            return ['voluntario_id' => null, 'conductor_libre' => '[Cuartelero] ' . $cuartelero->nombre];
+        }
+
+        return ['voluntario_id' => null, 'conductor_libre' => null];
+    }
+
+    public function storeConjunta(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'clave_salida_id'              => 'required|exists:claves_salida,id',
+            'direccion'                    => 'required|string|max:255',
+            'oficial_id'                   => 'nullable|exists:voluntarios,id',
+            'salida_at'                    => 'nullable|date|before_or_equal:now',
+            'unidades'                     => 'required|array|min:2',
+            'unidades.*.unidad_id'         => 'required|exists:unidades,id',
+            'unidades.*.al_mando_id'       => 'required|exists:voluntarios,id',
+            'unidades.*.conductor_id'      => 'nullable|string',
+            'unidades.*.conductor_libre'   => 'nullable|string|max:255',
+            'unidades.*.km_salida'         => 'nullable|numeric|min:0',
+            'unidades.*.cantidad_personal' => 'nullable|integer|min:1',
+            'unidades.*.observaciones'     => 'nullable|string',
+        ]);
+
+        $clave = ClaveSalida::find($request->clave_salida_id);
+
+        if ($clave->tipo === 'administrativa' && !$request->oficial_id) {
+            return redirect()->back()->withInput()
+                ->with('error', 'Las salidas administrativas requieren un oficial autorizante.');
+        }
+
+        // Verificar que ninguna unidad tenga salida activa
+        foreach ($request->unidades as $u) {
+            $activa = SalidaUnidad::where('unidad_id', $u['unidad_id'])->whereNull('llegada_at')->first();
+            if ($activa) {
+                $unidad = Unidad::find($u['unidad_id']);
+                return redirect()->back()->withInput()
+                    ->with('error', "La unidad {$unidad->nombre} ya tiene una salida activa sin cerrar.");
+            }
+        }
+
+        // Verificar que ningún voluntario al mando ya esté en salida activa
+        foreach ($request->unidades as $u) {
+            $enSalida = SalidaUnidad::where('al_mando_id', $u['al_mando_id'])->whereNull('llegada_at')->first();
+            if ($enSalida) {
+                $vol = Voluntario::find($u['al_mando_id']);
+                return redirect()->back()->withInput()
+                    ->with('error', "El voluntario {$vol->nombre} ya está al mando de otra salida activa.");
+            }
+        }
+
+        // Determinar hora de salida
+        $salidaAt = now();
+        if ($request->filled('salida_at')) {
+            try {
+                $hora = \Carbon\Carbon::parse($request->salida_at);
+                if ($hora->lessThanOrEqualTo(now())) $salidaAt = $hora;
+            } catch (\Exception $e) {}
+        }
+
+        // Crear una SalidaUnidad por cada fila del formulario
+        $creadas = 0;
+        foreach ($request->unidades as $u) {
+            $conductor = $this->resolverConductorParaUnidad(
+                $u['conductor_id'] ?? '',
+                $u['conductor_libre'] ?? '',
+                (int) $u['unidad_id']
+            );
+
+            if ($conductor instanceof \Illuminate\Http\RedirectResponse) {
+                return $conductor;
+            }
+
+            SalidaUnidad::create([
+                'unidad_id'         => $u['unidad_id'],
+                'clave_salida_id'   => $request->clave_salida_id,
+                'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
+                'al_mando_id'       => $u['al_mando_id'],
+                'voluntario_id'     => $conductor['voluntario_id'],
+                'conductor_libre'   => $conductor['conductor_libre'],
+                'direccion'         => $request->direccion,
+                'cantidad_personal' => $u['cantidad_personal'] ?? null,
+                'km_salida'         => $u['km_salida'] ?? null,
+                'salida_at'         => $salidaAt,
+                'observaciones'     => $u['observaciones'] ?? null,
+            ]);
+
+            $creadas++;
+        }
+
+        return redirect()->back()
+            ->with('success', "Salida conjunta registrada: {$creadas} unidades despachadas.");
     }
 
     public function show(SalidaUnidad $salida)

@@ -11,45 +11,38 @@
 
 {{-- MODAL SALIDA --}}
 <div class="modal fade" id="modalNuevaSalida" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-arrow-up-right-circle me-2"></i>Registrar Nueva Salida
-                </h5>
+                <div class="d-flex align-items-center gap-3 flex-grow-1">
+                    <h5 class="modal-title mb-0">
+                        <i class="bi bi-arrow-up-right-circle me-2"></i>Registrar Nueva Salida
+                    </h5>
+                    {{-- Toggle individual / conjunta --}}
+                    <div class="btn-group btn-group-sm ms-2" role="group" id="toggleModoSalida">
+                        <input type="radio" class="btn-check" name="modoSalida" id="modoIndividual" autocomplete="off" checked>
+                        <label class="btn btn-outline-light" for="modoIndividual">
+                            <i class="bi bi-truck me-1"></i>Individual
+                        </label>
+                        <input type="radio" class="btn-check" name="modoSalida" id="modoConjunta" autocomplete="off">
+                        <label class="btn btn-outline-light" for="modoConjunta">
+                            <i class="bi bi-collection me-1"></i>Conjunta
+                        </label>
+                    </div>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('salidas.store') }}" method="POST">
-                @csrf
 
-                {{-- Campo oculto para hora de salida ajustada --}}
+            <form action="{{ route('salidas.store') }}" method="POST" id="formSalida">
+                @csrf
                 <input type="hidden" name="salida_at" id="salidaAtAjustada">
 
                 <div class="modal-body">
+
+                    {{-- ══════════════════════════════════════════════════════
+                         DATOS COMPARTIDOS (siempre visibles)
+                    ══════════════════════════════════════════════════════ --}}
                     <div class="row g-3">
-
-                        {{-- Unidad --}}
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Unidad <span class="text-danger">*</span></label>
-                            <select name="unidad_id" id="selectUnidad"
-                                    class="form-select @error('unidad_id') is-invalid @enderror" required>
-                                <option value="">Seleccionar unidad...</option>
-                                @foreach($unidades as $unidad)
-                                    <option value="{{ $unidad->id }}" {{ old('unidad_id') == $unidad->id ? 'selected' : '' }}>
-                                        {{ $unidad->nombre }} — {{ $unidad->compania->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('unidad_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        {{-- Alerta sin conductor --}}
-                        <div class="col-12 d-none" id="alertaSinConductor">
-                            <div class="alert alert-warning py-2 mb-0">
-                                <i class="bi bi-exclamation-triangle me-1"></i>
-                                Esta unidad no tiene conductor en turno activo. No se puede registrar la salida.
-                            </div>
-                        </div>
 
                         {{-- Clave --}}
                         <div class="col-md-8">
@@ -77,34 +70,8 @@
                             @error('clave_salida_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        {{-- Dirección --}}
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Dirección / Lugar <span class="text-danger">*</span></label>
-                            <input type="text" name="direccion"
-                                   class="form-control @error('direccion') is-invalid @enderror"
-                                   value="{{ old('direccion') }}" placeholder="Ej: Av. Principal 123" required>
-                            @error('direccion') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        {{-- Conductor --}}
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Conductor</label>
-                            <select name="conductor_id" id="selectConductor" class="form-select">
-                                <option value="">Sin asignar...</option>
-                                @foreach($conductores as $conductor)
-                                    <option value="{{ $conductor['id'] }}"
-                                            class="{{ $conductor['tipo'] === 'cuartelero' ? 'text-primary' : '' }}">
-                                        {{ $conductor['nombre'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <input type="text" name="conductor_libre" id="conductorLibre"
-                                class="form-control mt-1 d-none"
-                                placeholder="O escribe el nombre del conductor...">
-                        </div>
-
-                        {{-- Oficial autorizante — solo visible para salidas administrativas --}}
-                        <div class="col-md-6" id="bloqueOficial" style="display:none">
+                        {{-- Oficial autorizante (solo para administrativas) --}}
+                        <div class="col-md-4" id="bloqueOficial" style="display:none">
                             <label class="form-label fw-bold">
                                 Oficial autorizante <span class="text-danger">*</span>
                             </label>
@@ -118,106 +85,169 @@
                             </select>
                         </div>
 
-                        {{-- Al Mando --}}
-                        <div class="col-md-6">
+                        {{-- Dirección --}}
+                        <div class="col-md-10">
+                            <label class="form-label fw-bold">Dirección / Lugar <span class="text-danger">*</span></label>
+                            <input type="text" name="direccion"
+                                   class="form-control @error('direccion') is-invalid @enderror"
+                                   value="{{ old('direccion') }}" placeholder="Ej: Av. Principal 123" required>
+                            @error('direccion') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
+                        {{-- Hora de salida — siempre visible, fecha fija en servidor --}}
+                        <div class="col-md-2">
                             <label class="form-label fw-bold">
-                                Voluntario al Mando <span class="text-danger">*</span>
+                                <i class="bi bi-clock me-1"></i>Hora de salida
                             </label>
-                            <select name="al_mando_id" id="selectOficialAlMando" class="form-select @error('al_mando_id') is-invalid @enderror" required>
-                                <option value="">Seleccionar voluntario...</option>
-                                @foreach($voluntariosAlMando as $voluntario)
-                                    <option value="{{ $voluntario->id }}" {{ old('al_mando_id') == $voluntario->id ? 'selected' : '' }}>
-                                        {{ $voluntario->nombre }} — {{ $voluntario->compania->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('al_mando_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        {{-- Km Salida --}}
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Km Salida</label>
-                            <input type="number" name="km_salida" id="kmSalida" step="1"
-                                   class="form-control @error('km_salida') is-invalid @enderror"
-                                   value="{{ old('km_salida') }}" placeholder="Se cargará automático">
-                            <div class="text-muted small mt-1" id="kmReferenciaTexto"></div>
-                            @error('km_salida') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        {{-- Personal --}}
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Cantidad Personal</label>
-                            <input type="number" name="cantidad_personal" class="form-control"
-                                   value="{{ old('cantidad_personal') }}" placeholder="Opcional" min="1">
-                        </div>
-
-                        {{-- Observaciones --}}
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold">Observaciones</label>
-                            <input type="text" name="observaciones" class="form-control"
-                                   value="{{ old('observaciones') }}" placeholder="Opcional...">
-                        </div>
-
-                        {{-- Ajuste de hora de salida --}}
-                        <div class="col-md-1 d-flex flex-column">
-                            <label class="form-label fw-bold" style="visibility:hidden">‎</label>
-                            <button type="button"
-                                    class="btn btn-outline-secondary btn-sm"
-                                    id="btnAjusteHoraSalida"
-                                    title="Ajustar hora de salida"
-                                    data-bs-toggle="tooltip">
-                                <i class="bi bi-clock-history"></i>
-                            </button>
-                        </div>
-
-                        {{-- Panel desplegable para ajustar hora --}}
-                        <div class="col-12" id="panelHoraSalida" style="display:none">
-                            <div class="card border-warning">
-                                <div class="card-body py-2">
-                                    <div class="row g-2">
-                                        <div class="col-md-5">
-                                            <label class="form-label fw-bold mb-1">
-                                                <i class="bi bi-clock me-1"></i>Hora real de salida
-                                            </label>
-                                            <input type="time" id="inputHoraSalida" class="form-control form-control-sm">
-                                        </div>
-                                        <div class="col-md-7 d-flex flex-column">
-                                            <label class="form-label fw-bold mb-1" style="visibility:hidden">‎</label>
-                                            <div class="d-flex gap-2">
-                                                <button type="button" id="btnConfirmarHoraSalida" class="btn btn-success btn-sm">
-                                                    <i class="bi bi-check-lg me-1"></i>Confirmar
-                                                </button>
-                                                <button type="button" id="btnCancelarHoraSalida" class="btn btn-outline-secondary btn-sm">
-                                                    <i class="bi bi-x-lg me-1"></i>Cancelar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="text-muted small mt-2">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        Selecciona la hora real en la que la unidad salió del cuartel.
-                                    </div>
-                                </div>
+                            <input type="time" id="inputHoraSalida"
+                                   class="form-control"
+                                   max="">
+                            <div class="text-muted small mt-1" id="horaIndicador" style="font-size:11px">
+                                <i class="bi bi-arrow-repeat me-1"></i>Actualizando...
                             </div>
                         </div>
 
-                        {{-- Indicador de hora ajustada --}}
-                        <div class="col-12" id="horaAjustadaSalida" style="display:none">
-                            <div class="alert alert-warning py-2 mb-0 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="bi bi-clock-history me-1"></i>
-                                    <span></span>
-                                </div>
-                                <button type="button" class="btn-close btn-sm" id="btnLimpiarHoraSalida" title="Quitar ajuste y usar hora actual"></button>
+                    </div>{{-- /row datos compartidos --}}
+
+                    <hr class="my-3">
+
+                    {{-- ══════════════════════════════════════════════════════
+                         MODO INDIVIDUAL
+                    ══════════════════════════════════════════════════════ --}}
+                    <div id="seccionIndividual">
+                        <div class="row g-3">
+
+                            {{-- Unidad --}}
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Unidad <span class="text-danger">*</span></label>
+                                <select name="unidad_id" id="selectUnidad"
+                                        class="form-select @error('unidad_id') is-invalid @enderror" required>
+                                    <option value="">Seleccionar unidad...</option>
+                                    @foreach($unidades as $unidad)
+                                        <option value="{{ $unidad->id }}" {{ old('unidad_id') == $unidad->id ? 'selected' : '' }}>
+                                            {{ $unidad->nombre }} — {{ $unidad->compania->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('unidad_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
+
+                            {{-- Alerta sin conductor --}}
+                            <div class="col-12 d-none" id="alertaSinConductor">
+                                <div class="alert alert-warning py-2 mb-0">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Esta unidad no tiene conductor en turno activo. No se puede registrar la salida.
+                                </div>
+                            </div>
+
+                            {{-- Conductor --}}
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold">Conductor</label>
+                                <select name="conductor_id" id="selectConductor" class="form-select">
+                                    <option value="">Sin asignar...</option>
+                                    @foreach($conductores as $conductor)
+                                        <option value="{{ $conductor['id'] }}"
+                                                class="{{ $conductor['tipo'] === 'cuartelero' ? 'text-primary' : '' }}">
+                                            {{ $conductor['nombre'] }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <input type="text" name="conductor_libre" id="conductorLibre"
+                                    class="form-control mt-1 d-none"
+                                    placeholder="O escribe el nombre del conductor...">
+                            </div>
+
+                            {{-- Al Mando --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    Voluntario al Mando <span class="text-danger">*</span>
+                                </label>
+                                <select name="al_mando_id" id="selectOficialAlMando" class="form-select @error('al_mando_id') is-invalid @enderror" required>
+                                    <option value="">Seleccionar voluntario...</option>
+                                    @foreach($voluntariosAlMando as $voluntario)
+                                        <option value="{{ $voluntario->id }}" {{ old('al_mando_id') == $voluntario->id ? 'selected' : '' }}>
+                                            {{ $voluntario->nombre }} — {{ $voluntario->compania->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('al_mando_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+
+                            {{-- Km Salida --}}
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Km Salida</label>
+                                <input type="number" name="km_salida" id="kmSalida" step="1"
+                                       class="form-control @error('km_salida') is-invalid @enderror"
+                                       value="{{ old('km_salida') }}" placeholder="Se cargará automático">
+                                <div class="text-muted small mt-1" id="kmReferenciaTexto"></div>
+                                @error('km_salida') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+
+                            {{-- Personal --}}
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Cantidad Personal</label>
+                                <input type="number" name="cantidad_personal" class="form-control"
+                                       value="{{ old('cantidad_personal') }}" placeholder="Opcional" min="1">
+                            </div>
+
+                            {{-- Observaciones --}}
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Observaciones</label>
+                                <input type="text" name="observaciones" class="form-control"
+                                       value="{{ old('observaciones') }}" placeholder="Opcional...">
+                            </div>
+
+                        </div>
+                    </div>{{-- /seccionIndividual --}}
+
+                    {{-- ══════════════════════════════════════════════════════
+                         MODO CONJUNTA
+                    ══════════════════════════════════════════════════════ --}}
+                    <div id="seccionConjunta" style="display:none">
+
+                        <div class="alert alert-info py-2 mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Clave, dirección y hora son compartidas. Agrega una fila por cada unidad despachada.
                         </div>
 
-                    </div>
-                </div>
+                        {{-- Tabla de unidades --}}
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle mb-2" id="tablaUnidadesConjunta">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:180px">Unidad <span class="text-danger">*</span></th>
+                                        <th style="width:200px">Conductor</th>
+                                        <th style="width:190px">Al Mando <span class="text-danger">*</span></th>
+                                        <th style="width:100px">Km Salida</th>
+                                        <th style="width:90px">Personal</th>
+                                        <th style="width:160px">Observaciones</th>
+                                        <th style="width:44px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="filasUnidades">
+                                    {{-- Las filas se agregan por JS --}}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAgregarUnidad">
+                            <i class="bi bi-plus-circle me-1"></i>Agregar unidad
+                        </button>
+
+                        <div class="text-muted small mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Conductores disponibles son los que tienen turno activo en cada unidad.
+                        </div>
+
+                    </div>{{-- /seccionConjunta --}}
+
+                </div>{{-- /modal-body --}}
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-arrow-up-right-circle me-1"></i>Registrar Salida
+                    <button type="submit" class="btn btn-danger" id="btnSubmitSalida">
+                        <i class="bi bi-arrow-up-right-circle me-1"></i>
+                        <span id="labelSubmitSalida">Registrar Salida</span>
                     </button>
                 </div>
             </form>
@@ -490,6 +520,36 @@
 @push('scripts')
 <script>
 const conductorPorUnidad = @json($conductorPorUnidad);
+const opcionesUnidades    = @json($unidades->map(fn($u) => ['id' => $u->id, 'nombre' => $u->nombre . ' — ' . $u->compania->nombre]));
+const opcionesVoluntarios = @json($voluntariosAlMando->map(fn($v) => ['id' => $v->id, 'nombre' => $v->nombre . ' — ' . $v->compania->nombre]));
+const opcionesConductores = @json($conductores);
+
+// ── Toggle modo individual / conjunta ──
+const modoIndividualRadio = document.getElementById('modoIndividual');
+const modoConjuntaRadio   = document.getElementById('modoConjunta');
+const seccionIndividual   = document.getElementById('seccionIndividual');
+const seccionConjunta     = document.getElementById('seccionConjunta');
+const labelSubmit         = document.getElementById('labelSubmitSalida');
+
+function aplicarModo() {
+    const esConjunta = modoConjuntaRadio.checked;
+
+    seccionIndividual.style.display = esConjunta ? 'none' : '';
+    seccionConjunta.style.display   = esConjunta ? ''     : 'none';
+    labelSubmit.textContent         = esConjunta ? 'Registrar Salida Conjunta' : 'Registrar Salida';
+
+    // required en campos de modo individual
+    document.getElementById('selectUnidad').required      = !esConjunta;
+    document.getElementById('selectOficialAlMando').required = !esConjunta;
+
+    if (esConjunta && document.querySelectorAll('#filasUnidades tr').length === 0) {
+        agregarFilaUnidad();
+        agregarFilaUnidad();
+    }
+}
+
+modoIndividualRadio.addEventListener('change', aplicarModo);
+modoConjuntaRadio.addEventListener('change', aplicarModo);
 
 // ── Oficial autorizante: solo visible para salidas administrativas ──
 const selectClave   = document.getElementById('selectClave');
@@ -511,9 +571,9 @@ function actualizarOficial() {
 }
 
 selectClave.addEventListener('change', actualizarOficial);
-actualizarOficial(); // Ejecutar al cargar por si hay old() seleccionado
+actualizarOficial();
 
-// ── Autocompletar conductor según unidad ──
+// ── Autocompletar conductor según unidad (modo individual) ──
 document.getElementById('selectUnidad').addEventListener('change', function() {
     const unidadId        = this.value;
     const kmInput         = document.getElementById('kmSalida');
@@ -671,10 +731,15 @@ actualizarCronometros();
 setInterval(actualizarCronometros, 1000);
 
 // ════════════════════════════════════════════════════════════════
-// AJUSTE DE HORA DE SALIDA
+// HORA DE SALIDA — input siempre visible, se sincroniza con el campo oculto
 // ════════════════════════════════════════════════════════════════
 
-// Devuelve la hora actual local en formato HH:MM (24h)
+const inputHoraSalida  = document.getElementById('inputHoraSalida');
+const salidaAtOculto   = document.getElementById('salidaAtAjustada');
+const horaIndicador    = document.getElementById('horaIndicador');
+
+let horaModificadaManualmente = false;
+
 function horaActualLocal() {
     const ahora = new Date();
     const hh = String(ahora.getHours()).padStart(2, '0');
@@ -682,118 +747,191 @@ function horaActualLocal() {
     return `${hh}:${mm}`;
 }
 
-// Formato legible HH:MM (24h) — si quieres 12h cámbialo aquí
-function formatearHoraLegible(hora) {
-    if (!hora) return '';
-    const [hh, mm] = hora.split(':');
-    return `${hh}:${mm}`;
+function fechaHoyLocal() {
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm   = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd   = String(hoy.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
 }
 
-function configurarAjusteHora({ btnAbrir, panelId, inputId, campoOcultoId, confirmId, cancelId, indicadorId, limpiarId }) {
-    const panel      = document.getElementById(panelId);
-    const input      = document.getElementById(inputId);
-    const campoOcul  = document.getElementById(campoOcultoId);
-    const btnConfirm = document.getElementById(confirmId);
-    const btnCancel  = document.getElementById(cancelId);
-    const indicador  = document.getElementById(indicadorId);
-    const btnLimpiar = limpiarId ? document.getElementById(limpiarId) : null;
+function sincronizarCampoOculto(hora) {
+    salidaAtOculto.value = `${fechaHoyLocal()} ${hora}:00`;
+}
 
-    // Inicializa tooltip si no existe
-    if (!bootstrap.Tooltip.getInstance(btnAbrir)) {
-        new bootstrap.Tooltip(btnAbrir);
-    }
-
-    // Abrir panel y pre-rellenar con hora actual
-    btnAbrir.addEventListener('click', () => {
-        // Si ya hay una hora ajustada confirmada, usa esa como punto de partida
-        input.value = campoOcul.value
-            ? campoOcul.value.substring(11, 16) // tomar HH:MM del datetime ya guardado
-            : horaActualLocal();
-        input.max   = horaActualLocal(); // no permitir hora futura
-        panel.style.display = 'block';
-        btnAbrir.classList.add('active', 'btn-warning');
-        btnAbrir.classList.remove('btn-outline-secondary');
-        input.focus();
-    });
-
-    // Confirmar ajuste: guardar en campo oculto y mostrar indicador
-    btnConfirm.addEventListener('click', () => {
-        if (!input.value) return;
-
-        // Actualizar max por si pasó tiempo desde que abrió
+function tickHora() {
+    if (!horaModificadaManualmente) {
         const ahora = horaActualLocal();
-        if (input.value > ahora) {
-            alert('No puedes seleccionar una hora futura.');
-            input.value = ahora;
-            return;
-        }
-
-        // Construir datetime completo (YYYY-MM-DD HH:MM:00) con la fecha de hoy
-        const hoy = new Date();
-        const yyyy = hoy.getFullYear();
-        const mm   = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dd   = String(hoy.getDate()).padStart(2, '0');
-        campoOcul.value = `${yyyy}-${mm}-${dd} ${input.value}:00`;
-
-        panel.style.display = 'none';
-
-        // Mostrar indicador de hora ajustada
-        const legible = formatearHoraLegible(input.value);
-        indicador.querySelector('span').textContent = `Hora de salida ajustada: ${legible} (en lugar de la hora actual)`;
-        indicador.style.display = 'block';
-
-        // Cambiar tooltip del botón
-        btnAbrir.title = `Hora ajustada: ${legible} — clic para cambiar`;
-        bootstrap.Tooltip.getInstance(btnAbrir)?.dispose();
-        new bootstrap.Tooltip(btnAbrir);
-    });
-
-    // Cancelar: cerrar panel
-    btnCancel.addEventListener('click', () => {
-        panel.style.display = 'none';
-        if (!campoOcul.value) {
-            btnAbrir.classList.remove('active', 'btn-warning');
-            btnAbrir.classList.add('btn-outline-secondary');
-        }
-    });
-
-    // Limpiar ajuste: volver a hora automática
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', () => {
-            campoOcul.value = '';
-            indicador.style.display = 'none';
-            btnAbrir.classList.remove('active', 'btn-warning');
-            btnAbrir.classList.add('btn-outline-secondary');
-            btnAbrir.title = 'Ajustar hora de salida';
-            bootstrap.Tooltip.getInstance(btnAbrir)?.dispose();
-            new bootstrap.Tooltip(btnAbrir);
-        });
+        inputHoraSalida.value = ahora;
+        sincronizarCampoOculto(ahora);
+        horaIndicador.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
     }
 }
 
-// Configurar el ajuste de hora de salida
-configurarAjusteHora({
-    btnAbrir:      document.getElementById('btnAjusteHoraSalida'),
-    panelId:       'panelHoraSalida',
-    inputId:       'inputHoraSalida',
-    campoOcultoId: 'salidaAtAjustada',
-    confirmId:     'btnConfirmarHoraSalida',
-    cancelId:      'btnCancelarHoraSalida',
-    indicadorId:   'horaAjustadaSalida',
-    limpiarId:     'btnLimpiarHoraSalida',
+// Iniciar con la hora actual y actualizar cada 30s mientras no toquen el campo
+tickHora();
+const intervaloHora = setInterval(tickHora, 30000);
+
+// Cuando el usuario toca el campo, dejar de actualizar y marcar como modificado
+inputHoraSalida.addEventListener('change', function () {
+    const horaElegida = this.value;
+    const ahora = horaActualLocal();
+
+    if (horaElegida > ahora) {
+        // No permitir hora futura
+        this.value = ahora;
+        sincronizarCampoOculto(ahora);
+        horaIndicador.innerHTML = '<i class="bi bi-exclamation-triangle me-1 text-warning"></i>No puedes seleccionar una hora futura';
+        horaModificadaManualmente = false;
+        return;
+    }
+
+    horaModificadaManualmente = true;
+    sincronizarCampoOculto(horaElegida);
+
+    if (horaElegida === ahora) {
+        horaIndicador.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
+        horaModificadaManualmente = false;
+    } else {
+        horaIndicador.innerHTML = `<i class="bi bi-clock-history me-1 text-warning"></i><strong>Hora ajustada: ${horaElegida}</strong>`;
+    }
 });
 
-// Resetear el ajuste de hora cuando se cierre el modal
+// Al abrir el modal, asegurar que el input esté actualizado
+document.getElementById('modalNuevaSalida').addEventListener('show.bs.modal', function () {
+    horaModificadaManualmente = false;
+    tickHora();
+});
+
+// ── Filas dinámicas para salida conjunta ──
+let filaIndex = 0;
+
+function buildSelect(name, opts, placeholder, required = false) {
+    const req = required ? 'required' : '';
+    let html = `<select name="${name}" class="form-select form-select-sm" ${req}>`;
+    html += `<option value="">${placeholder}</option>`;
+    opts.forEach(o => {
+        html += `<option value="${o.id}">${o.nombre}</option>`;
+    });
+    html += '</select>';
+    return html;
+}
+
+function buildConductorSelect(idx, unidadId) {
+    let opts = [];
+    if (unidadId && conductorPorUnidad[unidadId]) {
+        const c = conductorPorUnidad[unidadId];
+        const val = (c.tipo === 'maquinista' ? 'v_' : 'c_') + c.id;
+        opts = [{ id: val, nombre: c.nombre }];
+    }
+    let html = `<select name="unidades[${idx}][conductor_id]" class="form-select form-select-sm cj-conductor">`;
+    html += `<option value="">— sin conductor —</option>`;
+    opts.forEach(o => { html += `<option value="${o.id}" selected>${o.nombre}</option>`; });
+    html += '</select>';
+    if (!unidadId || !conductorPorUnidad[unidadId]) {
+        html += `<input type="text" name="unidades[${idx}][conductor_libre]" class="form-control form-control-sm mt-1" placeholder="Nombre conductor...">`;
+    }
+    return html;
+}
+
+function agregarFilaUnidad() {
+    const idx  = filaIndex++;
+    const tbody = document.getElementById('filasUnidades');
+    const tr   = document.createElement('tr');
+    tr.dataset.idx = idx;
+
+    // Select unidad
+    let selectUnidadHtml = `<select name="unidades[${idx}][unidad_id]" class="form-select form-select-sm cj-unidad" required>`;
+    selectUnidadHtml += '<option value="">Seleccionar...</option>';
+    opcionesUnidades.forEach(u => {
+        selectUnidadHtml += `<option value="${u.id}">${u.nombre}</option>`;
+    });
+    selectUnidadHtml += '</select>';
+    selectUnidadHtml += '<div class="text-muted small mt-1 cj-km-ref" style="font-size:11px"></div>';
+
+    // Select al mando
+    let selectMandoHtml = `<select name="unidades[${idx}][al_mando_id]" class="form-select form-select-sm cj-mando" required>`;
+    selectMandoHtml += '<option value="">Seleccionar...</option>';
+    opcionesVoluntarios.forEach(v => {
+        selectMandoHtml += `<option value="${v.id}">${v.nombre}</option>`;
+    });
+    selectMandoHtml += '</select>';
+
+    tr.innerHTML = `
+        <td>${selectUnidadHtml}</td>
+        <td class="cj-conductor-cell"><span class="text-muted small">Selecciona unidad primero</span></td>
+        <td>${selectMandoHtml}</td>
+        <td><input type="number" name="unidades[${idx}][km_salida]" class="form-control form-control-sm cj-km" step="1" placeholder="Automático"></td>
+        <td><input type="number" name="unidades[${idx}][cantidad_personal]" class="form-control form-control-sm" min="1" placeholder="—"></td>
+        <td><input type="text" name="unidades[${idx}][observaciones]" class="form-control form-control-sm" placeholder="Opcional"></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm cj-quitar" title="Quitar fila">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </td>`;
+
+    tbody.appendChild(tr);
+
+    // Evento: al seleccionar unidad → autocompletar conductor y km
+    tr.querySelector('.cj-unidad').addEventListener('change', function() {
+        const unidadId = this.value;
+        const cell     = tr.querySelector('.cj-conductor-cell');
+        const kmInput  = tr.querySelector('.cj-km');
+        const kmRef    = tr.querySelector('.cj-km-ref');
+
+        // Conductor
+        cell.innerHTML = buildConductorSelect(idx, unidadId);
+
+        // Sin conductor en turno: advertencia
+        if (unidadId && !conductorPorUnidad[unidadId]) {
+            cell.insertAdjacentHTML('beforeend',
+                '<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Sin conductor en turno</div>');
+        }
+
+        // Último km vía API
+        if (unidadId) {
+            fetch(`/salidas/ultimo-km/${unidadId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.km) {
+                        const km = Math.round(data.km);
+                        kmInput.value = km;
+                        kmRef.innerHTML = `<i class="bi bi-info-circle me-1"></i>Último: <strong>${km.toLocaleString('es-CL')} km</strong> (${data.fecha})`;
+                    } else {
+                        kmInput.value = '';
+                        kmRef.innerHTML = '<i class="bi bi-exclamation-circle me-1 text-warning"></i>Sin historial';
+                    }
+                });
+        } else {
+            kmInput.value  = '';
+            kmRef.innerHTML = '';
+        }
+    });
+
+    // Botón quitar fila
+    tr.querySelector('.cj-quitar').addEventListener('click', function() {
+        const filas = document.querySelectorAll('#filasUnidades tr');
+        if (filas.length <= 2) {
+            alert('La salida conjunta requiere al menos 2 unidades.');
+            return;
+        }
+        tr.remove();
+    });
+}
+
+document.getElementById('btnAgregarUnidad').addEventListener('click', agregarFilaUnidad);
+
+// ── Reset al cerrar el modal ──
 document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('salidaAtAjustada').value = '';
-    document.getElementById('panelHoraSalida').style.display = 'none';
-    document.getElementById('horaAjustadaSalida').style.display = 'none';
-    const btn = document.getElementById('btnAjusteHoraSalida');
-    btn.classList.remove('active', 'btn-warning');
-    btn.classList.add('btn-outline-secondary');
-    btn.title = 'Ajustar hora de salida';
-    bootstrap.Tooltip.getInstance(btn)?.dispose();
-    new bootstrap.Tooltip(btn);
+    // Restaurar hora al estado automático
+    horaModificadaManualmente = false;
+    tickHora();
+
+    // Volver a modo individual y limpiar filas conjunta
+    modoIndividualRadio.checked = true;
+    aplicarModo();
+    document.getElementById('filasUnidades').innerHTML = '';
+    filaIndex = 0;
 });
 
 @if($errors->any())
