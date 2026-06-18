@@ -122,31 +122,39 @@
                 </div>
 
                 <div class="row g-0">
-                    {{-- Columna izquierda: En turno + Maquinistas --}}
+                    {{-- Columna izquierda: En turno + Maquinistas + Unidades 0-8 --}}
                     <div class="col-md-6 border-end p-3">
                         @php $enSeccion = false; $seccionActual = ''; @endphp
                         @foreach($lineas as $linea)
                             @if(str_starts_with($linea, 'EN TURNO'))
                                 @php $enSeccion = true; $seccionActual = 'turno'; @endphp
                                 <p class="fw-bold text-uppercase border-bottom pb-1 mb-2"
-                                   style="font-size: 0.75rem; color: #dc3545; letter-spacing: 0.05em;">
+                                style="font-size: 0.75rem; color: #dc3545; letter-spacing: 0.05em;">
                                     <i class="bi bi-person-badge me-1"></i>{{ $linea }}
                                 </p>
                             @elseif(str_starts_with($linea, 'MAQUINISTAS'))
                                 @php $seccionActual = 'maquinistas'; @endphp
                                 <p class="fw-bold text-uppercase border-bottom pb-1 mb-2 mt-3"
-                                   style="font-size: 0.75rem; color: #0d6efd; letter-spacing: 0.05em;">
+                                style="font-size: 0.75rem; color: #0d6efd; letter-spacing: 0.05em;">
                                     <i class="bi bi-truck-front me-1"></i>{{ $linea }}
                                 </p>
-                            @elseif(str_starts_with($linea, 'CITACIONES'))
+                            @elseif(str_starts_with($linea, 'UNIDADES 0-8'))
+                                @php $seccionActual = 'fuera'; @endphp
+                                <p class="fw-bold text-uppercase border-bottom pb-1 mb-2 mt-3"
+                                style="font-size: 0.75rem; color: #fd7e14; letter-spacing: 0.05em;">
+                                    <i class="bi bi-cone-striped me-1"></i>{{ $linea }}
+                                </p>
+                            @elseif(str_starts_with($linea, 'CITACIONES') || str_starts_with($linea, 'GUARDIA') || str_starts_with($linea, 'FINALIZA'))
                                 @php $enSeccion = false; @endphp
                             @elseif($enSeccion && trim($linea))
-                                <p class="mb-1 ps-2 {{ $seccionActual === 'maquinistas' ? 'fw-bold' : '' }}"
-                                   style="font-size: {{ $seccionActual === 'maquinistas' ? '0.92rem' : '0.82rem' }};">
+                                <p class="mb-1 ps-2 {{ in_array($seccionActual, ['maquinistas', 'fuera']) ? 'fw-bold' : '' }}"
+                                style="font-size: {{ $seccionActual === 'maquinistas' ? '0.92rem' : ($seccionActual === 'fuera' ? '0.92rem' : '0.82rem') }};">
                                     @if($seccionActual === 'turno')
                                         <i class="bi bi-person-fill text-secondary me-1"></i>
-                                    @else
+                                    @elseif($seccionActual === 'maquinistas')
                                         <i class="bi bi-truck-front text-primary me-1"></i>
+                                    @else
+                                        <i class="bi bi-cone-striped text-warning me-1"></i>
                                     @endif
                                     {{ $linea }}
                                 </p>

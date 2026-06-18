@@ -51,6 +51,20 @@ class Boletin extends Model
             }
         }
 
+        // Unidades fuera de servicio (0-8)
+        $unidadesFueraServicio = \App\Models\Unidad::with('compania')
+            ->where('activa', false)
+            ->orderBy('compania_id')
+            ->orderBy('nombre')
+            ->get();
+
+        if ($unidadesFueraServicio->isNotEmpty()) {
+            $texto .= "\nUNIDADES 0-8:\n";
+            foreach ($unidadesFueraServicio as $u) {
+                $texto .= strtoupper("- {$u->nombre}\n");
+            }
+        }
+
         // Citaciones
         $citaciones = Citacion::with('compania')
             ->where(function($q) {
