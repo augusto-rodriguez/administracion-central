@@ -83,11 +83,11 @@ class GuardiaNocturnaController extends Controller
                 ->with('warning', 'Esta guardia ya fue cerrada.');
         }
 
-        // ← Agregar cuarteleros y voluntarios al with
         $companias = Compania::where('activa', true)
             ->with([
-                'voluntarios' => fn($q) => $q->where('activo', true)->orderBy('nombre'),
-                'cuarteleros' => fn($q) => $q->where('activo', true)->orderBy('nombre'),
+                'voluntarios'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
+                'cuarteleros'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
+                'especialidades',  // ← nuevo
             ])
             ->orderBy('numero')
             ->get();
@@ -104,6 +104,7 @@ class GuardiaNocturnaController extends Controller
 
         return view('guardias_nocturnas.edit', compact('guardia', 'companias'));
     }
+
 
     // ─────────────────────────────────────────────────────────────────
     // HEREDAR — devuelve JSON con situación actual de la compañía
@@ -183,20 +184,23 @@ class GuardiaNocturnaController extends Controller
         }
 
         $request->validate([
-            'compania_id'       => 'required|exists:companias,id',
-            'oficial_a_cargo_id'=> 'nullable|exists:voluntarios,id',
-            'cuartelero_id'     => 'nullable|exists:cuarteleros,id',
-            'sin_reporte'       => 'boolean',
-            'observaciones'     => 'nullable|string',
-            'voluntarios'       => 'nullable|array',
-            'voluntarios.*'     => 'exists:voluntarios,id',
-            'unidades'          => 'nullable|array',
-            'unidades.*.unidad_id'      => 'required|exists:unidades,id',
-            'unidades.*.maquinista_id'  => 'nullable|exists:voluntarios,id',
-            'unidades.*.cuartelero_id'  => 'nullable|exists:cuarteleros,id',
+            'compania_id'        => 'required|exists:companias,id',
+            'oficial_a_cargo_id' => 'nullable|exists:voluntarios,id',
+            'cuartelero_id'      => 'nullable|exists:cuarteleros,id',
+            'sin_reporte'        => 'boolean',
+            'observaciones'      => 'nullable|string',
+            'voluntarios'        => 'nullable|array',
+            'voluntarios.*'      => 'exists:voluntarios,id',
+            'unidades'           => 'nullable|array',
+            'unidades.*.unidad_id'     => 'required|exists:unidades,id',
+            'unidades.*.maquinista_id' => 'nullable|exists:voluntarios,id',
+            'unidades.*.cuartelero_id' => 'nullable|exists:cuarteleros,id',
+            // ← nuevos campos especialidades
+            'operadores_rescate' => 'nullable|integer|min:0|max:99',
+            'operadores_hazmat'  => 'nullable|integer|min:0|max:99',
+            'tecnicos_hazmat'    => 'nullable|integer|min:0|max:99',
         ]);
 
-        // Crear o actualizar registro de compañía
         $gnCompania = GuardiaNocturnaCompania::updateOrCreate(
             [
                 'guardia_nocturna_id' => $guardia->id,
@@ -207,19 +211,22 @@ class GuardiaNocturnaController extends Controller
                 'cuartelero_id'      => $request->cuartelero_id,
                 'sin_reporte'        => $request->boolean('sin_reporte'),
                 'observaciones'      => $request->observaciones,
+                // ← nuevos campos
+                'operadores_rescate' => $request->operadores_rescate,
+                'operadores_hazmat'  => $request->operadores_hazmat,
+                'tecnicos_hazmat'    => $request->tecnicos_hazmat,
             ]
         );
 
-        // Sincronizar voluntarios
         $gnCompania->voluntarios()->delete();
         foreach ($request->voluntarios ?? [] as $voluntarioId) {
             GuardiaNocturnaVoluntario::create([
                 'guardia_nocturna_compania_id' => $gnCompania->id,
                 'voluntario_id'                => $voluntarioId,
-                'hora_ingreso'                 => null, 
+                'hora_ingreso'                 => null,
             ]);
         }
-        // Sincronizar unidades
+
         $gnCompania->unidades()->delete();
         foreach ($request->unidades ?? [] as $u) {
             GuardiaNocturnaUnidad::create([
@@ -326,6 +333,7 @@ class GuardiaNocturnaController extends Controller
     public function exportarPdf(GuardiaNocturna $guardia)
     {
         $guardia->load([
+            'companias.compania.especialidades', // ← nuevo
             'companias.compania',
             'companias.oficialACargo',
             'companias.cuartelero',
@@ -355,5 +363,22 @@ class GuardiaNocturnaController extends Controller
         $nombre = $gnVoluntario->voluntario->nombre;
 
         return back()->with('success', "Hora de salida de {$nombre} registrada correctamente.");
+    }
+
+    public function guardarEspecialidades(Request $request, GuardiaNocturna $guardia, GuardiaNocturnaCompania $gnCompania)
+    {
+        $request->validate([
+            'operadores_rescate' => 'nullable|integer|min:0|max:99',
+            'operadores_hazmat'  => 'nullable|integer|min:0|max:99',
+            'tecnicos_hazmat'    => 'nullable|integer|min:0|max:99',
+        ]);
+
+        $gnCompania->update([
+            'operadores_rescate' => $request->operadores_rescate,
+            'operadores_hazmat'  => $request->operadores_hazmat,
+            'tecnicos_hazmat'    => $request->tecnicos_hazmat,
+        ]);
+
+        return back()->with('success', 'Especialidades actualizadas correctamente.');
     }
 }

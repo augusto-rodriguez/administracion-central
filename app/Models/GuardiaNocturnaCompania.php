@@ -15,10 +15,16 @@ class GuardiaNocturnaCompania extends Model
         'cuartelero_id',
         'sin_reporte',
         'observaciones',
+        'operadores_rescate',  // ← nuevo
+        'operadores_hazmat',   // ← nuevo
+        'tecnicos_hazmat',     // ← nuevo
     ];
 
     protected $casts = [
-        'sin_reporte' => 'boolean',
+        'sin_reporte'        => 'boolean',
+        'operadores_rescate' => 'integer',
+        'operadores_hazmat'  => 'integer',
+        'tecnicos_hazmat'    => 'integer',
     ];
 
     public function guardia()

@@ -82,8 +82,9 @@
 
 @foreach($companias as $compania)
 @php
-    $gnCompania = $guardia->companias->firstWhere('compania_id', $compania->id);
-    $guardada   = $gnCompania !== null && !$gnCompania->sin_reporte;
+    $gnCompania  = $guardia->companias->firstWhere('compania_id', $compania->id);
+    $guardada    = $gnCompania !== null && !$gnCompania->sin_reporte;
+    $especialidades = $compania->especialidades->pluck('nombre');
 @endphp
 
 <div class="card mb-4" id="card-compania-{{ $compania->id }}">
@@ -91,6 +92,11 @@
         <span>
             <i class="bi bi-building me-2"></i>
             {{ $compania->numero }}ª Compañía — {{ $compania->nombre }}
+            @foreach($compania->especialidades as $esp)
+                <span class="badge bg-info text-dark ms-1" style="font-size: 0.7rem;">
+                    {{ $esp->nombre }}
+                </span>
+            @endforeach
         </span>
         @if($gnCompania)
             @if($gnCompania->sin_reporte)
@@ -125,6 +131,7 @@
                  style="{{ $gnCompania?->sin_reporte ? 'display:none' : '' }}">
 
                 <div class="row g-3 mb-3">
+
                     {{-- Oficial a cargo --}}
                     <div class="col-md-6">
                         <label class="form-label fw-bold">
@@ -185,6 +192,44 @@
                         <textarea name="observaciones" class="form-control" rows="2"
                                   placeholder="Observaciones opcionales...">{{ $gnCompania?->observaciones }}</textarea>
                     </div>
+
+                    {{-- Especialidades dinámicas --}}
+                    @if($especialidades->contains('Rescate'))
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-warning">
+                            <i class="bi bi-life-preserver me-1"></i>Operadores Rescate
+                        </label>
+                        <input type="number" name="operadores_rescate"
+                               class="form-control"
+                               min="0" max="99"
+                               placeholder="Cantidad"
+                               value="{{ $gnCompania?->operadores_rescate }}">
+                    </div>
+                    @endif
+
+                    @if($especialidades->contains('Hazmat'))
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-danger">
+                            <i class="bi bi-radioactive me-1"></i>Operadores Hazmat
+                        </label>
+                        <input type="number" name="operadores_hazmat"
+                               class="form-control"
+                               min="0" max="99"
+                               placeholder="Cantidad"
+                               value="{{ $gnCompania?->operadores_hazmat }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-danger">
+                            <i class="bi bi-radioactive me-1"></i>Técnicos Hazmat
+                        </label>
+                        <input type="number" name="tecnicos_hazmat"
+                               class="form-control"
+                               min="0" max="99"
+                               placeholder="Cantidad"
+                               value="{{ $gnCompania?->tecnicos_hazmat }}">
+                    </div>
+                    @endif
+
                 </div>
 
                 {{-- Unidades --}}
@@ -264,6 +309,7 @@
         </form>
     </div>
 </div>
+
 @endforeach
 
 @push('scripts')
@@ -403,18 +449,15 @@ function confirmarCierre() {
 }
 
 function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
-    // Limpiar advertencia previa
     const warningId = 'warning-cuartelero-' + companiaId;
     const existing  = document.getElementById(warningId);
     if (existing) existing.remove();
 
     if (!cuarteleroId) return;
 
-    // Buscar el nombre del cuartelero seleccionado
     const tsInstance   = selectEl.tomselect;
     const nombreCuart  = tsInstance.options[cuarteleroId]?.text ?? 'El cuartelero seleccionado';
 
-    // Revisar si aparece en alguna unidad heredada
     const container    = document.getElementById('unidades-container-' + companiaId);
     const filas        = container?.querySelectorAll('tbody tr') ?? [];
     let aparece        = false;
@@ -427,7 +470,6 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
     });
 
     if (!aparece && filas.length > 0) {
-        // Insertar advertencia debajo del select de cuartelero
         const warning = document.createElement('div');
         warning.id    = warningId;
         warning.className = 'alert alert-warning py-2 mt-2 mb-0 small';
@@ -439,7 +481,6 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
             <a href="{{ route('turnos.index') }}" target="_blank">Puestas en Servicio</a>
             y vuelve a heredar la situación.`;
 
-        // Insertar después del select
         selectEl.closest('.col-md-6').appendChild(warning);
     }
 }

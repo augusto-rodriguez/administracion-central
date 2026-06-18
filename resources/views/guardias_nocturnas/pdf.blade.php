@@ -197,6 +197,39 @@
         .badge-cuartelero { background: #17a2b8; color: white; }
         .badge-sin        { background: #aaa;    color: white; }
 
+        /* ── Especialidades ── */
+        .especialidades-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .especialidades-grid td {
+            width: 33%;
+            vertical-align: top;
+            padding-right: 8px;
+        }
+        .esp-box {
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 5px 8px;
+            text-align: center;
+        }
+        .esp-box .esp-titulo {
+            font-size: 7.5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #555;
+            margin-bottom: 3px;
+        }
+        .esp-box .esp-titulo.rescate { color: #d68910; }
+        .esp-box .esp-titulo.hazmat  { color: #c0392b; }
+        .esp-box .esp-valor {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+
         /* ── Observaciones ── */
         .obs-box {
             background: #f9f9f9;
@@ -241,7 +274,6 @@
                         Operador: <strong>{{ $guardia->cerradoPor->nombre ?? '—' }}</strong>
                     </div>
                 </td>
-                {{-- celda fantasma para centrar el texto --}}
                 <td style="width: 70px;"></td>
             </tr>
         </table>
@@ -259,6 +291,12 @@
 
     {{-- Compañías --}}
     @foreach($guardia->companias as $gnCompania)
+    @php
+        $especialidades     = $gnCompania->compania->especialidades->pluck('nombre');
+        $tieneRescate       = $especialidades->contains('Rescate');
+        $tieneHazmat        = $especialidades->contains('Hazmat');
+        $tieneEspecialidades = $tieneRescate || $tieneHazmat;
+    @endphp
     <div class="compania-card">
         <div class="compania-header">
             <span>{{ $gnCompania->compania->numero }}ª Compañía — {{ $gnCompania->compania->nombre }}</span>
@@ -361,6 +399,22 @@
                     </tr>
                 </table>
 
+                {{-- Especialidades --}}
+                @if($tieneEspecialidades)
+                    <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+                        <span class="seccion-titulo" style="margin: 0; border: none; padding: 0;">Especialidades:</span>
+                        @if($tieneRescate)
+                            <span style="background: #fff3cd; border: 1px solid #d68910; border-radius: 3px; padding: 2px 7px; font-size: 8px; color: #d68910;">
+                                &#9670; Rescate: <strong>{{ $gnCompania->operadores_rescate ?? '—' }}</strong> operadores
+                            </span>
+                        @endif
+                        @if($tieneHazmat)
+                            <span style="background: #fdecea; border: 1px solid #c0392b; border-radius: 3px; padding: 2px 7px; font-size: 8px; color: #c0392b;">
+                                &#9888; Hazmat: <strong>{{ $gnCompania->operadores_hazmat ?? '—' }}</strong> op. / <strong>{{ $gnCompania->tecnicos_hazmat ?? '—' }}</strong> téc.
+                            </span>
+                        @endif
+                    </div>
+                @endif
                 {{-- Observaciones --}}
                 @if($gnCompania->observaciones)
                 <div class="obs-box">

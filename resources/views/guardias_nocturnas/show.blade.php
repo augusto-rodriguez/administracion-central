@@ -15,7 +15,6 @@
     </div>
     <div class="d-flex align-items-center gap-3">
 
-        {{-- Total voluntarios --}}
         @php
             $totalVoluntarios = $guardia->companias
                 ->where('sin_reporte', false)
@@ -50,6 +49,11 @@
             <i class="bi bi-building me-2"></i>
             {{ $gnCompania->compania->numero }}ª Compañía —
             {{ $gnCompania->compania->nombre }}
+            @foreach($gnCompania->compania->especialidades ?? [] as $esp)
+                <span class="badge bg-info text-dark ms-1" style="font-size: 0.7rem;">
+                    {{ $esp->nombre }}
+                </span>
+            @endforeach
         </span>
         @if($gnCompania->sin_reporte)
             <span class="badge bg-danger">Sin reporte</span>
@@ -136,7 +140,6 @@
                         <p class="text-muted small mb-2">Sin voluntarios registrados.</p>
                     @endif
 
-                    {{-- Botones solo para operadores --}}
                     @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
                         <button type="button"
                                 class="btn btn-sm btn-outline-success"
@@ -152,7 +155,7 @@
                     @endif
                 </div>
 
-                {{-- Unidades — fila completa --}}
+                {{-- Unidades --}}
                 <div class="col-12">
                     <h6 class="fw-bold mb-2">
                         <i class="bi bi-truck-front me-1 text-danger"></i>
@@ -192,6 +195,66 @@
                         <p class="text-muted small mb-0">Sin unidades registradas.</p>
                     @endif
                 </div>
+
+                {{-- Especialidades --}}
+                @php
+                    $especialidades = $gnCompania->compania->especialidades->pluck('nombre');
+                    $tieneEspecialidades = $especialidades->contains('Rescate') || $especialidades->contains('Hazmat');
+                @endphp
+
+                @if($tieneEspecialidades)
+                <div class="col-12">
+                    <h6 class="fw-bold mb-2">
+                        <i class="bi bi-star me-1 text-warning"></i>Especialidades
+                        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+                            <button type="button"
+                                    class="btn btn-xs btn-outline-secondary ms-2"
+                                    style="font-size: 0.72rem; padding: 1px 6px;"
+                                    onclick="abrirModalEspecialidades(
+                                        {{ $gnCompania->id }},
+                                        '{{ $gnCompania->compania->nombre }}',
+                                        {{ $gnCompania->operadores_rescate ?? 'null' }},
+                                        {{ $gnCompania->operadores_hazmat ?? 'null' }},
+                                        {{ $gnCompania->tecnicos_hazmat ?? 'null' }},
+                                        {{ $especialidades->contains('Rescate') ? 'true' : 'false' }},
+                                        {{ $especialidades->contains('Hazmat') ? 'true' : 'false' }}
+                                    )">
+                                <i class="bi bi-pencil me-1"></i>Editar
+                            </button>
+                        @endif
+                    </h6>
+                    <div class="d-flex flex-wrap gap-3">
+                        @if($especialidades->contains('Rescate'))
+                            <div class="border rounded p-2 text-center" style="min-width: 130px;">
+                                <div class="text-warning fw-bold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-life-preserver me-1"></i>OPERADORES RESCATE
+                                </div>
+                                <div class="fs-4 fw-bold">
+                                    {{ $gnCompania->operadores_rescate ?? '—' }}
+                                </div>
+                            </div>
+                        @endif
+                        @if($especialidades->contains('Hazmat'))
+                            <div class="border rounded p-2 text-center" style="min-width: 130px;">
+                                <div class="text-danger fw-bold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-radioactive me-1"></i>OPERADORES HAZMAT
+                                </div>
+                                <div class="fs-4 fw-bold">
+                                    {{ $gnCompania->operadores_hazmat ?? '—' }}
+                                </div>
+                            </div>
+                            <div class="border rounded p-2 text-center" style="min-width: 130px;">
+                                <div class="text-danger fw-bold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-radioactive me-1"></i>TÉCNICOS HAZMAT
+                                </div>
+                                <div class="fs-4 fw-bold">
+                                    {{ $gnCompania->tecnicos_hazmat ?? '—' }}
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
 
                 {{-- Observaciones --}}
                 @if($gnCompania->observaciones)
@@ -336,6 +399,62 @@
         </div>
     </div>
 
+    {{-- Modal especialidades --}}
+    <div class="modal fade" id="modalEspecialidades" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark py-2">
+                    <h6 class="modal-title mb-0" id="modalEspecialidadesTitulo">
+                        <i class="bi bi-star me-2"></i>Editar especialidades
+                    </h6>
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEspecialidades" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div id="campoRescate" style="display:none;" class="mb-3">
+                            <label class="form-label fw-bold text-warning">
+                                <i class="bi bi-life-preserver me-1"></i>Operadores Rescate
+                            </label>
+                            <input type="number" name="operadores_rescate"
+                                   id="inputOperadoresRescate"
+                                   class="form-control" min="0" max="99"
+                                   placeholder="Cantidad">
+                        </div>
+                        <div id="camposHazmat" style="display:none;">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-danger">
+                                    <i class="bi bi-radioactive me-1"></i>Operadores Hazmat
+                                </label>
+                                <input type="number" name="operadores_hazmat"
+                                       id="inputOperadoresHazmat"
+                                       class="form-control" min="0" max="99"
+                                       placeholder="Cantidad">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-danger">
+                                    <i class="bi bi-radioactive me-1"></i>Técnicos Hazmat
+                                </label>
+                                <input type="number" name="tecnicos_hazmat"
+                                       id="inputTecnicosHazmat"
+                                       class="form-control" min="0" max="99"
+                                       placeholder="Cantidad">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning btn-sm">
+                            <i class="bi bi-floppy me-1"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 @endif
 
 @push('scripts')
@@ -361,7 +480,6 @@ function abrirModalSalida(gnVolId, nombreVoluntario, horaSalidaActual) {
     document.getElementById('inputHoraSalida').value = horaSalidaActual ?? '';
     document.getElementById('formHoraSalida').action =
         `{{ url('guardias-nocturnas/voluntario') }}/${gnVolId}/hora-salida`;
-
     new bootstrap.Modal(document.getElementById('modalHoraSalida')).show();
 }
 
@@ -370,10 +488,7 @@ function abrirModalAgregar(companiaId, companiaNombre) {
     document.getElementById('modalAgregarTitulo').innerHTML =
         `<i class="bi bi-person-plus me-2"></i>Agregar voluntario — ${companiaNombre}`;
 
-    if (tsAgregar) {
-        tsAgregar.destroy();
-        tsAgregar = null;
-    }
+    if (tsAgregar) { tsAgregar.destroy(); tsAgregar = null; }
 
     const select = document.getElementById('selectAgregarVoluntario');
     select.innerHTML = '<option value="">Buscar voluntario...</option>';
@@ -397,13 +512,30 @@ function abrirModalAgregar(companiaId, companiaNombre) {
 function abrirModalObservacion(gnCompaniaId, companiaNombre, observacionActual) {
     document.getElementById('modalObservacionTitulo').innerHTML =
         `<i class="bi bi-chat-text me-2"></i>Observación — ${companiaNombre}`;
-
     document.getElementById('textoObservacion').value = observacionActual;
-
     document.getElementById('formObservacion').action =
         `/guardias-nocturnas/{{ $guardia->id }}/observacion/${gnCompaniaId}`;
-
     new bootstrap.Modal(document.getElementById('modalObservacion')).show();
+}
+
+function abrirModalEspecialidades(gnCompaniaId, companiaNombre, opRescate, opHazmat, tecHazmat, tieneRescate, tieneHazmat) {
+    document.getElementById('modalEspecialidadesTitulo').innerHTML =
+        `<i class="bi bi-star me-2"></i>Especialidades — ${companiaNombre}`;
+
+    // Mostrar/ocultar campos según especialidades de la compañía
+    document.getElementById('campoRescate').style.display  = tieneRescate ? 'block' : 'none';
+    document.getElementById('camposHazmat').style.display  = tieneHazmat  ? 'block' : 'none';
+
+    // Cargar valores actuales
+    document.getElementById('inputOperadoresRescate').value = opRescate ?? '';
+    document.getElementById('inputOperadoresHazmat').value  = opHazmat  ?? '';
+    document.getElementById('inputTecnicosHazmat').value    = tecHazmat ?? '';
+
+    // Apuntar el form a la ruta de guardar compañía
+    document.getElementById('formEspecialidades').action =
+        `/guardias-nocturnas/{{ $guardia->id }}/especialidades/${gnCompaniaId}`;
+
+    new bootstrap.Modal(document.getElementById('modalEspecialidades')).show();
 }
 
 @endif
