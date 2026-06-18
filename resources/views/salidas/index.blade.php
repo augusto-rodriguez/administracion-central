@@ -377,15 +377,16 @@
                             </div>
                             <form action="{{ route('salidas.llegada', $salida) }}" method="POST">
                                 @csrf
+                                <input type="hidden" name="llegada_at" class="llegada-at-oculto" data-salida-id="{{ $salida->id }}">
                                 <div class="modal-body">
                                     <div class="alert alert-info py-2 mb-3">
                                         <strong>Destino:</strong> {{ $salida->direccion }}<br>
                                         <strong>Clave:</strong> {{ $salida->claveSalida->codigo }} — {{ $salida->claveSalida->descripcion }}
                                     </div>
 
-                                    {{-- Horas: salida fija del servidor, llegada inyectada por JS --}}
+                                    {{-- Horas: salida fija del servidor, hora llegada editable --}}
                                     <div class="row g-2 mb-3">
-                                        <div class="col-6">
+                                        <div class="col-5">
                                             <div class="border rounded p-2 text-center bg-light">
                                                 <div class="text-muted small mb-1">
                                                     <i class="bi bi-arrow-up-right-circle me-1"></i>Hora salida
@@ -396,15 +397,21 @@
                                                 <div class="text-muted small">{{ $salida->salida_at->format('d/m/Y') }}</div>
                                             </div>
                                         </div>
-                                        <div class="col-6">
-                                            <div class="border rounded p-2 text-center bg-success bg-opacity-10 border-success">
-                                                <div class="text-muted small mb-1">
+                                        <div class="col-7">
+                                            <div class="border rounded p-2 bg-success bg-opacity-10 border-success">
+                                                <div class="text-muted small mb-1 text-center">
                                                     <i class="bi bi-arrow-down-left-circle me-1"></i>Hora llegada
                                                 </div>
-                                                <div class="fw-bold fs-5 text-success hora-llegada-display" id="horaLlegada{{ $salida->id }}">
-                                                    —
+                                                <input type="time"
+                                                       class="form-control form-control-sm fw-bold text-center llegada-time-input"
+                                                       id="inputLlegada{{ $salida->id }}"
+                                                       data-salida-id="{{ $salida->id }}"
+                                                       max="">
+                                                <div class="text-muted text-center mt-1 llegada-indicador"
+                                                     id="llegadaIndicador{{ $salida->id }}"
+                                                     style="font-size:10px">
+                                                    <i class="bi bi-arrow-repeat me-1"></i>Hora actual
                                                 </div>
-                                                <div class="text-muted small fecha-llegada-display" id="fechaLlegada{{ $salida->id }}"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -960,23 +967,80 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     filaIndex = 0;
 });
 
-// ── Hora de llegada en modales de llegada ──
-document.querySelectorAll('.modal[id^="modalLlegada"]').forEach(function(modal) {
-    modal.addEventListener('show.bs.modal', function() {
-        const id     = this.id.replace('modalLlegada', '');
-        const ahora  = new Date();
-        const hh     = String(ahora.getHours()).padStart(2, '0');
-        const mm     = String(ahora.getMinutes()).padStart(2, '0');
-        const dd     = String(ahora.getDate()).padStart(2, '0');
-        const mes    = String(ahora.getMonth() + 1).padStart(2, '0');
-        const anio   = ahora.getFullYear();
+// ── Hora de llegada — input editable en cada modal ──
+(function() {
+    // Mapa id_salida → { intervalo, modificadaManualmente }
+    const estadoLlegada = {};
 
-        const spanHora  = document.getElementById('horaLlegada'  + id);
-        const spanFecha = document.getElementById('fechaLlegada' + id);
-        if (spanHora)  spanHora.textContent  = `${hh}:${mm}`;
-        if (spanFecha) spanFecha.textContent = `${dd}/${mes}/${anio}`;
+    function hhMM() {
+        const d = new Date();
+        return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+
+    function fechaHoy() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function sincronizarLlegada(salidaId, hora) {
+        // Escribir en el campo oculto llegada_at del form correspondiente
+        const oculto = document.querySelector(`#modalLlegada${salidaId} .llegada-at-oculto`);
+        if (oculto) oculto.value = `${fechaHoy()} ${hora}:00`;
+    }
+
+    function tickLlegada(salidaId) {
+        if (estadoLlegada[salidaId]?.modificada) return;
+        const ahora = hhMM();
+        const input = document.getElementById('inputLlegada' + salidaId);
+        const ind   = document.getElementById('llegadaIndicador' + salidaId);
+        if (input) input.value = ahora;
+        if (ind)   ind.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
+        sincronizarLlegada(salidaId, ahora);
+    }
+
+    document.querySelectorAll('.modal[id^="modalLlegada"]').forEach(function(modal) {
+        const salidaId = modal.id.replace('modalLlegada', '');
+        estadoLlegada[salidaId] = { modificada: false, intervalo: null };
+
+        // Al abrir: arrancar tick
+        modal.addEventListener('show.bs.modal', function() {
+            estadoLlegada[salidaId].modificada = false;
+            tickLlegada(salidaId);
+            clearInterval(estadoLlegada[salidaId].intervalo);
+            estadoLlegada[salidaId].intervalo = setInterval(() => tickLlegada(salidaId), 30000);
+        });
+
+        // Al cerrar: limpiar intervalo
+        modal.addEventListener('hidden.bs.modal', function() {
+            clearInterval(estadoLlegada[salidaId].intervalo);
+            estadoLlegada[salidaId].modificada = false;
+        });
+
+        // El usuario toca el input
+        const input = document.getElementById('inputLlegada' + salidaId);
+        const ind   = document.getElementById('llegadaIndicador' + salidaId);
+        if (!input) return;
+
+        input.addEventListener('change', function() {
+            const ahora = hhMM();
+            if (this.value > ahora) {
+                this.value = ahora;
+                if (ind) ind.innerHTML = '<i class="bi bi-exclamation-triangle me-1 text-warning"></i>No puedes seleccionar una hora futura';
+                estadoLlegada[salidaId].modificada = false;
+                sincronizarLlegada(salidaId, ahora);
+                return;
+            }
+            estadoLlegada[salidaId].modificada = true;
+            sincronizarLlegada(salidaId, this.value);
+            if (this.value === ahora) {
+                if (ind) ind.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
+                estadoLlegada[salidaId].modificada = false;
+            } else {
+                if (ind) ind.innerHTML = `<i class="bi bi-clock-history me-1 text-warning"></i><strong>Hora ajustada: ${this.value}</strong>`;
+            }
+        });
     });
-});
+})();
 
 @if($errors->any())
     var modal = new bootstrap.Modal(document.getElementById('modalNuevaSalida'));

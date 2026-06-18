@@ -413,13 +413,25 @@ class SalidaUnidadController extends Controller
         $request->validate([
             'km_llegada' => 'required|numeric|min:0',
             'km_salida'  => 'nullable|numeric|min:0',
+            'llegada_at' => 'nullable|date|before_or_equal:now',
         ]);
 
         $kmSalida  = $salida->km_salida ?? $request->km_salida;
         $kmLlegada = $request->km_llegada;
 
+        // Usar la hora enviada si es válida; si no, now()
+        $llegadaAt = now();
+        if ($request->filled('llegada_at')) {
+            try {
+                $horaAjustada = \Carbon\Carbon::parse($request->llegada_at);
+                if ($horaAjustada->lessThanOrEqualTo(now())) {
+                    $llegadaAt = $horaAjustada;
+                }
+            } catch (\Exception $e) {}
+        }
+
         $salida->update([
-            'llegada_at'    => now(),
+            'llegada_at'    => $llegadaAt,
             'km_salida'     => $kmSalida,
             'km_llegada'    => $kmLlegada,
             'km_recorrido'  => $kmSalida ? ($kmLlegada - $kmSalida) : null,
