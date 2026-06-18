@@ -275,7 +275,13 @@
                                 @endphp
                                 @if($guardiaActual && $cargoActual)
                                     {{ $cargoActual->cargo->nombre }}<br>
-                                    <strong>Sr. {{ strtoupper($guardiaActual->voluntario->nombre) }}</strong>
+                                    @php
+                                        $palabras = explode(' ', trim($guardiaActual->voluntario->nombre));
+                                        $nombreMostrar = count($palabras) >= 3
+                                            ? $palabras[0] . ' ' . implode(' ', array_slice($palabras, 2))
+                                            : implode(' ', $palabras);
+                                    @endphp
+                                    <strong>Sr. {{ strtoupper($nombreMostrar) }}</strong>
                                 @else
                                     <span class="text-muted">Sin comandante de guardia asignado esta semana.</span>
                                 @endif
