@@ -26,7 +26,7 @@ class Boletin extends Model
         $saludo = $this->tipo === 'am' ? 'Buenos días' : 'Buenas noches';
 
         Carbon::setLocale('es');
-        $fechaTexto = Carbon::parse($this->fecha)->translatedFormat('d \\d\\e F \\d\\e Y');
+        $fechaTexto = Carbon::parse($this->fecha)->translatedFormat('l d \\d\\e F \\d\\e Y');
 
         $horario = $this->tipo === 'am' ? 'DE 08 A 20 HRS' : 'DE 20 A 08 HRS';
 
@@ -50,11 +50,6 @@ class Boletin extends Model
                 $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$m->voluntario->nombre}\n");
             }
         }
-        // $texto .= "\nMAQUINISTAS EN SERVICIO:\n";
-        // foreach ($this->maquinistas as $m) {
-        //     $unidades = $m->unidades_texto ?: $m->unidad->nombre;
-        //     $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$m->voluntario->nombre}\n");
-        // }
 
         // Citaciones
         $citaciones = Citacion::with('compania')

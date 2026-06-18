@@ -210,7 +210,7 @@
                     <div class="alert alert-info d-flex gap-2 align-items-start mb-0"
                         style="font-size: 0.85rem;">
                         <i class="bi bi-shield-check fs-5 text-primary mt-1"></i>
-                        <div>
+                       <div>
                             @if($boletin->texto_guardia)
                                 {{-- Hubo cambio de guardia en este boletín --}}
                                 <span class="fw-bold d-block mb-1"
@@ -226,16 +226,23 @@
                                 </span>
                                 @php
                                     $guardiaActual = \App\Models\GuardiaComandante::activa();
-                                    $rolCdte = $guardiaActual?->voluntario
-                                        ?->roles->firstWhere('rol', 'comandante');
+                                    $cargoActual   = $guardiaActual?->voluntario
+                                        ?->cargosActivos
+                                        ->whereNull('compania_id')
+                                        ->first();
                                 @endphp
-                                @if($guardiaActual && $rolCdte)
-                                    {{ $rolCdte->rango }}° Comandante<br>
+                                @if($guardiaActual && $cargoActual)
+                                    {{ $cargoActual->cargo->nombre }}<br>
                                     <strong>Sr. {{ strtoupper($guardiaActual->voluntario->nombre) }}</strong>
                                 @else
                                     <span class="text-muted">Sin comandante de guardia asignado esta semana.</span>
                                 @endif
                             @endif
+
+                            {{-- Texto de finalización según turno --}}
+                            <p class="mb-0 mt-2 fw-bold" style="font-size: 0.85rem; color: #dc3545;">
+                                FINALIZA 11-7 DE LAS {{ $boletin->tipo === 'am' ? '10:00 HRS' : '21:00 HRS' }}
+                            </p>
                         </div>
                     </div>
                 </div>
