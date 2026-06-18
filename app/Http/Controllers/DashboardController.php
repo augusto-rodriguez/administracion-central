@@ -12,6 +12,7 @@ use App\Models\GuardiaComandante;
 use App\Models\Cargo;
 use App\Models\VoluntarioCargo;
 use App\Models\LibroNovedades;
+use App\Models\OficialFueraServicio;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -67,13 +68,29 @@ class DashboardController extends Controller
 
         $libroActivo = LibroNovedades::where('estado', 'borrador')->latest()->first();
 
+        // Oficiales con cargo general activo
+        $oficiales = VoluntarioCargo::where('activo', true)
+            ->whereNull('compania_id')
+            ->whereHas('cargo', fn($q) => $q->where('tipo', 'general')->where('activo', true))
+            ->with(['voluntario.compania', 'cargo'])
+            ->orderBy('cargo_id')
+            ->get();
+
+        // Oficiales actualmente fuera de servicio
+        $fueraServicio = OficialFueraServicio::whereNull('fecha_fin')
+            ->orWhere('fecha_fin', '>=', today())
+            ->with('voluntario')
+            ->get()
+            ->keyBy('voluntario_id');
+
         return view('dashboard', compact(
             'totalCompanias', 'totalUnidades',
             'totalVoluntarios', 'totalCuarteleros',
             'enServicio', 'enServicioCuarteleros',
             'turnosActivos', 'turnosActivosCuarteleros',
             'salidasActivas', 'guardiaActual',
-            'comandantes', 'libroActivo'
+            'comandantes', 'libroActivo',
+            'oficiales', 'fueraServicio' // ← nuevos
         ));
     }
 
@@ -103,5 +120,31 @@ class DashboardController extends Controller
         );
 
         return back()->with('success', 'Comandante de guardia actualizado.');
+    }
+
+    public function registrarFueraServicio(Request $request)
+    {
+        $request->validate([
+            'voluntario_id' => 'required|exists:voluntarios,id',
+            'fecha_inicio'  => 'required|date',
+            'motivo'        => 'nullable|string|max:255',
+        ]);
+
+        OficialFueraServicio::create([
+            'voluntario_id' => $request->voluntario_id,
+            'fecha_inicio'  => $request->fecha_inicio,
+            'motivo'        => $request->motivo,
+        ]);
+
+        return back()->with('success', 'Oficial registrado como fuera de servicio.');
+    }
+
+    public function vuelveServicio($id)
+    {
+        OficialFueraServicio::findOrFail($id)->update([
+            'fecha_fin' => today(),
+        ]);
+
+        return back()->with('success', 'Oficial vuelve a servicio activo.');
     }
 }

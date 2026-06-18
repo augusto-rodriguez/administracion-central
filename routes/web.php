@@ -107,6 +107,9 @@ Route::middleware(['rol'])->group(function () {
             'parameters' => ['vouchers-combustible' => 'voucher']
         ])->only(['index', 'store', 'edit', 'update']);
 
+        Route::post('dashboard/oficial-fuera-servicio',      [App\Http\Controllers\DashboardController::class, 'registrarFueraServicio'])->name('dashboard.fuera-servicio');
+        Route::post('dashboard/oficial-vuelve-servicio/{id}', [App\Http\Controllers\DashboardController::class, 'vuelveServicio'])->name('dashboard.vuelve-servicio');
+
     });
 
     // ─────────────────────────────────────────────────────────────────

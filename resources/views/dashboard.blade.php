@@ -29,6 +29,11 @@
                         title="Cambiar comandante de guardia">
                     <i class="bi bi-shield-lock me-1"></i>Guardia
                 </button>
+                <button class="btn btn-sm btn-outline-warning"
+                        data-bs-toggle="modal" data-bs-target="#modalFueraServicio"
+                        title="Registrar oficial fuera de servicio">
+                    <i class="bi bi-person-slash me-1"></i>Fuera de servicio
+                </button>
             @endif
         </div>
 
@@ -73,6 +78,98 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+@endif
+
+@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !auth()->user()->esCapitanCia())
+<div class="modal fade" id="modalFueraServicio" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-person-slash me-2"></i>Oficiales fuera de servicio
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                {{-- Listado actuales fuera de servicio --}}
+                @if($fueraServicio->isNotEmpty())
+                    <p class="fw-bold small text-danger mb-2">
+                        <i class="bi bi-exclamation-circle me-1"></i>Actualmente fuera de servicio:
+                    </p>
+                    <ul class="list-group mb-4">
+                        @foreach($fueraServicio as $fs)
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <span class="fw-bold">{{ $fs->voluntario->nombre }}</span>
+                                    <span class="text-muted small ms-2">
+                                        desde {{ $fs->fecha_inicio->format('d/m/Y') }}
+                                    </span>
+                                    @if($fs->motivo)
+                                        <br><span class="text-muted small">{{ $fs->motivo }}</span>
+                                    @endif
+                                </div>
+                                <form action="{{ route('dashboard.vuelve-servicio', $fs->id) }}"
+                                      method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-success"
+                                            title="Marcar como en servicio">
+                                        <i class="bi bi-person-check me-1"></i>Vuelve
+                                    </button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="text-muted small mb-4">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        Todos los oficiales están en servicio activo.
+                    </p>
+                @endif
+
+                {{-- Registrar nuevo fuera de servicio --}}
+                <p class="fw-bold small mb-2">
+                    <i class="bi bi-person-slash me-1"></i>Registrar fuera de servicio:
+                </p>
+                <form action="{{ route('dashboard.fuera-servicio') }}" method="POST">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Oficial</label>
+                        <select name="voluntario_id" class="form-select form-select-sm" required>
+                            <option value="">Seleccionar oficial...</option>
+                            @foreach($oficiales as $rol)
+                                @if(!isset($fueraServicio[$rol->voluntario->id]))
+                                    <option value="{{ $rol->voluntario->id }}">
+                                        {{ $rol->cargo->nombre }} — {{ $rol->voluntario->nombre }}
+                                    </option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Fecha inicio</label>
+                        <input type="date" name="fecha_inicio"
+                               class="form-control form-control-sm"
+                               value="{{ today()->toDateString() }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">
+                            Motivo <span class="text-muted fw-normal">(opcional)</span>
+                        </label>
+                        <input type="text" name="motivo"
+                               class="form-control form-control-sm"
+                               placeholder="Ej: Licencia médica, vacaciones...">
+                    </div>
+                    <button type="submit" class="btn btn-warning btn-sm w-100">
+                        <i class="bi bi-person-slash me-1"></i>Registrar fuera de servicio
+                    </button>
+                </form>
+
+            </div>
         </div>
     </div>
 </div>

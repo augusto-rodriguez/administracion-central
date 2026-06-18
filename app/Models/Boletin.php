@@ -83,6 +83,22 @@ class Boletin extends Model
             }
         }
 
+        // Oficiales fuera de servicio (8-1)
+        $oficialesFuera = \App\Models\OficialFueraServicio::with('voluntario')
+            ->whereNull('fecha_fin')
+            ->orWhere('fecha_fin', '>=', now())
+            ->get();
+
+        if ($oficialesFuera->isNotEmpty()) {
+            $texto .= "\nOFICIALES 8-1:\n";
+            foreach ($oficialesFuera as $of) {
+                $clave = $of->voluntario->clave_actual
+                    ? $of->voluntario->clave_actual
+                    : strtoupper($of->voluntario->nombre);
+                $texto .= strtoupper("- {$clave}\n");
+            }
+        }
+
         return $texto;
     }
 }

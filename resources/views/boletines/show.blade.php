@@ -159,13 +159,46 @@
                                 </p>
                             @endif
                         @endforeach
-                    </div>
+                            {{-- Oficiales 8-1 --}}
+                        @php
+                            $enOficiales  = false;
+                            $oficiales81  = [];
 
-                    {{-- Columna derecha: Citaciones --}}
+                            foreach ($lineas as $linea) {
+                                if (str_starts_with($linea, 'OFICIALES 8-1')) {
+                                    $enOficiales = true;
+                                    continue;
+                                }
+                                if ($enOficiales && (str_starts_with($linea, 'GUARDIA') || str_starts_with($linea, 'FINALIZA'))) {
+                                    break;
+                                }
+                                if ($enOficiales && trim($linea)) {
+                                    $oficiales81[] = ltrim(trim($linea), '-');
+                                }
+                            }
+                        @endphp
+
+                        @if(count($oficiales81))
+                            <p class="fw-bold text-uppercase border-bottom pb-1 mb-2 mt-3"
+                            style="font-size: 0.75rem; color: #dc3545; letter-spacing: 0.05em;">
+                                <i class="bi bi-person-slash me-1"></i>OFICIALES 8-1
+                            </p>
+                            @foreach($oficiales81 as $of)
+                                <p class="mb-1 ps-2 fw-bold" style="font-size: 0.92rem;">
+                                    <i class="bi bi-person-fill text-danger me-1"></i>{{ trim($of) }}
+                                </p>
+                            @endforeach
+                        @endif
+
+                    </div>
+                    
+
+                    {{-- Columna derecha: Citaciones + Oficiales 8-1 --}}
                     <div class="col-md-6 p-3">
+
+                        {{-- Citaciones --}}
                         @php
                             $enCitaciones    = false;
-                            $companiaActual  = null;
                             $citacionesAgrup = [];
 
                             foreach ($lineas as $linea) {
@@ -173,8 +206,11 @@
                                     $enCitaciones = true;
                                     continue;
                                 }
+                                // ← cortar antes de oficiales 8-1
+                                if (str_starts_with($linea, 'OFICIALES 8-1') || str_starts_with($linea, 'GUARDIA') || str_starts_with($linea, 'FINALIZA')) {
+                                    break;
+                                }
                                 if ($enCitaciones && trim($linea)) {
-                                    // Detectar si la línea tiene formato "COMPAÑIA: mensaje"
                                     if (str_contains($linea, ':')) {
                                         [$cia, $msg] = explode(':', $linea, 2);
                                         $citacionesAgrup[trim($cia)][] = trim($msg);
@@ -190,11 +226,9 @@
                             style="font-size: 0.75rem; color: #198754; letter-spacing: 0.05em;">
                                 <i class="bi bi-megaphone me-1"></i>CITACIONES
                             </p>
-
                             @foreach($citacionesAgrup as $compania => $mensajes)
                                 <div class="mb-2">
-                                    <p class="fw-bold mb-1"
-                                    style="font-size: 0.78rem; color: #198754;">
+                                    <p class="fw-bold mb-1" style="font-size: 0.78rem; color: #198754;">
                                         <i class="bi bi-building me-1"></i>{{ $compania }}
                                     </p>
                                     @foreach($mensajes as $msg)
@@ -209,8 +243,9 @@
                         @else
                             <p class="text-muted small">Sin citaciones vigentes.</p>
                         @endif
+
+                    
                     </div>
-                </div>
 
                 {{-- Guardia de comandancia al final del modal --}}
                 <div class="border-top p-3">
@@ -245,11 +280,6 @@
                                     <span class="text-muted">Sin comandante de guardia asignado esta semana.</span>
                                 @endif
                             @endif
-
-                            {{-- Texto de finalización según turno --}}
-                            <p class="mb-0 mt-2 fw-bold" style="font-size: 0.85rem; color: #dc3545;">
-                                FINALIZA 11-7 DE LAS {{ $boletin->tipo === 'am' ? '10:00 HRS' : '21:00 HRS' }}
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -257,6 +287,13 @@
             </div>
 
             <div class="modal-footer py-2">
+                {{-- ── Banner de finalización ── --}}
+                <div class="w-100 text-center fw-bold py-2 px-3"
+                    style="background-color: #dc3545; color: #fff; font-size: 0.9rem; letter-spacing: 0.04em;">
+                    <i class="bi bi-stop-circle me-1"></i>
+                    FINALIZA 11-7 DE LAS {{ $boletin->tipo === 'am' ? '10:00 HRS' : '21:00 HRS' }}
+                </div>
+
                 <button type="button" class="btn btn-outline-secondary btn-sm"
                         data-bs-dismiss="modal">
                     <i class="bi bi-x me-1"></i>Cerrar
