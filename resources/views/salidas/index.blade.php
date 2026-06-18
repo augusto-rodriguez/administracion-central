@@ -383,6 +383,32 @@
                                         <strong>Clave:</strong> {{ $salida->claveSalida->codigo }} — {{ $salida->claveSalida->descripcion }}
                                     </div>
 
+                                    {{-- Horas: salida fija del servidor, llegada inyectada por JS --}}
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <div class="border rounded p-2 text-center bg-light">
+                                                <div class="text-muted small mb-1">
+                                                    <i class="bi bi-arrow-up-right-circle me-1"></i>Hora salida
+                                                </div>
+                                                <div class="fw-bold fs-5">
+                                                    {{ $salida->salida_at->format('H:i') }}
+                                                </div>
+                                                <div class="text-muted small">{{ $salida->salida_at->format('d/m/Y') }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="border rounded p-2 text-center bg-success bg-opacity-10 border-success">
+                                                <div class="text-muted small mb-1">
+                                                    <i class="bi bi-arrow-down-left-circle me-1"></i>Hora llegada
+                                                </div>
+                                                <div class="fw-bold fs-5 text-success hora-llegada-display" id="horaLlegada{{ $salida->id }}">
+                                                    —
+                                                </div>
+                                                <div class="text-muted small fecha-llegada-display" id="fechaLlegada{{ $salida->id }}"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     @if(!$salida->km_salida)
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">
@@ -932,6 +958,24 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     aplicarModo();
     document.getElementById('filasUnidades').innerHTML = '';
     filaIndex = 0;
+});
+
+// ── Hora de llegada en modales de llegada ──
+document.querySelectorAll('.modal[id^="modalLlegada"]').forEach(function(modal) {
+    modal.addEventListener('show.bs.modal', function() {
+        const id     = this.id.replace('modalLlegada', '');
+        const ahora  = new Date();
+        const hh     = String(ahora.getHours()).padStart(2, '0');
+        const mm     = String(ahora.getMinutes()).padStart(2, '0');
+        const dd     = String(ahora.getDate()).padStart(2, '0');
+        const mes    = String(ahora.getMonth() + 1).padStart(2, '0');
+        const anio   = ahora.getFullYear();
+
+        const spanHora  = document.getElementById('horaLlegada'  + id);
+        const spanFecha = document.getElementById('fechaLlegada' + id);
+        if (spanHora)  spanHora.textContent  = `${hh}:${mm}`;
+        if (spanFecha) spanFecha.textContent = `${dd}/${mes}/${anio}`;
+    });
 });
 
 @if($errors->any())
