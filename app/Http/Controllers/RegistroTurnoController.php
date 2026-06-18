@@ -13,12 +13,27 @@ class RegistroTurnoController extends Controller
 {
     public function index()
     {
-        $voluntarios = \App\Models\Voluntario::with(['compania', 'unidadesAutorizadas.compania'])
+        // $voluntarios = \App\Models\Voluntario::with(['compania', 'unidadesAutorizadas.compania'])
+        //     ->where('activo', true)
+        //     ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
+        //     ->orderBy('nombre')->get();
+
+        $voluntarios = \App\Models\Voluntario::with([
+            'compania',
+            'unidadesAutorizadas' => fn($q) => $q->where('activa', true),
+            'unidadesAutorizadas.compania'
+        ])
             ->where('activo', true)
             ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
             ->orderBy('nombre')->get();
 
-        $cuarteleros = \App\Models\Cuartelero::with(['compania', 'unidadesAutorizadas.compania'])
+        // $cuarteleros = \App\Models\Cuartelero::with(['compania', 'unidadesAutorizadas.compania'])
+        //     ->where('activo', true)->orderBy('nombre')->get();
+        $cuarteleros = \App\Models\Cuartelero::with([
+            'compania',
+            'unidadesAutorizadas' => fn($q) => $q->where('activa', true),
+            'unidadesAutorizadas.compania'
+        ])
             ->where('activo', true)->orderBy('nombre')->get();
 
         // Historial unificado con una sola paginación
