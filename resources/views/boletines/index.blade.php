@@ -118,11 +118,11 @@
                     <div class="spinner-border text-danger" role="status"></div>
                 </div>
             </div>
-            <div class="modal-footer py-2">
+            <!-- <div class="modal-footer py-2">
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
                     <i class="bi bi-x me-1"></i>Cerrar
                 </button>
-            </div>
+            </div> -->
         </div>
     </div>
 </div>
