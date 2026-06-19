@@ -364,12 +364,15 @@ document.querySelectorAll('.tomselect-cuartelero').forEach(el => {
 
 // Inicializar TomSelect voluntarios
 document.querySelectorAll('.tomselect-voluntarios').forEach(el => {
-    new TomSelect(el, {
+    const ts = new TomSelect(el, {
         plugins: ['remove_button'],
         placeholder: 'Buscar y agregar voluntarios...',
+        onItemAdd: function() {
+            this.setTextboxValue('');
+            this.refreshOptions();
+        },
     });
 });
-
 // Mostrar/ocultar formulario si sin reporte
 function toggleFormCompania(companiaId, sinReporte) {
     const form = document.getElementById('form-compania-' + companiaId);
