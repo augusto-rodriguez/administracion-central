@@ -238,16 +238,17 @@
                         <span class="fw-bold small">
                             <i class="bi bi-truck-front me-1"></i>Unidades en servicio
                         </span>
-                        <div class="d-flex gap-2">
+                       <div class="d-flex gap-2 align-items-center">
                             <button type="button"
                                     class="btn btn-sm btn-outline-primary"
                                     onclick="heredarSituacion({{ $compania->id }}, {{ $guardia->id }})">
                                 <i class="bi bi-arrow-repeat me-1"></i>Heredar situación actual
                             </button>
+                            <span class="text-muted fw-bold">o</span>
                             <button type="button"
                                     class="btn btn-sm btn-outline-success"
                                     onclick="agregarFilaUnidad({{ $compania->id }})">
-                                <i class="bi bi-plus-circle me-1"></i>Agregar unidad
+                                <i class="bi bi-plus-circle me-1"></i>Agregar manualmente
                             </button>
                         </div>
                     </div>
