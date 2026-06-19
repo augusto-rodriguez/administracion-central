@@ -171,16 +171,13 @@ class TurnoCuarteleroController extends Controller
             $unidadesRestantes = array_diff($unidadesDelTurno, $unidadesNuevas);
 
             if (empty($unidadesRestantes)) {
-                // Turno queda vacío: cerrar SIN detach para preservar historial
+                // Turno queda sin conductores activos: cerrar SIN detach para preservar historial
                 $turno->update([
                     'salida_at'     => now(),
                     'total_minutos' => $turno->entrada_at->diffInMinutes(now()),
                 ]);
-            } else {
-                // Turno sigue activo: solo quitar las unidades transferidas
-                $unidadesAQuitar = array_intersect($unidadesDelTurno, $unidadesNuevas);
-                $turno->unidades()->detach($unidadesAQuitar);
             }
+            // Si quedan otras unidades el turno sigue activo. Sin detach en ningún caso.
         }
 
         // Procesar cuarteleros afectados
@@ -189,16 +186,13 @@ class TurnoCuarteleroController extends Controller
             $unidadesRestantes = array_diff($unidadesDelTurno, $unidadesNuevas);
 
             if (empty($unidadesRestantes)) {
-                // Turno queda vacío: cerrar SIN detach para preservar historial
+                // Turno queda sin conductores activos: cerrar SIN detach para preservar historial
                 $turno->update([
                     'salida_at'     => now(),
                     'total_minutos' => $turno->entrada_at->diffInMinutes(now()),
                 ]);
-            } else {
-                // Turno sigue activo: solo quitar las unidades transferidas
-                $unidadesAQuitar = array_intersect($unidadesDelTurno, $unidadesNuevas);
-                $turno->unidades()->detach($unidadesAQuitar);
             }
+            // Ídem: sin detach, la unidad queda en el historial de ambos turnos.
         }
 
         $cuartelero = Cuartelero::findOrFail($formData['cuartelero_id']);
