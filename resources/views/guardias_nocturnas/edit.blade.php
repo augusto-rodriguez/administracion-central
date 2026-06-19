@@ -238,43 +238,46 @@
                         <span class="fw-bold small">
                             <i class="bi bi-truck-front me-1"></i>Unidades en servicio
                         </span>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-primary"
-                                onclick="heredarSituacion({{ $compania->id }}, {{ $guardia->id }})">
-                            <i class="bi bi-arrow-repeat me-1"></i>Heredar situación actual
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="heredarSituacion({{ $compania->id }}, {{ $guardia->id }})">
+                                <i class="bi bi-arrow-repeat me-1"></i>Heredar situación actual
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-success"
+                                    onclick="agregarFilaUnidad({{ $compania->id }})">
+                                <i class="bi bi-plus-circle me-1"></i>Agregar unidad
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body p-0">
-                        <div id="unidades-loading-{{ $compania->id }}" class="text-center text-muted py-3"
-                             style="display:none;">
-                            <div class="spinner-border spinner-border-sm me-2"></div>
-                            Cargando situación actual...
+                        <div id="unidades-loading-{{ $compania->id }}" class="text-center text-muted py-3" style="display:none;">
+                            <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
                         </div>
                         <div id="unidades-warning-{{ $compania->id }}"></div>
                         <div id="unidades-container-{{ $compania->id }}">
-                            @if($gnCompania && $gnCompania->unidades->isNotEmpty())
-                                <table class="table table-sm mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Unidad</th>
-                                            <th>Conductor</th>
-                                            <th>Tipo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                            <table class="table table-sm mb-0" id="tabla-unidades-{{ $compania->id }}">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Unidad</th>
+                                        <th>Tipo conductor</th>
+                                        <th>Conductor</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-unidades-{{ $compania->id }}">
+                                    @if($gnCompania && $gnCompania->unidades->isNotEmpty())
                                         @foreach($gnCompania->unidades as $u)
-                                        <tr>
+                                        <tr data-idx="{{ $loop->index }}">
                                             <td>
                                                 <span class="badge bg-primary">{{ $u->unidad->nombre }}</span>
                                                 <input type="hidden" name="unidades[{{ $loop->index }}][unidad_id]"
-                                                       value="{{ $u->unidad_id }}">
+                                                    value="{{ $u->unidad_id }}">
                                                 <input type="hidden" name="unidades[{{ $loop->index }}][maquinista_id]"
-                                                       value="{{ $u->maquinista_id }}">
+                                                    value="{{ $u->maquinista_id }}">
                                                 <input type="hidden" name="unidades[{{ $loop->index }}][cuartelero_id]"
-                                                       value="{{ $u->cuartelero_id }}">
-                                            </td>
-                                            <td>
-                                                {{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}
+                                                    value="{{ $u->cuartelero_id }}">
                                             </td>
                                             <td>
                                                 @if($u->maquinista_id)
@@ -285,15 +288,24 @@
                                                     <span class="badge bg-secondary">Sin conductor</span>
                                                 @endif
                                             </td>
+                                            <td>{{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        onclick="this.closest('tr').remove(); renumerarFilas({{ $compania->id }})">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                         @endforeach
-                                    </tbody>
-                                </table>
-                            @else
-                                <p class="text-muted small text-center py-3 mb-0">
-                                    Presiona "Heredar situación actual" para cargar las unidades.
-                                </p>
-                            @endif
+                                    @else
+                                        <tr id="fila-vacia-{{ $compania->id }}">
+                                            <td colspan="4" class="text-muted small text-center py-3">
+                                                Hereda la situación actual o agrega unidades manualmente.
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -483,6 +495,134 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
 
         selectEl.closest('.col-md-6').appendChild(warning);
     }
+}
+
+
+
+// Datos disponibles por compañía para el modo manual
+const datosCompanias = @json($datosCompanias);
+
+function agregarFilaUnidad(companiaId) {
+    const tbody = document.getElementById('tbody-unidades-' + companiaId);
+
+    // Quitar fila vacía si existe
+    const filaVacia = document.getElementById('fila-vacia-' + companiaId);
+    if (filaVacia) filaVacia.remove();
+
+    const idx   = tbody.querySelectorAll('tr').length;
+    const datos = datosCompanias[companiaId];
+
+    // Opciones unidades
+    let optsUnidad = '<option value="">Seleccionar unidad...</option>';
+    datos.unidades.forEach(u => {
+        optsUnidad += `<option value="${u.id}">${u.nombre}</option>`;
+    });
+
+    // Opciones maquinistas
+    let optsMaq = '<option value="">— Sin maquinista —</option>';
+    datos.maquinistas.forEach(v => {
+        optsMaq += `<option value="${v.id}">${v.nombre}</option>`;
+    });
+
+    // Opciones cuarteleros
+    let optsCuar = '<option value="">— Sin cuartelero —</option>';
+    datos.cuarteleros.forEach(c => {
+        optsCuar += `<option value="${c.id}">${c.nombre}</option>`;
+    });
+
+    const tr = document.createElement('tr');
+    tr.dataset.idx = idx;
+    tr.innerHTML = `
+        <td>
+            <select class="form-select form-select-sm select-unidad-manual"
+                    onchange="actualizarHiddenUnidad(this, ${companiaId}, ${idx})"
+                    style="min-width:130px">
+                ${optsUnidad}
+            </select>
+            <input type="hidden" name="unidades[${idx}][unidad_id]" value="">
+            <input type="hidden" name="unidades[${idx}][maquinista_id]" value="">
+            <input type="hidden" name="unidades[${idx}][cuartelero_id]" value="">
+        </td>
+        <td>
+            <select class="form-select form-select-sm"
+                    onchange="cambiarTipoConductor(this, ${companiaId}, ${idx})"
+                    style="min-width:130px">
+                <option value="">Sin conductor</option>
+                <option value="maquinista">Maquinista</option>
+                <option value="cuartelero">Cuartelero</option>
+            </select>
+        </td>
+        <td>
+            <div id="conductor-container-${companiaId}-${idx}">
+                <span class="text-muted small">—</span>
+            </div>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    onclick="this.closest('tr').remove(); renumerarFilas(${companiaId})">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>`;
+
+    tbody.appendChild(tr);
+}
+
+function cambiarTipoConductor(selectTipo, companiaId, idx) {
+    const tipo      = selectTipo.value;
+    const container = document.getElementById(`conductor-container-${companiaId}-${idx}`);
+    const datos     = datosCompanias[companiaId];
+    const tr        = selectTipo.closest('tr');
+
+    // Limpiar hiddens conductor
+    tr.querySelector(`input[name="unidades[${idx}][maquinista_id]"]`).value = '';
+    tr.querySelector(`input[name="unidades[${idx}][cuartelero_id]"]`).value = '';
+
+    if (!tipo) {
+        container.innerHTML = '<span class="text-muted small">—</span>';
+        return;
+    }
+
+    const lista   = tipo === 'maquinista' ? datos.maquinistas : datos.cuarteleros;
+    const campo   = tipo === 'maquinista' ? 'maquinista_id' : 'cuartelero_id';
+    const badgeCs = tipo === 'maquinista' ? 'bg-danger' : 'bg-info text-dark';
+
+    let opts = `<option value="">Seleccionar...</option>`;
+    lista.forEach(p => { opts += `<option value="${p.id}">${p.nombre}</option>`; });
+
+    container.innerHTML = `
+        <select class="form-select form-select-sm"
+                onchange="actualizarHiddenConductor(this, '${campo}', ${companiaId}, ${idx})"
+                style="min-width:160px">
+            ${opts}
+        </select>`;
+}
+
+function actualizarHiddenUnidad(select, companiaId, idx) {
+    const tr = select.closest('tr');
+    tr.querySelector(`input[name="unidades[${idx}][unidad_id]"]`).value = select.value;
+}
+
+function actualizarHiddenConductor(select, campo, companiaId, idx) {
+    const tr = select.closest('tr');
+    tr.querySelector(`input[name="unidades[${idx}][${campo}]"]`).value = select.value;
+}
+
+// Renumera los índices de los inputs tras eliminar una fila
+function renumerarFilas(companiaId) {
+    const tbody = document.getElementById('tbody-unidades-' + companiaId);
+    tbody.querySelectorAll('tr').forEach((tr, newIdx) => {
+        tr.dataset.idx = newIdx;
+        tr.querySelectorAll('input[type="hidden"]').forEach(inp => {
+            inp.name = inp.name.replace(/unidades\[\d+\]/, `unidades[${newIdx}]`);
+        });
+        tr.querySelectorAll('select').forEach(sel => {
+            if (sel.onchange) {
+                // actualizar referencias de idx en atributos onchange
+                sel.setAttribute('onchange',
+                    sel.getAttribute('onchange').replace(/,\s*\d+\)/, `, ${newIdx})`));
+            }
+        });
+    });
 }
 </script>
 @endpush

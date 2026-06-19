@@ -84,11 +84,12 @@ class GuardiaNocturnaController extends Controller
         }
 
         $companias = Compania::where('activa', true)
-            ->where('id', '>', 0)          // ← agregar esto
+            ->where('id', '>', 0)
             ->with([
                 'voluntarios'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
                 'cuarteleros'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
                 'especialidades',
+                'unidades'      => fn($q) => $q->where('activa', true)->orderBy('nombre'),
             ])
             ->orderBy('numero')
             ->get();
@@ -103,7 +104,16 @@ class GuardiaNocturnaController extends Controller
             'companias.unidades.cuartelero',
         ]);
 
-        return view('guardias_nocturnas.edit', compact('guardia', 'companias'));
+        // Datos para el selector manual de unidades en JS
+        $datosCompanias = $companias->mapWithKeys(fn($c) => [
+            $c->id => [
+                'unidades'    => $c->unidades->map(fn($u) => ['id' => $u->id, 'nombre' => $u->nombre])->values(),
+                'maquinistas' => $c->voluntarios->map(fn($v) => ['id' => $v->id, 'nombre' => $v->nombre])->values(),
+                'cuarteleros' => $c->cuarteleros->map(fn($cu) => ['id' => $cu->id, 'nombre' => $cu->nombre])->values(),
+            ]
+        ]);
+
+        return view('guardias_nocturnas.edit', compact('guardia', 'companias', 'datosCompanias'));
     }
 
 
