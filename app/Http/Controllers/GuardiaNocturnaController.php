@@ -84,16 +84,16 @@ class GuardiaNocturnaController extends Controller
         }
 
         $companias = Compania::where('activa', true)
-            ->where('id', '>', 0)
-            ->with([
-                'voluntarios'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
-                'cuarteleros'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
-                'especialidades',
-                'unidades'      => fn($q) => $q->where('activa', true)->orderBy('nombre'),
-            ])
-            ->orderBy('numero')
-            ->get();
-
+        ->where('id', '!=', 5)
+        ->with([
+            'voluntarios'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
+            'cuarteleros'   => fn($q) => $q->where('activo', true)->orderBy('nombre'),
+            'especialidades',
+            'unidades'      => fn($q) => $q->where('activa', true)->orderBy('nombre'),
+        ])
+        ->orderBy('numero')
+        ->get();
+        
         $guardia->load([
             'companias.compania',
             'companias.oficialACargo',
