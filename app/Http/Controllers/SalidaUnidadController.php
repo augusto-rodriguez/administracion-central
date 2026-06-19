@@ -45,25 +45,30 @@ class SalidaUnidadController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        // Construir mapa unidad_id => conductor para autocompletar
+        // Construir mapa unidad_id => conductor para autocompletar.
+        // Un maquinista en turno activo con una unidad tiene prioridad sobre
+        // un cuartelero que también la tenga asignada (puede ocurrir ahora que
+        // las unidades se preservan en ambos turnos al hacer un cambio de conductor).
         $conductorPorUnidad = [];
 
-        foreach ($turnosMaquinistas as $turno) {
-            foreach ($turno->unidades as $unidad) {
-                $conductorPorUnidad[$unidad->id] = [
-                    'tipo'   => 'maquinista',
-                    'id'     => $turno->voluntario->id,
-                    'nombre' => $turno->voluntario->nombre . ' — ' . $turno->voluntario->compania->nombre,
-                ];
-            }
-        }
-
+        // Primero cuarteleros (menor prioridad)
         foreach ($turnosCuarteleros as $turno) {
             foreach ($turno->unidades as $unidad) {
                 $conductorPorUnidad[$unidad->id] = [
                     'tipo'   => 'cuartelero',
                     'id'     => $turno->cuartelero->id,
                     'nombre' => $turno->cuartelero->nombre . ' — ' . $turno->cuartelero->compania->nombre,
+                ];
+            }
+        }
+
+        // Luego maquinistas (mayor prioridad: sobreescriben al cuartelero si comparten unidad)
+        foreach ($turnosMaquinistas as $turno) {
+            foreach ($turno->unidades as $unidad) {
+                $conductorPorUnidad[$unidad->id] = [
+                    'tipo'   => 'maquinista',
+                    'id'     => $turno->voluntario->id,
+                    'nombre' => $turno->voluntario->nombre . ' — ' . $turno->voluntario->compania->nombre,
                 ];
             }
         }
@@ -523,16 +528,22 @@ class SalidaUnidadController extends Controller
         }
 
         foreach ($datos['conflictos'] as $conflicto) {
-            $turnoMaquinista = \App\Models\RegistroTurno::find($conflicto['turno_id']);
-            if ($turnoMaquinista) {
-                $turnoMaquinista->unidades()->detach($conflicto['unidad_id']);
-                if ($turnoMaquinista->unidades()->count() === 0) {
-                    $turnoMaquinista->update([
-                        'salida_at'     => now(),
-                        'total_minutos' => $turnoMaquinista->entrada_at->diffInMinutes(now()),
-                    ]);
-                }
+            $turnoMaquinista = \App\Models\RegistroTurno::with('unidades')->find($conflicto['turno_id']);
+            if (!$turnoMaquinista) continue;
+
+            $unidadesRestantes = $turnoMaquinista->unidades
+                ->pluck('id')
+                ->reject(fn($id) => $id == $conflicto['unidad_id']);
+
+            if ($unidadesRestantes->isEmpty()) {
+                // Turno queda vacío: cerrar SIN detach para preservar historial
+                $turnoMaquinista->update([
+                    'salida_at'     => now(),
+                    'total_minutos' => $turnoMaquinista->entrada_at->diffInMinutes(now()),
+                ]);
             }
+            // Si le quedan otras unidades, el turno sigue activo sin tocar nada.
+            // La unidad devuelta al cuartelero queda en el historial de ambos conductores.
         }
 
         $turno = \App\Models\RegistroTurnoCuartelero::find($datos['turno_id']);
