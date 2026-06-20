@@ -295,9 +295,19 @@ class RegistroTurnoController extends Controller
                     . implode(', ', $unidadesConSalidaActiva) . '. Registra la llegada primero.');
         }
 
+        // ✅ Leer la hora enviada por el modal; si no viene, usar now()
+        $salidaAt = request()->filled('salida_at')
+            ? Carbon::parse(request()->input('salida_at'))
+            : now();
+
+        // Seguridad: no permitir hora futura
+        if ($salidaAt->gt(now())) {
+            $salidaAt = now();
+        }
+
         $turno->update([
-            'salida_at'     => now(),
-            'total_minutos' => $turno->entrada_at->diffInMinutes(now()),
+            'salida_at'     => $salidaAt,
+            'total_minutos' => $turno->entrada_at->diffInMinutes($salidaAt),
         ]);
 
         return redirect()->back()->with('success', 'Salida registrada correctamente.');
