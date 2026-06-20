@@ -48,8 +48,12 @@ class RegistroTurnoController extends Controller
             ->get();
 
         // Combinar, ordenar y paginar manualmente
+        // $historial = $maquinistas->concat($cuartelerosTurnos)
+        //     ->sortByDesc('entrada_at')
+        //     ->values();
+
         $historial = $maquinistas->concat($cuartelerosTurnos)
-            ->sortByDesc('entrada_at')
+            ->sortByDesc(fn($item) => \Carbon\Carbon::parse($item->salida_at)->timestamp)
             ->values();
 
         $perPage = 20;
