@@ -83,6 +83,8 @@ Route::middleware(['rol'])->group(function () {
         Route::resource('turnos', App\Http\Controllers\RegistroTurnoController::class)->only(['index', 'store', 'show']);
         Route::post('turnos/{turno}/salida',                       [App\Http\Controllers\RegistroTurnoController::class, 'registrarSalida'])->name('turnos.salida');
         Route::delete('turnos/{turno}/quitar-unidad/{unidad}',     [App\Http\Controllers\RegistroTurnoController::class, 'quitarUnidad'])   ->name('turnos.quitar-unidad');
+        Route::get('turnos/{turno}/editar',                        [App\Http\Controllers\RegistroTurnoController::class, 'edit'])            ->name('turnos.edit');
+        Route::put('turnos/{turno}/editar',                        [App\Http\Controllers\RegistroTurnoController::class, 'update'])          ->name('turnos.update');
 
         // Salidas de unidades
         Route::get('salidas/ultimo-km/{unidad}', [App\Http\Controllers\SalidaUnidadController::class, 'ultimoKm'])->name('salidas.ultimo-km');
@@ -100,6 +102,8 @@ Route::middleware(['rol'])->group(function () {
         Route::post('cuarteleros-turnos',                              [App\Http\Controllers\TurnoCuarteleroController::class, 'store'])           ->name('cuarteleros.turnos.store');
         Route::post('cuarteleros-turnos/{turno}/salida',               [App\Http\Controllers\TurnoCuarteleroController::class, 'registrarSalida'])->name('cuarteleros.turnos.salida');
         Route::delete('cuarteleros-turnos/{turno}/quitar-unidad/{unidad}', [App\Http\Controllers\TurnoCuarteleroController::class, 'quitarUnidad'])->name('cuarteleros.turnos.quitar-unidad');
+        Route::get('cuarteleros-turnos/{turno}/editar',                [App\Http\Controllers\TurnoCuarteleroController::class, 'edit'])            ->name('cuarteleros.turnos.edit');
+        Route::put('cuarteleros-turnos/{turno}/editar',                [App\Http\Controllers\TurnoCuarteleroController::class, 'update'])          ->name('cuarteleros.turnos.update');
 
         // Vouchers combustible
         Route::get('vouchers-combustible/exportar', [App\Http\Controllers\VoucherCombustibleController::class, 'exportar'])->name('vouchers-combustible.exportar');

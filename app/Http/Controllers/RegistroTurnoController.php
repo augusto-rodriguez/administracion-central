@@ -309,6 +309,44 @@ class RegistroTurnoController extends Controller
         return view('turnos.show', compact('turno'));
     }
 
+    public function edit(RegistroTurno $turno)
+    {
+        // Solo turnos cerrados y dentro de las 12 horas posteriores al cierre
+        if (!$turno->salida_at || $turno->salida_at->lt(now()->subHours(12))) {
+            abort(403, 'No se puede editar este turno.');
+        }
+
+        $turno->load(['voluntario.compania', 'unidades']);
+        return view('turnos.edit', compact('turno'));
+    }
+
+    public function update(Request $request, RegistroTurno $turno)
+    {
+        // Solo turnos cerrados y dentro de las 12 horas posteriores al cierre
+        if (!$turno->salida_at || $turno->salida_at->lt(now()->subHours(12))) {
+            abort(403, 'No se puede editar este turno.');
+        }
+
+        $request->validate([
+            'entrada_at'    => 'required|date|before_or_equal:salida_at',
+            'salida_at'     => 'required|date|after_or_equal:entrada_at|before_or_equal:now',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        $entrada = Carbon::parse($request->entrada_at);
+        $salida  = Carbon::parse($request->salida_at);
+
+        $turno->update([
+            'entrada_at'    => $entrada,
+            'salida_at'     => $salida,
+            'total_minutos' => $entrada->diffInMinutes($salida),
+            'observaciones' => $request->observaciones,
+        ]);
+
+        return redirect()->route('turnos.index')
+            ->with('success', 'Turno actualizado correctamente.');
+    }
+
     public function quitarUnidad(RegistroTurno $turno, \App\Models\Unidad $unidad)
     {
         $salidaActiva = \App\Models\SalidaUnidad::where('unidad_id', $unidad->id)

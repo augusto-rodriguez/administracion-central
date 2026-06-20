@@ -269,4 +269,42 @@ class TurnoCuarteleroController extends Controller
         return redirect()->back()
             ->with('success', "Unidad {$unidad->nombre} removida del turno.");
     }
+
+    public function edit(RegistroTurnoCuartelero $turno)
+    {
+        // Solo turnos cerrados y dentro de las 12 horas posteriores al cierre
+        if (!$turno->salida_at || $turno->salida_at->lt(now()->subHours(12))) {
+            abort(403, 'No se puede editar este turno.');
+        }
+
+        $turno->load(['cuartelero.compania', 'unidades']);
+        return view('turnos.edit_cuartelero', compact('turno'));
+    }
+
+    public function update(Request $request, RegistroTurnoCuartelero $turno)
+    {
+        // Solo turnos cerrados y dentro de las 12 horas posteriores al cierre
+        if (!$turno->salida_at || $turno->salida_at->lt(now()->subHours(12))) {
+            abort(403, 'No se puede editar este turno.');
+        }
+
+        $request->validate([
+            'entrada_at'    => 'required|date|before_or_equal:salida_at',
+            'salida_at'     => 'required|date|after_or_equal:entrada_at|before_or_equal:now',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        $entrada = Carbon::parse($request->entrada_at);
+        $salida  = Carbon::parse($request->salida_at);
+
+        $turno->update([
+            'entrada_at'    => $entrada,
+            'salida_at'     => $salida,
+            'total_minutos' => $entrada->diffInMinutes($salida),
+            'observaciones' => $request->observaciones,
+        ]);
+
+        return redirect()->route('turnos.index')
+            ->with('success', 'Turno de cuartelero actualizado correctamente.');
+    }
 }

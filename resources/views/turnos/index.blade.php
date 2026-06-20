@@ -472,6 +472,7 @@
                     <th>Salida</th>
                     <th>Tiempo</th>
                     <th>Observaciones</th>
+                    <th></th>
                 </tr>
             </thead>
         <tbody>
@@ -503,6 +504,26 @@
                 <td>{{ $item->salida_at ? $item->salida_at->format('d/m/Y H:i') : '—' }}</td>
                 <td><span class="badge bg-secondary">{{ $item->tiempo_formateado }}</span></td>
                 <td>{{ $item->observaciones ?? '—' }}</td>
+                <td>
+                    @php
+                        $editable = $item->salida_at && $item->salida_at->gt(now()->subHours(12));
+                    @endphp
+                    @if($editable)
+                        @if($item->tipo === 'maquinista')
+                            <a href="{{ route('turnos.edit', $item->id) }}"
+                               class="btn btn-sm btn-outline-warning"
+                               title="Editar datos del turno (disponible hasta 12h después del cierre)">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        @else
+                            <a href="{{ route('cuarteleros.turnos.edit', $item->id) }}"
+                               class="btn btn-sm btn-outline-warning"
+                               title="Editar datos del turno (disponible hasta 12h después del cierre)">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                        @endif
+                    @endif
+                </td>
             </tr>
             @empty
             <tr>
