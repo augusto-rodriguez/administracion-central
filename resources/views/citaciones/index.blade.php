@@ -82,9 +82,17 @@
                 @forelse($citaciones as $citacion)
                 <tr>
                     <td>
-                        {{ $citacion->fecha_citacion
-                            ? \Carbon\Carbon::parse($citacion->fecha_citacion)->format('d-m-Y H:i')
-                            : '—' }}
+                        @if($citacion->fecha_citacion)
+                            @php $fecha = \Carbon\Carbon::parse($citacion->fecha_citacion); @endphp
+                            {{ $fecha->format('d-m-Y H:i') }}
+                            @if($fecha->isPast())
+                                <span class="badge bg-secondary ms-1">Expirada</span>
+                            @else
+                                <span class="badge bg-success ms-1">Vigente</span>
+                            @endif
+                        @else
+                            —
+                        @endif
                     </td>
 
                     <td>
