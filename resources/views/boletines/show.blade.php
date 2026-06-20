@@ -144,7 +144,8 @@
                                 style="font-size: 0.75rem; color: #fd7e14; letter-spacing: 0.05em;">
                                     <i class="bi bi-cone-striped me-1"></i>{{ $linea }}
                                 </p>
-                            @elseif(str_starts_with($linea, 'CITACIONES') || str_starts_with($linea, 'GUARDIA') || str_starts_with($linea, 'FINALIZA'))
+                            @elseif(str_starts_with($linea, 'CITACIONES') || str_starts_with($linea, 'GUARDIA') || str_starts_with($linea, 'FINALIZA') || str_starts_with($linea, 'OFICIALES 8-1'))
+                                {{-- ↑ CORRECCIÓN: se agrega OFICIALES 8-1 como corte para no renderizarlos aquí --}}
                                 @php $enSeccion = false; @endphp
                             @elseif($enSeccion && trim($linea))
                                 <p class="mb-1 ps-2 fw-bold" style="font-size: 0.92rem;">
@@ -159,7 +160,8 @@
                                 </p>
                             @endif
                         @endforeach
-                            {{-- Oficiales 8-1 --}}
+
+                        {{-- Oficiales 8-1 (solo se renderizan aquí, en rojo) --}}
                         @php
                             $enOficiales  = false;
                             $oficiales81  = [];
@@ -191,9 +193,8 @@
                         @endif
 
                     </div>
-                    
 
-                    {{-- Columna derecha: Citaciones + Oficiales 8-1 --}}
+                    {{-- Columna derecha: Citaciones --}}
                     <div class="col-md-6 p-3">
 
                         {{-- Citaciones --}}
@@ -244,8 +245,9 @@
                             <p class="text-muted small">Sin citaciones vigentes.</p>
                         @endif
 
-                    
                     </div>
+
+                </div>
 
                 {{-- Guardia de comandancia al final del modal --}}
                 <div class="border-top p-3">
@@ -322,7 +324,6 @@
 @endif
 
 function copiarBoletin() {
-    // Copiar texto plano + guardia si existe
     let texto = document.getElementById('textoBoletin')?.innerText ?? '';
 
     @if($boletin->texto_guardia)
