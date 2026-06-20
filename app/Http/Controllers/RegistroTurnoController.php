@@ -286,8 +286,14 @@ class RegistroTurnoController extends Controller
     {
         $unidadesConSalidaActiva = [];
         foreach ($turno->unidades as $unidad) {
+            // Solo bloquear si la salida activa fue registrada POR ESTE maquinista.
+            // Si la salida activa la inició el cuartelero u otro conductor, no debe
+            // impedir que el maquinista cierre su turno.
             $salidaActiva = SalidaUnidad::where('unidad_id', $unidad->id)
-                ->whereNull('llegada_at')->first();
+                ->whereNull('llegada_at')
+                ->where('voluntario_id', $turno->voluntario_id)
+                ->first();
+
             if ($salidaActiva) {
                 $unidadesConSalidaActiva[] = $unidad->nombre;
             }
@@ -295,7 +301,7 @@ class RegistroTurnoController extends Controller
 
         if (!empty($unidadesConSalidaActiva)) {
             return redirect()->back()
-                ->with('error', 'No se puede cerrar el turno. Las siguientes unidades tienen salidas activas sin llegada registrada: '
+                ->with('error', 'No se puede cerrar el turno. Las siguientes unidades tienen salidas activas registradas por este maquinista sin llegada registrada: '
                     . implode(', ', $unidadesConSalidaActiva) . '. Registra la llegada primero.');
         }
 
@@ -363,12 +369,17 @@ class RegistroTurnoController extends Controller
 
     public function quitarUnidad(RegistroTurno $turno, \App\Models\Unidad $unidad)
     {
+        // Solo bloquear si la salida activa fue iniciada por este maquinista.
+        // Una salida activa de cuartelero u otro conductor no impide quitar la unidad
+        // del registro histórico de este maquinista.
         $salidaActiva = \App\Models\SalidaUnidad::where('unidad_id', $unidad->id)
-            ->whereNull('llegada_at')->first();
+            ->whereNull('llegada_at')
+            ->where('voluntario_id', $turno->voluntario_id)
+            ->first();
 
         if ($salidaActiva) {
             return redirect()->back()
-                ->with('error', "No se puede quitar la unidad {$unidad->nombre}, tiene una salida activa sin llegada registrada.");
+                ->with('error', "No se puede quitar la unidad {$unidad->nombre}, tiene una salida activa registrada por este maquinista sin llegada registrada.");
         }
 
         $turno->load('unidades');

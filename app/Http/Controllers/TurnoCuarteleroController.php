@@ -219,10 +219,20 @@ class TurnoCuarteleroController extends Controller
 
     public function registrarSalida(RegistroTurnoCuartelero $turno)
     {
+        // Cargar el cuartelero para poder identificar sus salidas propias
+        $turno->load('cuartelero');
+        $nombreConductorLibre = '[Cuartelero] ' . $turno->cuartelero->nombre;
+
         $unidadesConSalidaActiva = [];
         foreach ($turno->unidades as $unidad) {
+            // Solo bloquear si la salida activa fue registrada POR ESTE cuartelero.
+            // Si la salida activa la inició un maquinista u otro conductor, no debe
+            // impedir que el cuartelero cierre su turno (el registro histórico se conserva).
             $salidaActiva = SalidaUnidad::where('unidad_id', $unidad->id)
-                ->whereNull('llegada_at')->first();
+                ->whereNull('llegada_at')
+                ->where('conductor_libre', $nombreConductorLibre)
+                ->first();
+
             if ($salidaActiva) {
                 $unidadesConSalidaActiva[] = $unidad->nombre;
             }
@@ -230,7 +240,7 @@ class TurnoCuarteleroController extends Controller
 
         if (!empty($unidadesConSalidaActiva)) {
             return redirect()->back()
-                ->with('error', 'No se puede cerrar el turno. Las siguientes unidades tienen salidas activas sin llegada registrada: '
+                ->with('error', 'No se puede cerrar el turno. Las siguientes unidades tienen salidas activas registradas por este cuartelero sin llegada registrada: '
                     . implode(', ', $unidadesConSalidaActiva) . '. Registra la llegada primero.');
         }
 
@@ -254,12 +264,20 @@ class TurnoCuarteleroController extends Controller
 
     public function quitarUnidad(RegistroTurnoCuartelero $turno, \App\Models\Unidad $unidad)
     {
+        $turno->load('cuartelero');
+        $nombreConductorLibre = '[Cuartelero] ' . $turno->cuartelero->nombre;
+
+        // Solo bloquear si la salida activa fue iniciada por este cuartelero.
+        // Una salida activa iniciada por un maquinista no impide quitar la unidad
+        // del registro histórico del cuartelero.
         $salidaActiva = SalidaUnidad::where('unidad_id', $unidad->id)
-            ->whereNull('llegada_at')->first();
+            ->whereNull('llegada_at')
+            ->where('conductor_libre', $nombreConductorLibre)
+            ->first();
 
         if ($salidaActiva) {
             return redirect()->back()
-                ->with('error', "No se puede quitar la unidad {$unidad->nombre}, tiene una salida activa sin llegada registrada.");
+                ->with('error', "No se puede quitar la unidad {$unidad->nombre}, tiene una salida activa registrada por este cuartelero sin llegada registrada.");
         }
 
         $turno->load('unidades');
