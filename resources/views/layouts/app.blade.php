@@ -182,7 +182,7 @@
     <hr style="border-color:#2d2d44;margin:8px 16px;">
 
     <div class="px-3 pb-3">
-        <div class="text-muted small mb-1">
+        <div class="small mb-1" style="color: #e9ecef;">
             <i class="bi bi-person-circle me-1"></i>{{ auth()->user()->nombre }}
             <span class="badge bg-secondary ms-1">{{ auth()->user()->rol }}</span>
         </div>
