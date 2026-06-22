@@ -123,7 +123,7 @@
                     @error('unidades') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Observaciones</label>
+                    <label class="form-label fw-bold">Observaciones de la(s) unidad(es)</label>
                     <input type="text" name="observaciones" class="form-control"
                            placeholder="Opcional..." value="{{ old('observaciones') }}">
                 </div>
@@ -202,7 +202,7 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Observaciones</label>
+                    <label class="form-label fw-bold">Observaciones de la(s) unidad(es)</label>
                     <input type="text" name="observaciones" class="form-control" placeholder="Opcional...">
                 </div>
                 <div class="col-md-1 d-flex flex-column">
