@@ -589,6 +589,7 @@ class SalidaUnidadController extends Controller
             'oficial_id'        => 'nullable|exists:voluntarios,id',
             'al_mando_id'       => 'required|exists:voluntarios,id',
             'cantidad_personal' => 'nullable|integer|min:1',
+            'km_llegada'        => 'nullable|numeric|min:0',
             'observaciones'     => 'nullable|string',
             'salida_at'         => 'required|date|before_or_equal:now',
         ]);
@@ -614,17 +615,38 @@ class SalidaUnidadController extends Controller
                 ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa.");
         }
 
+        // Recalcular km_recorrido con el km_llegada editado (km_salida no cambia)
+        $kmLlegada = $request->km_llegada !== null ? (float) $request->km_llegada : null;
+
+        // Validar que km_llegada >= km_salida si ambos están presentes
+        if ($kmLlegada !== null && $salida->km_salida !== null && $kmLlegada < $salida->km_salida) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'El km de llegada no puede ser menor al km de salida (' . number_format($salida->km_salida, 0, ',', '.') . ' km).');
+        }
+
+        $kmRecorrido = ($salida->km_salida !== null && $kmLlegada !== null)
+            ? ($kmLlegada - $salida->km_salida)
+            : null;
+
         $salida->update([
             'clave_salida_id'   => $request->clave_salida_id,
             'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
             'al_mando_id'       => $request->al_mando_id,
             'direccion'         => $request->direccion,
             'cantidad_personal' => $request->cantidad_personal,
+            'km_llegada'        => $kmLlegada,
+            'km_recorrido'      => $kmRecorrido,
             'salida_at'         => \Carbon\Carbon::parse($request->salida_at),
             'observaciones'     => $request->observaciones,
         ]);
 
+        $msg = 'Salida actualizada correctamente.';
+        if ($kmRecorrido !== null) {
+            $msg .= ' Km recorridos: ' . number_format($kmRecorrido, 0, ',', '.') . ' km.';
+        }
+
         return redirect()->route('salidas.index')
-            ->with('success', 'Salida actualizada correctamente.');
+            ->with('success', $msg);
     }
 }

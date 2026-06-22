@@ -29,20 +29,93 @@
     </div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label class="form-label fw-bold text-muted">Unidad</label>
                 <p class="form-control-plaintext">
                     {{ $salida->unidad->nombre }} — {{ $salida->unidad->compania->nombre }}
                 </p>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label class="form-label fw-bold text-muted">Conductor</label>
                 <p class="form-control-plaintext">{{ $salida->conductor_nombre }}</p>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Kilometraje --}}
+{{-- El form envuelve tanto la tarjeta de km como la de datos editables --}}
+<form action="{{ route('salidas.update', $salida) }}" method="POST">
+@csrf
+@method('PUT')
+
+<div class="card mt-3 border-warning">
+    <div class="card-header bg-warning bg-opacity-10 fw-bold text-warning-emphasis">
+        <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Kilometraje
+    </div>
+    <div class="card-body">
+
+        @if($salida->km_salida)
+        <div class="alert alert-warning py-2 mb-3">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Revisa bien antes de guardar.</strong>
+            El km de llegada debe ser mayor o igual al de salida
+            (<strong>{{ number_format((int) $salida->km_salida, 0, ',', '.') }} km</strong>).
+            El cálculo de km recorridos se actualizará automáticamente.
+        </div>
+        @endif
+
+        <div class="row g-3 align-items-start">
+
+            {{-- Km Salida — solo lectura --}}
             <div class="col-md-4">
                 <label class="form-label fw-bold text-muted">Km Salida</label>
-                <p class="form-control-plaintext">{{ $salida->km_salida ? formatKm($salida->km_salida) : '—' }}</p>
+                <div class="input-group">
+                    <input type="text" class="form-control bg-light"
+                           value="{{ $salida->km_salida ? number_format((int) $salida->km_salida, 0, ',', '.') : '—' }}"
+                           readonly disabled>
+                    <span class="input-group-text text-muted">km</span>
+                </div>
             </div>
+
+            {{-- Km Llegada — editable --}}
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Km Llegada</label>
+                <div class="input-group">
+                    <input type="number"
+                           name="km_llegada"
+                           id="inputKmLlegada"
+                           class="form-control @error('km_llegada') is-invalid @enderror"
+                           min="0" step="1"
+                           value="{{ old('km_llegada', $salida->km_llegada ? (int) $salida->km_llegada : '') }}"
+                           placeholder="{{ $salida->km_llegada ? '' : 'Sin registrar aún' }}">
+                    <span class="input-group-text text-muted">km</span>
+                    @error('km_llegada') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+                <div id="avisoKmNegativo" class="text-danger small mt-1" style="display:none">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    Menor al km de salida ({{ $salida->km_salida ? number_format((int) $salida->km_salida, 0, ',', '.') : '—' }} km)
+                </div>
+                @if(!$salida->km_llegada)
+                <div class="text-muted small mt-1">
+                    <i class="bi bi-info-circle me-1"></i>Esta salida aún no tiene km de llegada registrado.
+                </div>
+                @endif
+            </div>
+
+            {{-- Km Recorridos — preview calculado --}}
+            <div class="col-md-4">
+                <label class="form-label fw-bold text-muted">Km Recorridos (calculado)</label>
+                <div class="input-group">
+                    <input type="text" id="previewKmRecorridos" class="form-control fw-bold bg-light" readonly
+                           value="{{ ($salida->km_salida && $salida->km_llegada) ? number_format((int)$salida->km_llegada - (int)$salida->km_salida, 0, ',', '.') : '—' }}">
+                    <span class="input-group-text text-muted">km</span>
+                </div>
+                <div id="avisoKmRecorridos" class="text-muted small mt-1" style="display:none">
+                    <i class="bi bi-arrow-repeat me-1"></i>Actualizado en tiempo real
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -52,9 +125,6 @@
         <i class="bi bi-pencil me-2"></i>Datos editables
     </div>
     <div class="card-body">
-        <form action="{{ route('salidas.update', $salida) }}" method="POST">
-            @csrf
-            @method('PUT')
 
             <div class="row g-3">
 
@@ -160,9 +230,11 @@
                     Cancelar
                 </a>
             </div>
-        </form>
+
     </div>
 </div>
+
+</form>
 
 @endsection
 
@@ -172,6 +244,48 @@ const selectClave   = document.getElementById('selectClave');
 const bloqueOficial = document.getElementById('bloqueOficial');
 const selectOficial = document.getElementById('selectOficial');
 
+// ── Preview km recorridos en tiempo real ──
+(function () {
+    const inputLlegada = document.getElementById('inputKmLlegada');
+    const previewRec   = document.getElementById('previewKmRecorridos');
+    const avisoRec     = document.getElementById('avisoKmRecorridos');
+    const avisoNeg     = document.getElementById('avisoKmNegativo');
+    const kmSalida     = {{ $salida->km_salida ? (int) $salida->km_salida : 'null' }};
+
+    function recalcular() {
+        const llegada = parseFloat(inputLlegada.value);
+
+        if (isNaN(llegada) || inputLlegada.value === '') {
+            previewRec.value = '—';
+            previewRec.classList.remove('text-danger');
+            if (avisoNeg) avisoNeg.style.display = 'none';
+            if (avisoRec) avisoRec.style.display = 'none';
+            return;
+        }
+
+        if (kmSalida !== null && llegada < kmSalida) {
+            previewRec.value = '—';
+            previewRec.classList.add('text-danger');
+            if (avisoNeg) avisoNeg.style.display = '';
+            if (avisoRec) avisoRec.style.display = 'none';
+        } else if (kmSalida !== null) {
+            previewRec.value = (llegada - kmSalida).toLocaleString('es-CL');
+            previewRec.classList.remove('text-danger');
+            if (avisoNeg) avisoNeg.style.display = 'none';
+            if (avisoRec) avisoRec.style.display = '';
+        } else {
+            // Sin km_salida: no se puede calcular recorridos, solo mostrar el valor
+            previewRec.value = '—';
+            previewRec.classList.remove('text-danger');
+            if (avisoNeg) avisoNeg.style.display = 'none';
+            if (avisoRec) avisoRec.style.display = 'none';
+        }
+    }
+
+    if (inputLlegada) inputLlegada.addEventListener('input', recalcular);
+})();
+
+// ── Mostrar/ocultar oficial autorizante según tipo de clave ──
 function actualizarOficial() {
     const tipo = selectClave.options[selectClave.selectedIndex]?.dataset.tipo;
     if (tipo === 'administrativa') {
