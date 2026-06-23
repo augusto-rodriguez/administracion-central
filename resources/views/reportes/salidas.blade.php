@@ -21,7 +21,6 @@
     <div class="card-body">
         <form method="GET" action="{{ route('reportes.salidas') }}">
 
-            {{-- Capitán: compañía fija como hidden --}}
             @if($esCapitan)
                 <input type="hidden" name="compania_id" value="{{ $companiaIdCapitan }}">
             @endif
@@ -37,7 +36,6 @@
                     <input type="date" name="hasta" class="form-control" value="{{ request('hasta') }}">
                 </div>
 
-                {{-- Filtro compañía: solo para admin/comandante --}}
                 @if(!$esCapitan)
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Compañía</label>
@@ -148,13 +146,7 @@
     </div>
 </div>
 
-@if(!$buscando)
-<div class="alert alert-info">
-    <i class="bi bi-info-circle me-2"></i>
-    Selecciona al menos un filtro y presiona <strong>Buscar</strong> para ver el reporte.
-</div>
-
-@elseif($salidas->isEmpty())
+@if($salidas->isEmpty())
 <div class="alert alert-info">
     <i class="bi bi-info-circle me-2"></i>No hay salidas registradas para los filtros seleccionados.
 </div>
