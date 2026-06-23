@@ -19,15 +19,12 @@ Route::middleware(['rol'])->group(function () {
     Route::post('dashboard/guardia-comandante', [App\Http\Controllers\DashboardController::class, 'guardarGuardia'])
         ->name('dashboard.guardia-comandante');
 
-    // Mi usuario — disponible para todos los roles
     Route::put('mi-usuario/password', [App\Http\Controllers\UsuarioController::class, 'cambiarPassword'])
         ->name('mi-usuario.password');
 
-    // Guardias nocturnas — solo lectura (todos los roles)
     Route::get('guardias-nocturnas',           [App\Http\Controllers\GuardiaNocturnaController::class, 'index'])->name('guardias-nocturnas.index');
     Route::get('guardias-nocturnas/{guardia}', [App\Http\Controllers\GuardiaNocturnaController::class, 'show']) ->name('guardias-nocturnas.show');
 
-    // Reportes accesibles para todos los roles
     Route::get('reportes/exportar-cuartelero',  [App\Http\Controllers\ReporteController::class, 'exportarCuartelero'])->name('reportes.exportar-cuartelero');
     Route::get('reportes/salidas/exportar',     [App\Http\Controllers\ReporteSalidaController::class, 'exportar'])   ->name('reportes.salidas.exportar');
     Route::get('reportes/salidas',              [App\Http\Controllers\ReporteSalidaController::class, 'index'])       ->name('reportes.salidas');
@@ -54,9 +51,8 @@ Route::middleware(['rol'])->group(function () {
             Route::post('/{guardia}/agregar-voluntario',               [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarVoluntario'])   ->name('agregar-voluntario');
             Route::post('/{guardia}/observacion/{gnCompania}',         [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarObservacion'])  ->name('agregar-observacion');
             Route::patch('/voluntario/{gnVoluntario}/hora-salida',     [App\Http\Controllers\GuardiaNocturnaController::class, 'registrarHoraSalida'])->name('hora-salida');
-            Route::post('/{guardia}/especialidades/{gnCompania}',      [App\Http\Controllers\GuardiaNocturnaController::class, 'guardarEspecialidades'])->name('especialidades'); // ← nueva
+            Route::post('/{guardia}/especialidades/{gnCompania}',      [App\Http\Controllers\GuardiaNocturnaController::class, 'guardarEspecialidades'])->name('especialidades');
         });
-
 
         // Libro de novedades
         Route::get('/libro-novedades',                         [App\Http\Controllers\LibroNovedadesController::class, 'index'])  ->name('libro-novedades.index');
@@ -86,15 +82,37 @@ Route::middleware(['rol'])->group(function () {
         Route::get('turnos/{turno}/editar',                        [App\Http\Controllers\RegistroTurnoController::class, 'edit'])            ->name('turnos.edit');
         Route::put('turnos/{turno}/editar',                        [App\Http\Controllers\RegistroTurnoController::class, 'update'])          ->name('turnos.update');
 
-        // Salidas de unidades
-        Route::get('salidas/ultimo-km/{unidad}', [App\Http\Controllers\SalidaUnidadController::class, 'ultimoKm'])->name('salidas.ultimo-km');
+        // ── Salidas de unidades ───────────────────────────────────────────
+        Route::get('salidas/ultimo-km/{unidad}',
+            [App\Http\Controllers\SalidaUnidadController::class, 'ultimoKm'])
+            ->name('salidas.ultimo-km');
+
         Route::post('salidas/retornar-turno-cuartelero-cancelar', function () {
             session()->forget('retomar_turno_cuartelero');
             return redirect()->route('salidas.index');
         })->name('salidas.retornar-turno-cuartelero-cancelar');
-        Route::post('salidas/retornar-turno-cuartelero', [App\Http\Controllers\SalidaUnidadController::class, 'retornarTurnoCuartelero'])->name('salidas.retornar-turno-cuartelero');
-        Route::resource('salidas', App\Http\Controllers\SalidaUnidadController::class)->only(['index', 'store', 'show','edit', 'update']);
-        Route::post('salidas/{salida}/llegada', [App\Http\Controllers\SalidaUnidadController::class, 'registrarLlegada'])->name('salidas.llegada');
+
+        Route::post('salidas/retornar-turno-cuartelero',
+            [App\Http\Controllers\SalidaUnidadController::class, 'retornarTurnoCuartelero'])
+            ->name('salidas.retornar-turno-cuartelero');
+
+        // Rutas CRUD existentes
+        Route::resource('salidas', App\Http\Controllers\SalidaUnidadController::class)
+            ->only(['index', 'store', 'show', 'edit', 'update']);
+
+        Route::post('salidas/{salida}/llegada',
+            [App\Http\Controllers\SalidaUnidadController::class, 'registrarLlegada'])
+            ->name('salidas.llegada');
+
+        // ── Sobresalida (NUEVAS) ──────────────────────────────────────────
+        Route::get('salidas/{salida}/sobresalida',
+            [App\Http\Controllers\SalidaUnidadController::class, 'createSobresalida'])
+            ->name('salidas.sobresalida.create');
+
+        Route::post('salidas/{salida}/sobresalida',
+            [App\Http\Controllers\SalidaUnidadController::class, 'storeSobresalida'])
+            ->name('salidas.sobresalida.store');
+        // ─────────────────────────────────────────────────────────────────
 
         // Turnos cuarteleros
         Route::post('cuarteleros-turnos/confirmar',                    [App\Http\Controllers\TurnoCuarteleroController::class, 'storeConfirmado'])->name('cuarteleros.turnos.confirmar');
@@ -142,7 +160,6 @@ Route::middleware(['rol'])->group(function () {
         Route::resource('claves-salida', App\Http\Controllers\ClaveSalidaController::class)
             ->only(['index', 'create', 'store', 'edit', 'update']);
 
-        // Cuarteleros
         Route::resource('cuarteleros', App\Http\Controllers\CuarteleroController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update']);
         Route::post('cuarteleros/{cuartelero}/cerrar',         [App\Http\Controllers\CuarteleroController::class, 'cerrar'])         ->name('cuarteleros.cerrar');

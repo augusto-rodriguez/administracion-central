@@ -94,14 +94,12 @@
                             @error('direccion') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        {{-- Hora de salida — siempre visible, fecha fija en servidor --}}
+                        {{-- Hora de salida --}}
                         <div class="col-md-2">
                             <label class="form-label fw-bold">
                                 <i class="bi bi-clock me-1"></i>Hora de salida
                             </label>
-                            <input type="time" id="inputHoraSalida"
-                                   class="form-control"
-                                   max="">
+                            <input type="time" id="inputHoraSalida" class="form-control" max="">
                             <div class="text-muted small mt-1" id="horaIndicador" style="font-size:11px">
                                 <i class="bi bi-arrow-repeat me-1"></i>Actualizando...
                             </div>
@@ -210,7 +208,6 @@
                             Clave, dirección y hora son compartidas. Agrega una fila por cada unidad despachada.
                         </div>
 
-                        {{-- Tabla de unidades --}}
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle mb-2" id="tablaUnidadesConjunta">
                                 <thead class="table-light">
@@ -302,7 +299,9 @@
 </script>
 @endif
 
-{{-- Salidas activas --}}
+{{-- ══════════════════════════════════════════════════════════════════
+     SALIDAS ACTIVAS
+══════════════════════════════════════════════════════════════════ --}}
 @if($salidasActivas->count())
 <div class="card mb-4">
     <div class="card-header bg-white fw-bold">
@@ -314,8 +313,7 @@
             <thead class="table-light">
                 <tr>
                     <th>Unidad</th>
-                    <th>Clave</th>
-                    <th>Dirección</th>
+                    <th>Clave / Destino actual</th>
                     <th>Conductor</th>
                     <th>Al Mando</th>
                     <th>Salida</th>
@@ -326,11 +324,26 @@
             </thead>
             <tbody>
                 @foreach($salidasActivas as $salida)
+                @php
+                    // $salida YA ES el tramo activo (raíz o sobresalida con llegada_at = null).
+                    // Si es sobresalida, obtenemos la raíz para mostrar datos originales.
+                    $raiz = $salida->esSobresalida() ? $salida->salidaPadre : $salida;
+                    $esCadena = $salida->esSobresalida() || $salida->sobresalidas->count() > 0;
+                    // Número de tramo: 1 = raíz, 2+ = sobresalidas
+                    $numTramo = $salida->esSobresalida()
+                        ? ($raiz->sobresalidas->count() + 1)
+                        : 1;
+                    // km_salida efectivo: el del tramo activo o el heredado de la raíz
+                    $kmSalidaEfectivo = $salida->km_salida ?? ($salida->esSobresalida() ? $raiz->km_salida : null);
+                @endphp
                 <tr>
+                    {{-- Unidad --}}
                     <td class="fw-bold">
                         {{ $salida->unidad->nombre }}
                         <div class="text-muted small">{{ $salida->unidad->compania->nombre }}</div>
                     </td>
+
+                    {{-- Clave y destino del tramo activo --}}
                     <td>
                         @if($salida->claveSalida->tipo === 'emergencia')
                             <span class="badge bg-danger">{{ $salida->claveSalida->codigo }}</span>
@@ -338,33 +351,64 @@
                             <span class="badge bg-primary">{{ $salida->claveSalida->codigo }}</span>
                         @endif
                         <div class="text-muted small" style="font-size:11px">
-                            {{ Str::limit($salida->claveSalida->descripcion, 30) }}
+                            {{ Str::limit($salida->direccion, 35) }}
                         </div>
+                        @if($esCadena)
+                        <div class="mt-1">
+                            <span class="badge bg-warning text-dark" style="font-size:10px">
+                                <i class="bi bi-arrow-right-circle me-1"></i>
+                                Tramo {{ $numTramo }} — cadena desde {{ $raiz->salida_at->format('H:i') }}
+                            </span>
+                        </div>
+                        @endif
                     </td>
-                    <td>{{ $salida->direccion }}</td>
+
+                    {{-- Conductor --}}
                     <td>{{ $salida->conductor_nombre }}</td>
+
+                    {{-- Al mando del tramo activo --}}
                     <td>{{ $salida->alMando?->nombre ?? '—' }}</td>
-                    <td>{{ $salida->salida_at->format('d/m/Y H:i') }}</td>
+
+                    {{-- Hora de salida de la raíz (cronómetro total desde que salió) --}}
+                    <td>{{ $raiz->salida_at->format('d/m/Y H:i') }}</td>
+
+                    {{-- Cronómetro desde la raíz --}}
                     <td>
                         <span class="badge bg-warning text-dark cronometro"
-                              data-salida="{{ $salida->salida_at->timestamp }}">
+                              data-salida="{{ $raiz->salida_at->timestamp }}">
                             Calculando...
                         </span>
                     </td>
+
+                    {{-- Km del tramo activo --}}
                     <td>{{ formatKm($salida->km_salida) }}</td>
-                    <td>
+
+                    {{-- Acciones --}}
+                    <td class="text-nowrap">
+                        {{-- Llegada única: cierra el tramo activo y la unidad vuelve al cuartel --}}
                         <button class="btn btn-sm btn-success"
                                 data-bs-toggle="modal"
                                 data-bs-target="#modalLlegada{{ $salida->id }}">
                             <i class="bi bi-arrow-down-left-circle me-1"></i>Llegada
                         </button>
-                        <a href="{{ route('salidas.show', $salida) }}" class="btn btn-sm btn-outline-secondary">
+
+                        {{-- Sobresalida: deriva al nuevo destino sin regresar --}}
+                        <a href="{{ route('salidas.sobresalida.create', $salida) }}"
+                           class="btn btn-sm btn-warning"
+                           title="Derivar a otro destino sin regresar al cuartel">
+                            <i class="bi bi-arrow-right-circle me-1"></i>Sobresalida
+                        </a>
+
+                        {{-- Ver detalle de la raíz --}}
+                        <a href="{{ route('salidas.show', $raiz) }}"
+                           class="btn btn-sm btn-outline-secondary"
+                           title="Ver detalle">
                             <i class="bi bi-eye"></i>
                         </a>
                     </td>
                 </tr>
 
-                {{-- Modal Llegada --}}
+                {{-- Modal de Llegada — único por tramo activo, cierra solo ese tramo --}}
                 <div class="modal fade" id="modalLlegada{{ $salida->id }}" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -372,19 +416,94 @@
                                 <h5 class="modal-title">
                                     <i class="bi bi-arrow-down-left-circle me-2"></i>
                                     Registrar Llegada — {{ $salida->unidad->nombre }}
+                                    @if($esCadena)
+                                        <span class="badge bg-warning text-dark ms-2" style="font-size:11px">
+                                            Tramo {{ $numTramo }}
+                                        </span>
+                                    @endif
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <form action="{{ route('salidas.llegada', $salida) }}" method="POST">
                                 @csrf
-                                <input type="hidden" name="llegada_at" class="llegada-at-oculto" data-salida-id="{{ $salida->id }}">
+                                <input type="hidden" name="llegada_at" class="llegada-at-oculto"
+                                       data-salida-id="{{ $salida->id }}">
                                 <div class="modal-body">
+
+                                    {{-- ── Línea de tiempo de tramos (solo si hay cadena) ── --}}
+                                    @if($esCadena)
+                                    <div class="mb-3">
+
+                                        {{-- Tramo raíz --}}
+                                        <div class="d-flex align-items-start gap-2 mb-2">
+                                            <div class="text-center flex-shrink-0" style="width:36px">
+                                                <span class="badge bg-danger rounded-pill">{{ $raiz->claveSalida->codigo }}</span>
+                                            </div>
+                                            <div class="flex-grow-1 border rounded p-2 bg-light">
+                                                <div class="fw-bold fs-5 lh-1">{{ $raiz->salida_at->format('H:i') }}</div>
+                                                <div class="text-muted small">{{ $raiz->salida_at->format('d/m/Y') }}</div>
+                                                <div class="text-muted small mt-1">{{ Str::limit($raiz->direccion, 40) }}</div>
+                                            </div>
+                                        </div>
+
+                                        {{-- Tramos intermedios (sobresalidas cerradas, todas excepto la actual) --}}
+                                        @foreach($raiz->sobresalidas->where('id', '!=', $salida->id)->sortBy('salida_at') as $tramo)
+                                        <div class="d-flex align-items-start gap-2 mb-2 ms-2">
+                                            <div class="text-center flex-shrink-0" style="width:36px">
+                                                <div style="width:2px; height:8px; background:#dee2e6; margin: 0 auto 4px;"></div>
+                                                <span class="badge bg-warning text-dark rounded-pill" style="font-size:10px">{{ $tramo->claveSalida->codigo }}</span>
+                                            </div>
+                                            <div class="flex-grow-1 border rounded p-2" style="font-size:13px">
+                                                <div class="fw-bold">{{ $tramo->salida_at->format('H:i') }}</div>
+                                                <div class="text-muted">{{ Str::limit($tramo->direccion, 40) }}</div>
+                                            </div>
+                                        </div>
+                                        @endforeach
+
+                                        {{-- Tramo actual (el que se está cerrando) --}}
+                                        <div class="d-flex align-items-start gap-2 ms-2">
+                                            <div class="text-center flex-shrink-0" style="width:36px">
+                                                <div style="width:2px; height:8px; background:#dee2e6; margin: 0 auto 4px;"></div>
+                                                <span class="badge bg-warning text-dark rounded-pill" style="font-size:10px">{{ $salida->claveSalida->codigo }}</span>
+                                            </div>
+                                            <div class="flex-grow-1 border border-success rounded p-2 bg-success bg-opacity-10" style="font-size:13px">
+                                                <div class="fw-bold">{{ $salida->salida_at->format('H:i') }}
+                                                    <span class="badge bg-success ms-1" style="font-size:10px">tramo actual</span>
+                                                </div>
+                                                <div class="text-muted">{{ Str::limit($salida->direccion, 40) }}</div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    @else
+                                    {{-- Sin cadena: cuadros originales hora salida / hora llegada --}}
                                     <div class="alert alert-info py-2 mb-3">
                                         <strong>Destino:</strong> {{ $salida->direccion }}<br>
                                         <strong>Clave:</strong> {{ $salida->claveSalida->codigo }} — {{ $salida->claveSalida->descripcion }}
                                     </div>
+                                    @endif
 
-                                    {{-- Horas: salida fija del servidor, hora llegada editable --}}
+                                    @if($esCadena)
+                                    {{-- Con cadena: solo el input de llegada (la línea de tiempo ya muestra las horas) --}}
+                                    <div class="mb-3">
+                                        <div class="border rounded p-2 bg-success bg-opacity-10 border-success">
+                                            <div class="text-muted small mb-1 text-center">
+                                                <i class="bi bi-arrow-down-left-circle me-1"></i>Hora llegada al cuartel
+                                            </div>
+                                            <input type="time"
+                                                   class="form-control form-control-sm fw-bold text-center llegada-time-input"
+                                                   id="inputLlegada{{ $salida->id }}"
+                                                   data-salida-id="{{ $salida->id }}"
+                                                   max="">
+                                            <div class="text-muted text-center mt-1 llegada-indicador"
+                                                 id="llegadaIndicador{{ $salida->id }}"
+                                                 style="font-size:10px">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Hora actual
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @else
+                                    {{-- Sin cadena: cuadros originales hora salida | hora llegada --}}
                                     <div class="row g-2 mb-3">
                                         <div class="col-5">
                                             <div class="border rounded p-2 text-center bg-light">
@@ -394,7 +513,9 @@
                                                 <div class="fw-bold fs-5">
                                                     {{ $salida->salida_at->format('H:i') }}
                                                 </div>
-                                                <div class="text-muted small">{{ $salida->salida_at->format('d/m/Y') }}</div>
+                                                <div class="text-muted small">
+                                                    {{ $salida->salida_at->format('d/m/Y') }}
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-7">
@@ -415,8 +536,9 @@
                                             </div>
                                         </div>
                                     </div>
+                                    @endif
 
-                                    @if(!$salida->km_salida)
+                                    @if(!$kmSalidaEfectivo)
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">
                                             Km Salida <span class="text-danger">*</span>
@@ -432,7 +554,10 @@
                                     @else
                                     <div class="mb-3">
                                         <div class="alert alert-secondary py-2">
-                                            <strong>Km salida:</strong> {{ formatKm($salida->km_salida) }}
+                                            <strong>Km salida:</strong> {{ formatKm($kmSalidaEfectivo) }}
+                                            @if($salida->esSobresalida() && !$salida->km_salida)
+                                                <span class="text-muted small ms-1">(heredado de la raíz)</span>
+                                            @endif
                                         </div>
                                     </div>
                                     @endif
@@ -444,13 +569,12 @@
                                         <input type="number" name="km_llegada" step="1"
                                                class="form-control form-control-lg km-llegada-input"
                                                data-salida-id="{{ $salida->id }}"
-                                               data-km-salida="{{ $salida->km_salida }}"
-                                               min="{{ $salida->km_salida }}"
+                                               data-km-salida="{{ $kmSalidaEfectivo }}"
+                                               min="{{ $kmSalidaEfectivo }}"
                                                placeholder="Solo números sin puntos ni guiones" required>
                                         <div class="text-muted small mt-1">
                                             <i class="bi bi-info-circle me-1"></i>Ingresa solo números, sin puntos ni guiones
                                         </div>
-                                        {{-- Resumen km recorridos en tiempo real --}}
                                         <div class="mt-2 d-none km-resumen" id="kmResumen{{ $salida->id }}">
                                             <div class="alert py-2 mb-0" id="kmResumenAlert{{ $salida->id }}">
                                                 <i class="bi bi-signpost-2 me-1"></i>
@@ -482,7 +606,9 @@
 </div>
 @endif
 
-{{-- Historial --}}
+{{-- ══════════════════════════════════════════════════════════════════
+     HISTORIAL
+══════════════════════════════════════════════════════════════════ --}}
 <div class="card">
     <div class="card-header bg-white fw-bold">
         <i class="bi bi-list-ul me-2"></i>Historial de Salidas
@@ -516,6 +642,14 @@
                         @else
                             <span class="badge bg-primary">{{ $salida->claveSalida->codigo }}</span>
                         @endif
+                        @if($salida->sobresalidas->count() > 0)
+                        <div class="mt-1">
+                            <span class="badge bg-warning text-dark" style="font-size:10px">
+                                <i class="bi bi-arrow-right-circle me-1"></i>
+                                {{ $salida->sobresalidas->count() + 1 }} tramos
+                            </span>
+                        </div>
+                        @endif
                     </td>
                     <td>{{ $salida->direccion }}</td>
                     <td>{{ $salida->conductor_nombre }}</td>
@@ -523,7 +657,16 @@
                     <td>{{ $salida->salida_at->format('d/m/Y H:i') }}</td>
                     <td>{{ $salida->llegada_at->format('d/m/Y H:i') }}</td>
                     <td><span class="badge bg-secondary">{{ $salida->tiempo_formateado }}</span></td>
-                    <td>{{ formatKm($salida->km_recorrido) }}</td>
+                    <td>
+                        @if($salida->km_recorrido !== null)
+                            {{ formatKm($salida->km_recorrido) }}
+                            @if($salida->sobresalidas->count() > 0)
+                                <div class="text-muted" style="font-size:10px">total cadena</div>
+                            @endif
+                        @else
+                            —
+                        @endif
+                    </td>
                     <td>
                         <a href="{{ route('salidas.show', $salida) }}" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-eye"></i>
@@ -571,8 +714,7 @@ function aplicarModo() {
     seccionConjunta.style.display   = esConjunta ? ''     : 'none';
     labelSubmit.textContent         = esConjunta ? 'Registrar Salida Conjunta' : 'Registrar Salida';
 
-    // required en campos de modo individual
-    document.getElementById('selectUnidad').required      = !esConjunta;
+    document.getElementById('selectUnidad').required         = !esConjunta;
     document.getElementById('selectOficialAlMando').required = !esConjunta;
 
     if (esConjunta && document.querySelectorAll('#filasUnidades tr').length === 0) {
@@ -763,10 +905,7 @@ function actualizarCronometros() {
 actualizarCronometros();
 setInterval(actualizarCronometros, 1000);
 
-// ════════════════════════════════════════════════════════════════
-// HORA DE SALIDA — input siempre visible, se sincroniza con el campo oculto
-// ════════════════════════════════════════════════════════════════
-
+// ── Hora de salida ──
 const inputHoraSalida  = document.getElementById('inputHoraSalida');
 const salidaAtOculto   = document.getElementById('salidaAtAjustada');
 const horaIndicador    = document.getElementById('horaIndicador');
@@ -801,17 +940,14 @@ function tickHora() {
     }
 }
 
-// Iniciar con la hora actual y actualizar cada 30s mientras no toquen el campo
 tickHora();
 const intervaloHora = setInterval(tickHora, 30000);
 
-// Cuando el usuario toca el campo, dejar de actualizar y marcar como modificado
 inputHoraSalida.addEventListener('change', function () {
     const horaElegida = this.value;
     const ahora = horaActualLocal();
 
     if (horaElegida > ahora) {
-        // No permitir hora futura
         this.value = ahora;
         sincronizarCampoOculto(ahora);
         horaIndicador.innerHTML = '<i class="bi bi-exclamation-triangle me-1 text-warning"></i>No puedes seleccionar una hora futura';
@@ -830,7 +966,6 @@ inputHoraSalida.addEventListener('change', function () {
     }
 });
 
-// Al abrir el modal, asegurar que el input esté actualizado
 document.getElementById('modalNuevaSalida').addEventListener('show.bs.modal', function () {
     horaModificadaManualmente = false;
     tickHora();
@@ -868,12 +1003,11 @@ function buildConductorSelect(idx, unidadId) {
 }
 
 function agregarFilaUnidad() {
-    const idx  = filaIndex++;
+    const idx   = filaIndex++;
     const tbody = document.getElementById('filasUnidades');
-    const tr   = document.createElement('tr');
+    const tr    = document.createElement('tr');
     tr.dataset.idx = idx;
 
-    // Select unidad
     let selectUnidadHtml = `<select name="unidades[${idx}][unidad_id]" class="form-select form-select-sm cj-unidad" required>`;
     selectUnidadHtml += '<option value="">Seleccionar...</option>';
     opcionesUnidades.forEach(u => {
@@ -882,7 +1016,6 @@ function agregarFilaUnidad() {
     selectUnidadHtml += '</select>';
     selectUnidadHtml += '<div class="text-muted small mt-1 cj-km-ref" style="font-size:11px"></div>';
 
-    // Select al mando
     let selectMandoHtml = `<select name="unidades[${idx}][al_mando_id]" class="form-select form-select-sm cj-mando" required>`;
     selectMandoHtml += '<option value="">Seleccionar...</option>';
     opcionesVoluntarios.forEach(v => {
@@ -905,43 +1038,38 @@ function agregarFilaUnidad() {
 
     tbody.appendChild(tr);
 
-    // Evento: al seleccionar unidad → autocompletar conductor y km
     tr.querySelector('.cj-unidad').addEventListener('change', function() {
         const unidadId = this.value;
         const cell     = tr.querySelector('.cj-conductor-cell');
         const kmInput  = tr.querySelector('.cj-km');
         const kmRef    = tr.querySelector('.cj-km-ref');
 
-        // Conductor
         cell.innerHTML = buildConductorSelect(idx, unidadId);
 
-        // Sin conductor en turno: advertencia
         if (unidadId && !conductorPorUnidad[unidadId]) {
             cell.insertAdjacentHTML('beforeend',
                 '<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Sin conductor en turno</div>');
         }
 
-        // Último km vía API
         if (unidadId) {
             fetch(`/salidas/ultimo-km/${unidadId}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.km) {
                         const km = Math.round(data.km);
-                        kmInput.value = km;
+                        kmInput.value   = km;
                         kmRef.innerHTML = `<i class="bi bi-info-circle me-1"></i>Último: <strong>${km.toLocaleString('es-CL')} km</strong> (${data.fecha})`;
                     } else {
-                        kmInput.value = '';
+                        kmInput.value   = '';
                         kmRef.innerHTML = '<i class="bi bi-exclamation-circle me-1 text-warning"></i>Sin historial';
                     }
                 });
         } else {
-            kmInput.value  = '';
+            kmInput.value   = '';
             kmRef.innerHTML = '';
         }
     });
 
-    // Botón quitar fila
     tr.querySelector('.cj-quitar').addEventListener('click', function() {
         const filas = document.querySelectorAll('#filasUnidades tr');
         if (filas.length <= 2) {
@@ -956,11 +1084,8 @@ document.getElementById('btnAgregarUnidad').addEventListener('click', agregarFil
 
 // ── Reset al cerrar el modal ──
 document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', function() {
-    // Restaurar hora al estado automático
     horaModificadaManualmente = false;
     tickHora();
-
-    // Volver a modo individual y limpiar filas conjunta
     modoIndividualRadio.checked = true;
     aplicarModo();
     document.getElementById('filasUnidades').innerHTML = '';
@@ -969,7 +1094,6 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
 
 // ── Hora de llegada — input editable en cada modal ──
 (function() {
-    // Mapa id_salida → { intervalo, modificadaManualmente }
     const estadoLlegada = {};
 
     function hhMM() {
@@ -983,7 +1107,6 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     }
 
     function sincronizarLlegada(salidaId, hora) {
-        // Escribir en el campo oculto llegada_at del form correspondiente
         const oculto = document.querySelector(`#modalLlegada${salidaId} .llegada-at-oculto`);
         if (oculto) oculto.value = `${fechaHoy()} ${hora}:00`;
     }
@@ -1002,7 +1125,6 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
         const salidaId = modal.id.replace('modalLlegada', '');
         estadoLlegada[salidaId] = { modificada: false, intervalo: null };
 
-        // Al abrir: arrancar tick
         modal.addEventListener('show.bs.modal', function() {
             estadoLlegada[salidaId].modificada = false;
             tickLlegada(salidaId);
@@ -1010,13 +1132,11 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
             estadoLlegada[salidaId].intervalo = setInterval(() => tickLlegada(salidaId), 30000);
         });
 
-        // Al cerrar: limpiar intervalo
         modal.addEventListener('hidden.bs.modal', function() {
             clearInterval(estadoLlegada[salidaId].intervalo);
             estadoLlegada[salidaId].modificada = false;
         });
 
-        // El usuario toca el input
         const input = document.getElementById('inputLlegada' + salidaId);
         const ind   = document.getElementById('llegadaIndicador' + salidaId);
         if (!input) return;

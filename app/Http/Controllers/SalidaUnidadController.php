@@ -10,16 +10,30 @@ use Illuminate\Http\Request;
 
 class SalidaUnidadController extends Controller
 {
+    // ─────────────────────────────────────────────────────────────────────
+    // INDEX
+    // ─────────────────────────────────────────────────────────────────────
+
     public function index()
     {
-        $salidasActivas = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando'])
+        // Tramo activo por unidad: exactamente un registro con llegada_at = null
+        // por unidad (puede ser la raíz o una sobresalida). Se carga salidaPadre
+        // para poder acceder a los datos de la raíz cuando el activo es sobresalida.
+        $salidasActivas = SalidaUnidad::with([
+                'unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando',
+                'salidaPadre.claveSalida',
+                'sobresalidas.claveSalida', 'sobresalidas.alMando',
+            ])
             ->whereNull('llegada_at')
             ->orderBy('salida_at', 'desc')
             ->get();
 
-        $historial = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando'])
+        // Historial: solo raíces cerradas para no mostrar cada tramo por separado
+        $historial = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando',
+                'sobresalidas'])
             ->whereNotNull('llegada_at')
-            ->orderBy('salida_at', 'desc')
+            ->whereNull('salida_padre_id')   // solo raíces en el historial
+            ->orderBy('llegada_at', 'desc')  // primero la que llegó más recientemente
             ->paginate(20);
 
         $unidades = Unidad::with('compania')->where('activa', true)->orderBy('nombre')->get();
@@ -39,19 +53,13 @@ class SalidaUnidadController extends Controller
         $turnosCuarteleros = \App\Models\RegistroTurnoCuartelero::with(['cuartelero.compania', 'unidades'])
             ->whereNull('salida_at')->get();
 
-        // Voluntarios al mando — todos los voluntarios activos
         $voluntariosAlMando = Voluntario::with('compania')
             ->where('activo', true)
             ->orderBy('nombre')
             ->get();
 
-        // Construir mapa unidad_id => conductor para autocompletar.
-        // Un maquinista en turno activo con una unidad tiene prioridad sobre
-        // un cuartelero que también la tenga asignada (puede ocurrir ahora que
-        // las unidades se preservan en ambos turnos al hacer un cambio de conductor).
         $conductorPorUnidad = [];
 
-        // Primero cuarteleros (menor prioridad)
         foreach ($turnosCuarteleros as $turno) {
             foreach ($turno->unidades as $unidad) {
                 $conductorPorUnidad[$unidad->id] = [
@@ -62,7 +70,6 @@ class SalidaUnidadController extends Controller
             }
         }
 
-        // Luego maquinistas (mayor prioridad: sobreescriben al cuartelero si comparten unidad)
         foreach ($turnosMaquinistas as $turno) {
             foreach ($turno->unidades as $unidad) {
                 $conductorPorUnidad[$unidad->id] = [
@@ -73,7 +80,6 @@ class SalidaUnidadController extends Controller
             }
         }
 
-        // Lista de conductores disponibles para el select
         $conductores = collect();
         foreach ($turnosMaquinistas as $turno) {
             $conductores->push([
@@ -98,9 +104,12 @@ class SalidaUnidadController extends Controller
         ));
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // STORE (salida individual normal — sin cambios en lógica)
+    // ─────────────────────────────────────────────────────────────────────
+
     public function store(Request $request)
     {
-        // ── Modo salida conjunta: delegar al método especializado ──
         if ($request->has('unidades') && is_array($request->unidades)) {
             return $this->storeConjunta($request);
         }
@@ -126,10 +135,9 @@ class SalidaUnidadController extends Controller
         if ($salidaActiva) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Esta unidad ya tiene una salida activa sin cerrar.');
+                ->with('error', 'Esta unidad ya tiene una salida activa sin cerrar. Si la unidad fue derivada a otro destino, use "Registrar Sobresalida".');
         }
 
-        // Validar oficial obligatorio si la clave es administrativa
         $clave = ClaveSalida::find($request->clave_salida_id);
 
         if ($clave && $clave->tipo === 'administrativa') {
@@ -152,7 +160,6 @@ class SalidaUnidadController extends Controller
             }
         }
 
-        // Validar que el voluntario al mando no tenga ya una salida activa
         $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
             ->whereNull('llegada_at')
             ->first();
@@ -225,21 +232,14 @@ class SalidaUnidadController extends Controller
             $conductorLibre = $request->conductor_libre;
         }
 
-        // ── Determinar hora de salida ──
-        // Si el operador ajustó la hora, usar esa; si no, usar la hora actual.
-        // Validación extra: si la hora ajustada es futura (por reloj desincronizado),
-        // se descarta silenciosamente y se usa now().
         $salidaAt = now();
-
         if ($request->filled('salida_at')) {
             try {
                 $horaAjustada = \Carbon\Carbon::parse($request->salida_at);
                 if ($horaAjustada->lessThanOrEqualTo(now())) {
                     $salidaAt = $horaAjustada;
                 }
-            } catch (\Exception $e) {
-                // Si falla el parseo, se mantiene now() — no se interrumpe el registro.
-            }
+            } catch (\Exception $e) {}
         }
 
         SalidaUnidad::create([
@@ -254,11 +254,146 @@ class SalidaUnidadController extends Controller
             'km_salida'         => $request->km_salida,
             'salida_at'         => $salidaAt,
             'observaciones'     => $request->observaciones,
+            'salida_padre_id'   => null,
         ]);
 
         return redirect()->back()->with('success', 'Salida registrada exitosamente.');
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // SOBRESALIDA — FORMULARIO
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Muestra el formulario para registrar una sobresalida.
+     * $salida es la salida activa actual de la unidad (raíz o última sobresalida).
+     */
+    public function createSobresalida(SalidaUnidad $salida)
+    {
+        abort_if($salida->llegada_at !== null, 422, 'Esta salida ya tiene llegada registrada.');
+
+        $salida->load(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando', 'salidaPadre']);
+
+        $claves = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
+
+        $oficiales = Voluntario::with('compania')
+            ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
+                ->where('activo', true)
+                ->where('puede_autorizar_salidas', true))
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+
+        $voluntariosAlMando = Voluntario::with('compania')
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get();
+
+        // La raíz real: si la salida actual ya es una sobresalida, el padre ES la raíz.
+        $raiz = $salida->esSalidaRaiz() ? $salida : $salida->salidaPadre;
+
+        return view('salidas.sobresalida', compact(
+            'salida', 'raiz', 'claves', 'oficiales', 'voluntariosAlMando'
+        ));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SOBRESALIDA — GUARDAR
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Registra una sobresalida para una unidad que ya está activa.
+     * $salida es la salida activa actual (raíz o última sobresalida).
+     */
+    public function storeSobresalida(Request $request, SalidaUnidad $salida)
+    {
+        // La unidad debe tener esta salida activa
+        abort_if($salida->llegada_at !== null, 422, 'Esta salida ya está cerrada.');
+
+        $request->validate([
+            'clave_salida_id'   => 'required|exists:claves_salida,id',
+            'direccion'         => 'required|string|max:255',
+            'oficial_id'        => 'nullable|exists:voluntarios,id',
+            'al_mando_id'       => 'required|exists:voluntarios,id',
+            'cantidad_personal' => 'nullable|integer|min:1',
+            'observaciones'     => 'nullable|string',
+            'salida_at'         => 'nullable|date|before_or_equal:now',
+        ]);
+
+        $clave = ClaveSalida::find($request->clave_salida_id);
+
+        if ($clave->tipo === 'administrativa' && !$request->oficial_id) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Las salidas administrativas requieren un oficial autorizante.');
+        }
+
+        if ($request->oficial_id) {
+            $oficialValido = Voluntario::whereHas('roles', fn($q) => $q->where('rol', 'oficial')
+                ->where('activo', true)
+                ->where('puede_autorizar_salidas', true))
+                ->where('id', $request->oficial_id)
+                ->exists();
+
+            if (!$oficialValido) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'El oficial seleccionado no está autorizado para autorizar salidas.');
+            }
+        }
+
+        // Determinar la raíz: si la salida actual ya es sobresalida, su padre es la raíz.
+        // Si es raíz, ella misma es la raíz. Esto garantiza que salida_padre_id
+        // SIEMPRE apunte al registro original de la cadena.
+        $raizId = $salida->esSalidaRaiz() ? $salida->id : $salida->salida_padre_id;
+
+        // Hora de la sobresalida
+        $salidaAt = now();
+        if ($request->filled('salida_at')) {
+            try {
+                $horaAjustada = \Carbon\Carbon::parse($request->salida_at);
+                if ($horaAjustada->lessThanOrEqualTo(now())) {
+                    $salidaAt = $horaAjustada;
+                }
+            } catch (\Exception $e) {}
+        }
+
+        // El km no se pide al operador. Como la unidad no regresó al cuartel,
+        // el odómetro no cambió: el nuevo tramo hereda el km_salida del tramo
+        // anterior (que a su vez heredó del km_salida original).
+        // El km_llegada real lo ingresará el conductor al llegar al cuartel.
+        $kmHeredado = $salida->km_salida ?? null;
+
+        // ── Cerrar el tramo anterior ──────────────────────────────────────
+        // Se cierra sin km_llegada (queda null) porque no hay odómetro
+        // en el momento de la derivación. El km_recorrido tampoco se puede
+        // calcular por el mismo motivo — queda como referencia incompleta.
+        $salida->update([
+            'llegada_at'   => $salidaAt,
+            'km_llegada'   => null,
+            'km_recorrido' => null,
+        ]);
+
+        // Crear el nuevo tramo (sobresalida activa) — conductor heredado
+        SalidaUnidad::create([
+            'unidad_id'         => $salida->unidad_id,
+            'salida_padre_id'   => $raizId,
+            'clave_salida_id'   => $request->clave_salida_id,
+            'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
+            'al_mando_id'       => $request->al_mando_id,
+            'voluntario_id'     => $salida->voluntario_id,
+            'conductor_libre'   => $salida->conductor_libre,
+            'direccion'         => $request->direccion,
+            'cantidad_personal' => $request->cantidad_personal ?? $salida->cantidad_personal,
+            'km_salida'         => $kmHeredado,
+            'salida_at'         => $salidaAt,
+            'observaciones'     => $request->observaciones,
+            // llegada_at intencionalmente null: este es el tramo activo
+        ]);
+
+        return redirect()->route('salidas.index')
+            ->with('success', "Sobresalida registrada para {$salida->unidad->nombre}. La unidad continúa en servicio hacia {$request->direccion}.");
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // SALIDA CONJUNTA
@@ -344,7 +479,6 @@ class SalidaUnidadController extends Controller
                 ->with('error', 'Las salidas administrativas requieren un oficial autorizante.');
         }
 
-        // Verificar que ninguna unidad tenga salida activa
         foreach ($request->unidades as $u) {
             $activa = SalidaUnidad::where('unidad_id', $u['unidad_id'])->whereNull('llegada_at')->first();
             if ($activa) {
@@ -354,7 +488,6 @@ class SalidaUnidadController extends Controller
             }
         }
 
-        // Verificar que ningún voluntario al mando ya esté en salida activa
         foreach ($request->unidades as $u) {
             $enSalida = SalidaUnidad::where('al_mando_id', $u['al_mando_id'])->whereNull('llegada_at')->first();
             if ($enSalida) {
@@ -364,7 +497,6 @@ class SalidaUnidadController extends Controller
             }
         }
 
-        // Determinar hora de salida
         $salidaAt = now();
         if ($request->filled('salida_at')) {
             try {
@@ -373,7 +505,6 @@ class SalidaUnidadController extends Controller
             } catch (\Exception $e) {}
         }
 
-        // Crear una SalidaUnidad por cada fila del formulario
         $creadas = 0;
         foreach ($request->unidades as $u) {
             $conductor = $this->resolverConductorParaUnidad(
@@ -398,6 +529,7 @@ class SalidaUnidadController extends Controller
                 'km_salida'         => $u['km_salida'] ?? null,
                 'salida_at'         => $salidaAt,
                 'observaciones'     => $u['observaciones'] ?? null,
+                'salida_padre_id'   => null,
             ]);
 
             $creadas++;
@@ -407,11 +539,23 @@ class SalidaUnidadController extends Controller
             ->with('success', "Salida conjunta registrada: {$creadas} unidades despachadas.");
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // SHOW
+    // ─────────────────────────────────────────────────────────────────────
+
     public function show(SalidaUnidad $salida)
     {
-        $salida->load(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando']);
+        $salida->load([
+            'unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando',
+            'salidaPadre.claveSalida',
+            'sobresalidas.claveSalida', 'sobresalidas.alMando',
+        ]);
         return view('salidas.show', compact('salida'));
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // REGISTRAR LLEGADA
+    // ─────────────────────────────────────────────────────────────────────
 
     public function registrarLlegada(Request $request, SalidaUnidad $salida)
     {
@@ -421,10 +565,15 @@ class SalidaUnidadController extends Controller
             'llegada_at' => 'nullable|date|before_or_equal:now',
         ]);
 
-        $kmSalida  = $salida->km_salida ?? $request->km_salida;
+        // Si el tramo activo es una sobresalida y no tiene km_salida propio,
+        // intentar heredarlo de la raíz de la cadena.
+        $kmSalidaEfectivo = $salida->km_salida;
+        if ($kmSalidaEfectivo === null && $salida->esSobresalida()) {
+            $kmSalidaEfectivo = $salida->salidaPadre?->km_salida;
+        }
+        $kmSalida  = $kmSalidaEfectivo ?? $request->km_salida;
         $kmLlegada = $request->km_llegada;
 
-        // Usar la hora enviada si es válida; si no, now()
         $llegadaAt = now();
         if ($request->filled('llegada_at')) {
             try {
@@ -435,18 +584,61 @@ class SalidaUnidadController extends Controller
             } catch (\Exception $e) {}
         }
 
+        // km_recorrido de este tramo final (km_salida del tramo → km_llegada final)
+        $kmRecorridoTramo = $kmSalida ? ($kmLlegada - $kmSalida) : null;
+
+        // Cerrar el tramo activo
         $salida->update([
             'llegada_at'    => $llegadaAt,
             'km_salida'     => $kmSalida,
             'km_llegada'    => $kmLlegada,
-            'km_recorrido'  => $kmSalida ? ($kmLlegada - $kmSalida) : null,
+            'km_recorrido'  => $kmRecorridoTramo,
             'observaciones' => $request->observaciones ?? $salida->observaciones,
         ]);
 
-        $msg = 'Llegada registrada.';
-        if ($kmSalida) $msg .= ' Km recorridos: ' . number_format($kmLlegada - $kmSalida, 0, ',', '.') . ' km.';
+        // Si es sobresalida, propagar el km_llegada final a TODOS los tramos
+        // de la cadena (raíz + sobresalidas intermedias) que cerraron sin odómetro.
+        // Así todos los registros quedan con el mismo km_llegada y su km_recorrido
+        // calculado correctamente — todos comparten el mismo km_salida heredado.
+        $kmTotalMsg = null;
+        if ($salida->esSobresalida()) {
+            $raiz = $salida->salidaPadre;
+            if ($raiz) {
+                $kmTotalRecorrido = ($raiz->km_salida !== null)
+                    ? ($kmLlegada - $raiz->km_salida)
+                    : null;
 
-        // Verificar si el conductor es cuartelero y tiene turno activo
+                // Actualizar la raíz
+                $raiz->update([
+                    'km_llegada'   => $kmLlegada,
+                    'km_recorrido' => $kmTotalRecorrido,
+                ]);
+
+                // Actualizar todos los tramos intermedios (sobresalidas sin km_llegada)
+                // El último tramo (el actual, $salida) ya se actualizó arriba.
+                SalidaUnidad::where('salida_padre_id', $raiz->id)
+                    ->where('id', '!=', $salida->id)
+                    ->whereNull('km_llegada')
+                    ->update([
+                        'km_llegada'   => $kmLlegada,
+                        'km_recorrido' => $kmTotalRecorrido,
+                    ]);
+
+                if ($kmTotalRecorrido !== null) {
+                    $kmTotalMsg = number_format($kmTotalRecorrido, 0, ',', '.') . ' km totales en la cadena';
+                }
+            }
+        }
+
+        $msg = 'Llegada registrada.';
+        if ($kmRecorridoTramo !== null) {
+            $msg .= ' Km de este tramo: ' . number_format($kmRecorridoTramo, 0, ',', '.') . ' km.';
+        }
+        if ($kmTotalMsg) {
+            $msg .= ' ' . $kmTotalMsg . '.';
+        }
+
+        // Verificar cuartelero para retorno de turno
         $cuarteleroId = null;
 
         if ($salida->conductor_libre && str_starts_with($salida->conductor_libre, '[Cuartelero] ')) {
@@ -506,56 +698,9 @@ class SalidaUnidadController extends Controller
         return redirect()->back()->with('success', $msg);
     }
 
-    public function ultimoKm(Unidad $unidad)
-    {
-        $ultima = SalidaUnidad::where('unidad_id', $unidad->id)
-            ->whereNotNull('km_llegada')
-            ->orderBy('llegada_at', 'desc')
-            ->first();
-
-        return response()->json([
-            'km'    => $ultima?->km_llegada,
-            'fecha' => $ultima?->llegada_at?->format('d/m/Y H:i'),
-        ]);
-    }
-
-    public function retornarTurnoCuartelero()
-    {
-        $datos = session('retomar_turno_cuartelero');
-
-        if (!$datos) {
-            return redirect()->route('salidas.index')->with('error', 'Sesión expirada.');
-        }
-
-        foreach ($datos['conflictos'] as $conflicto) {
-            $turnoMaquinista = \App\Models\RegistroTurno::with('unidades')->find($conflicto['turno_id']);
-            if (!$turnoMaquinista) continue;
-
-            $unidadesRestantes = $turnoMaquinista->unidades
-                ->pluck('id')
-                ->reject(fn($id) => $id == $conflicto['unidad_id']);
-
-            if ($unidadesRestantes->isEmpty()) {
-                // Turno queda vacío: cerrar SIN detach para preservar historial
-                $turnoMaquinista->update([
-                    'salida_at'     => now(),
-                    'total_minutos' => $turnoMaquinista->entrada_at->diffInMinutes(now()),
-                ]);
-            }
-            // Si le quedan otras unidades, el turno sigue activo sin tocar nada.
-            // La unidad devuelta al cuartelero queda en el historial de ambos conductores.
-        }
-
-        $turno = \App\Models\RegistroTurnoCuartelero::find($datos['turno_id']);
-        if ($turno) {
-            $turno->unidades()->syncWithoutDetaching($datos['unidades_auth']);
-        }
-
-        session()->forget('retomar_turno_cuartelero');
-
-        return redirect()->route('salidas.index')
-            ->with('success', 'Turno del cuartelero retomado con todas sus unidades.');
-    }
+    // ─────────────────────────────────────────────────────────────────────
+    // EDIT / UPDATE
+    // ─────────────────────────────────────────────────────────────────────
 
     public function edit(SalidaUnidad $salida)
     {
@@ -563,7 +708,7 @@ class SalidaUnidadController extends Controller
 
         $salida->load(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando']);
 
-        $claves   = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
+        $claves = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
         $oficiales = Voluntario::with('compania')
             ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
                 ->where('activo', true)
@@ -576,7 +721,9 @@ class SalidaUnidadController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        return view('salidas.edit', compact('salida', 'claves', 'oficiales', 'voluntariosAlMando'));
+        $kmYConductorEditables = $salida->kmYConductorEditables();
+
+        return view('salidas.edit', compact('salida', 'claves', 'oficiales', 'voluntariosAlMando', 'kmYConductorEditables'));
     }
 
     public function update(Request $request, SalidaUnidad $salida)
@@ -602,7 +749,6 @@ class SalidaUnidadController extends Controller
                 ->with('error', 'Las salidas administrativas requieren un oficial autorizante.');
         }
 
-        // Verificar al mando no tiene otra salida activa (excepto esta misma)
         $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
             ->whereNull('llegada_at')
             ->where('id', '!=', $salida->id)
@@ -615,10 +761,8 @@ class SalidaUnidadController extends Controller
                 ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa.");
         }
 
-        // Recalcular km_recorrido con el km_llegada editado (km_salida no cambia)
         $kmLlegada = $request->km_llegada !== null ? (float) $request->km_llegada : null;
 
-        // Validar que km_llegada >= km_salida si ambos están presentes
         if ($kmLlegada !== null && $salida->km_salida !== null && $kmLlegada < $salida->km_salida) {
             return redirect()->back()
                 ->withInput()
@@ -646,7 +790,62 @@ class SalidaUnidadController extends Controller
             $msg .= ' Km recorridos: ' . number_format($kmRecorrido, 0, ',', '.') . ' km.';
         }
 
+        return redirect()->route('salidas.index')->with('success', $msg);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ÚLTIMO KM (AJAX)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function ultimoKm(Unidad $unidad)
+    {
+        $ultima = SalidaUnidad::where('unidad_id', $unidad->id)
+            ->whereNotNull('km_llegada')
+            ->orderBy('llegada_at', 'desc')
+            ->first();
+
+        return response()->json([
+            'km'    => $ultima?->km_llegada,
+            'fecha' => $ultima?->llegada_at?->format('d/m/Y H:i'),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // RETORNO TURNO CUARTELERO
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function retornarTurnoCuartelero()
+    {
+        $datos = session('retomar_turno_cuartelero');
+
+        if (!$datos) {
+            return redirect()->route('salidas.index')->with('error', 'Sesión expirada.');
+        }
+
+        foreach ($datos['conflictos'] as $conflicto) {
+            $turnoMaquinista = \App\Models\RegistroTurno::with('unidades')->find($conflicto['turno_id']);
+            if (!$turnoMaquinista) continue;
+
+            $unidadesRestantes = $turnoMaquinista->unidades
+                ->pluck('id')
+                ->reject(fn($id) => $id == $conflicto['unidad_id']);
+
+            if ($unidadesRestantes->isEmpty()) {
+                $turnoMaquinista->update([
+                    'salida_at'     => now(),
+                    'total_minutos' => $turnoMaquinista->entrada_at->diffInMinutes(now()),
+                ]);
+            }
+        }
+
+        $turno = \App\Models\RegistroTurnoCuartelero::find($datos['turno_id']);
+        if ($turno) {
+            $turno->unidades()->syncWithoutDetaching($datos['unidades_auth']);
+        }
+
+        session()->forget('retomar_turno_cuartelero');
+
         return redirect()->route('salidas.index')
-            ->with('success', $msg);
+            ->with('success', 'Turno del cuartelero retomado con todas sus unidades.');
     }
 }

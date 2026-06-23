@@ -23,6 +23,15 @@
     Tiempo restante: <strong>{{ $horasRestantes }}h {{ $minsRestantes }}m</strong>.
 </div>
 
+@if(!$kmYConductorEditables)
+<div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle me-2"></i>
+    Esta salida tiene <strong>sobresalidas encadenadas</strong>. Puedes editar clave, dirección,
+    al mando, hora y observaciones. El km de llegada también es editable, pero ten en cuenta
+    que se propagará a todos los tramos de la cadena.
+</div>
+@endif
+
 <div class="card">
     <div class="card-header bg-warning-subtle fw-bold">
         <i class="bi bi-info-circle me-2"></i>Datos no editables
