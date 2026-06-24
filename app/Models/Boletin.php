@@ -9,7 +9,7 @@ class Boletin extends Model
 {
     protected $table = 'boletines';
 
-    protected $fillable = ['fecha', 'tipo','texto_guardia'];
+    protected $fillable = ['fecha', 'tipo', 'texto_guardia'];
 
     public function cuarteleros()
     {
@@ -20,7 +20,30 @@ class Boletin extends Model
     {
         return $this->hasMany(BoletinMaquinista::class);
     }
-    
+
+    /**
+     * Extrae primer nombre + primer apellido de un nombre completo.
+     *
+     * Regla:
+     *   1 token  → se devuelve tal cual
+     *   2 tokens → Nombre Apellido          → igual
+     *   3 tokens → Nombre Segundo Apellido  → token[0] + token[2]
+     *   4 tokens → Nombre Segundo Ap1 Ap2   → token[0] + token[2]
+     *
+     * Caso borde conocido: nombres compuestos como "María José Rojas"
+     * quedarán como "María Rojas". No hay forma de resolverlo sin datos extra.
+     */
+    private function nombreCorto(string $nombreCompleto): string
+    {
+        $partes = preg_split('/\s+/', trim($nombreCompleto));
+
+        return match (count($partes)) {
+            1       => $partes[0],
+            2       => $partes[0] . ' ' . $partes[1],
+            default => $partes[0] . ' ' . $partes[2],
+        };
+    }
+
     public function generarTexto()
     {
         $saludo = $this->tipo === 'am' ? 'Buenos días' : 'Buenas noches';
@@ -47,7 +70,8 @@ class Boletin extends Model
             if ($m->voluntario->clave_actual) {
                 $texto .= strtoupper("{$unidades} {$m->estado} {$m->voluntario->clave_actual}\n");
             } else {
-                $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$m->voluntario->nombre}\n");
+                $corto  = $this->nombreCorto($m->voluntario->nombre);
+                $texto .= strtoupper("{$unidades} {$m->estado} VOL. {$corto}\n");
             }
         }
 
@@ -97,6 +121,11 @@ class Boletin extends Model
                     : strtoupper($of->voluntario->nombre);
                 $texto .= strtoupper("- {$clave}\n");
             }
+        }
+
+        // Cambio de guardia (domingo PM)
+        if ($this->texto_guardia) {
+            $texto .= "\n{$this->texto_guardia}\n";
         }
 
         return $texto;
