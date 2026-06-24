@@ -46,45 +46,52 @@ class BoletinController extends Controller
             ->orderBy('compania_id')
             ->get();
 
-        $esDomingoPM  = now('America/Santiago')->dayOfWeek === Carbon::SUNDAY;
-        $comandantes  = collect();
-        $guardiaActual = null;
+        $esDomingoPM       = now('America/Santiago')->dayOfWeek === Carbon::SUNDAY;
+        $comandantes       = collect();
+        $guardiaActual     = null;
         $proximoComandante = null;
 
         if ($esDomingoPM) {
             $guardiaActual = GuardiaComandante::activa();
 
-            // Buscar cargos de comandancia (generales)
-            $cargosComandante = Cargo::where('tipo', 'general')
-                ->where('activo', true)
-                ->whereIn('nombre', [
-                    'Comandante',
-                    '1er Comandante',
-                    '2do Comandante',
-                    '3er Comandante',
-                    'Segundo Comandante',
-                    'Tercer Comandante',
-                ])
+            // IDs fijos de los cargos de comandancia de guardia:
+            // 12 = Comandante (orden 3)
+            // 13 = Segundo Comandante (orden 4)
+            // 14 = Tercer Comandante (orden 5)
+            $cargosComandante = Cargo::whereIn('id', [12, 13, 14])
                 ->orderBy('orden')
                 ->get();
 
-            $comandantes = VoluntarioCargo::whereIn('cargo_id', $cargosComandante->pluck('id'))
+            // Solo los que tienen voluntario activo asignado
+            $comandantes = VoluntarioCargo::whereIn('cargo_id', [12, 13, 14])
                 ->whereNull('compania_id')
                 ->where('activo', true)
                 ->with(['voluntario', 'cargo'])
-                ->orderBy('cargo_id')
                 ->get();
 
-            // Calcular quién sigue según correlativo
+            // Cargo actual del comandante de guardia
             $cargoActualId = $guardiaActual?->voluntario
                 ?->cargosActivos
                 ->whereNull('compania_id')
                 ->first()?->cargo_id ?? null;
 
-            $idsOrdenados      = $cargosComandante->pluck('id')->values();
-            $indexActual       = $idsOrdenados->search($cargoActualId);
-            $siguienteId       = $idsOrdenados[($indexActual + 1) % $idsOrdenados->count()] ?? null;
-            $proximoComandante = $comandantes->firstWhere('cargo_id', $siguienteId);
+            // ── Correlativo robusto ───────────────────────────────────────
+            // Ordenar SOLO sobre quienes tienen voluntario activo asignado,
+            // usando el campo 'orden' del cargo como referencia.
+            // Así los gaps o cargos sin asignar no rompen la rotación.
+            $comandantesOrdenados = $comandantes->sortBy(function ($vc) use ($cargosComandante) {
+                return $cargosComandante->firstWhere('id', $vc->cargo_id)?->orden ?? 999;
+            })->values();
+
+            $indexActual = $comandantesOrdenados->search(
+                fn($vc) => $vc->cargo_id === $cargoActualId
+            );
+
+            // Si el actual no se encuentra, empieza desde el primero
+            $siguienteIndex    = ($indexActual !== false ? $indexActual + 1 : 0)
+                                 % $comandantesOrdenados->count();
+            $proximoComandante = $comandantesOrdenados[$siguienteIndex] ?? null;
+            // ─────────────────────────────────────────────────────────────
         }
 
         return view('boletines.create', compact(
