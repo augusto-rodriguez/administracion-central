@@ -189,12 +189,12 @@
                     @error('direccion') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
-                {{-- Al Mando --}}
+               {{-- Al Mando --}}
                 <div class="col-md-6">
-                    <label class="form-label fw-bold">Voluntario al Mando <span class="text-danger">*</span></label>
+                    <label class="form-label fw-bold">Voluntario al Mando</label>
                     <select name="al_mando_id"
-                            class="form-select @error('al_mando_id') is-invalid @enderror" required>
-                        <option value="">Seleccionar voluntario...</option>
+                            class="form-select @error('al_mando_id') is-invalid @enderror">
+                        <option value="">— Sin voluntario al mando (cuartelero solo) —</option>
                         @foreach($voluntariosAlMando as $voluntario)
                             <option value="{{ $voluntario->id }}"
                                     {{ old('al_mando_id', $salida->al_mando_id) == $voluntario->id ? 'selected' : '' }}>
@@ -204,7 +204,6 @@
                     </select>
                     @error('al_mando_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-
                 {{-- Personal --}}
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Cantidad Personal</label>

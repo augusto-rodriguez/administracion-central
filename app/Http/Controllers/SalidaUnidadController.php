@@ -105,7 +105,7 @@ class SalidaUnidadController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // STORE (salida individual normal — sin cambios en lógica)
+    // STORE (salida individual normal)
     // ─────────────────────────────────────────────────────────────────────
 
     public function store(Request $request)
@@ -120,7 +120,7 @@ class SalidaUnidadController extends Controller
             'direccion'         => 'required|string|max:255',
             'km_salida'         => 'nullable|numeric|min:0',
             'oficial_id'        => 'nullable|exists:voluntarios,id',
-            'al_mando_id'       => 'required|exists:voluntarios,id',
+            'al_mando_id'       => 'nullable|exists:voluntarios,id',   // ← corregido: nullable
             'conductor_id'      => 'nullable|string',
             'conductor_libre'   => 'nullable|string|max:255',
             'cantidad_personal' => 'nullable|integer|min:1',
@@ -160,15 +160,18 @@ class SalidaUnidadController extends Controller
             }
         }
 
-        $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
-            ->whereNull('llegada_at')
-            ->first();
+        // ← corregido: solo validar conflicto si viene un voluntario al mando
+        if ($request->al_mando_id) {
+            $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
+                ->whereNull('llegada_at')
+                ->first();
 
-        if ($salidaAlMando) {
-            $voluntario = Voluntario::find($request->al_mando_id);
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de la unidad {$salidaAlMando->unidad->nombre} y aún no ha regresado.");
+            if ($salidaAlMando) {
+                $voluntario = Voluntario::find($request->al_mando_id);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de la unidad {$salidaAlMando->unidad->nombre} y aún no ha regresado.");
+            }
         }
 
         $voluntarioId   = null;
@@ -246,7 +249,7 @@ class SalidaUnidadController extends Controller
             'unidad_id'         => $request->unidad_id,
             'clave_salida_id'   => $request->clave_salida_id,
             'oficial_id'        => $request->oficial_id,
-            'al_mando_id'       => $request->al_mando_id,
+            'al_mando_id'       => $request->al_mando_id ?: null,   // ← null si no viene
             'voluntario_id'     => $voluntarioId,
             'conductor_libre'   => $conductorLibre,
             'direccion'         => $request->direccion,
@@ -314,7 +317,7 @@ class SalidaUnidadController extends Controller
             'clave_salida_id'   => 'required|exists:claves_salida,id',
             'direccion'         => 'required|string|max:255',
             'oficial_id'        => 'nullable|exists:voluntarios,id',
-            'al_mando_id'       => 'required|exists:voluntarios,id',
+            'al_mando_id'       => 'nullable|exists:voluntarios,id',   // ← corregido: nullable
             'cantidad_personal' => 'nullable|integer|min:1',
             'observaciones'     => 'nullable|string',
             'salida_at'         => 'nullable|date|before_or_equal:now',
@@ -339,6 +342,20 @@ class SalidaUnidadController extends Controller
                 return redirect()->back()
                     ->withInput()
                     ->with('error', 'El oficial seleccionado no está autorizado para autorizar salidas.');
+            }
+        }
+
+        // ← corregido: solo validar conflicto si viene un voluntario al mando
+        if ($request->al_mando_id) {
+            $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
+                ->whereNull('llegada_at')
+                ->first();
+
+            if ($salidaAlMando) {
+                $voluntario = Voluntario::find($request->al_mando_id);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra salida activa.");
             }
         }
 
@@ -380,7 +397,7 @@ class SalidaUnidadController extends Controller
             'salida_padre_id'   => $raizId,
             'clave_salida_id'   => $request->clave_salida_id,
             'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
-            'al_mando_id'       => $request->al_mando_id,
+            'al_mando_id'       => $request->al_mando_id ?: null,   // ← null si no viene
             'voluntario_id'     => $salida->voluntario_id,
             'conductor_libre'   => $salida->conductor_libre,
             'direccion'         => $request->direccion,
@@ -464,7 +481,7 @@ class SalidaUnidadController extends Controller
             'salida_at'                    => 'nullable|date|before_or_equal:now',
             'unidades'                     => 'required|array|min:2',
             'unidades.*.unidad_id'         => 'required|exists:unidades,id',
-            'unidades.*.al_mando_id'       => 'required|exists:voluntarios,id',
+            'unidades.*.al_mando_id'       => 'nullable|exists:voluntarios,id',   // ← corregido: nullable
             'unidades.*.conductor_id'      => 'nullable|string',
             'unidades.*.conductor_libre'   => 'nullable|string|max:255',
             'unidades.*.km_salida'         => 'nullable|numeric|min:0',
@@ -488,12 +505,15 @@ class SalidaUnidadController extends Controller
             }
         }
 
+        // ← corregido: solo validar conflicto si viene un voluntario al mando
         foreach ($request->unidades as $u) {
-            $enSalida = SalidaUnidad::where('al_mando_id', $u['al_mando_id'])->whereNull('llegada_at')->first();
-            if ($enSalida) {
-                $vol = Voluntario::find($u['al_mando_id']);
-                return redirect()->back()->withInput()
-                    ->with('error', "El voluntario {$vol->nombre} ya está al mando de otra salida activa.");
+            if (!empty($u['al_mando_id'])) {
+                $enSalida = SalidaUnidad::where('al_mando_id', $u['al_mando_id'])->whereNull('llegada_at')->first();
+                if ($enSalida) {
+                    $vol = Voluntario::find($u['al_mando_id']);
+                    return redirect()->back()->withInput()
+                        ->with('error', "El voluntario {$vol->nombre} ya está al mando de otra salida activa.");
+                }
             }
         }
 
@@ -521,7 +541,7 @@ class SalidaUnidadController extends Controller
                 'unidad_id'         => $u['unidad_id'],
                 'clave_salida_id'   => $request->clave_salida_id,
                 'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
-                'al_mando_id'       => $u['al_mando_id'],
+                'al_mando_id'       => !empty($u['al_mando_id']) ? $u['al_mando_id'] : null,   // ← null si no viene
                 'voluntario_id'     => $conductor['voluntario_id'],
                 'conductor_libre'   => $conductor['conductor_libre'],
                 'direccion'         => $request->direccion,
@@ -734,7 +754,7 @@ class SalidaUnidadController extends Controller
             'clave_salida_id'   => 'required|exists:claves_salida,id',
             'direccion'         => 'required|string|max:255',
             'oficial_id'        => 'nullable|exists:voluntarios,id',
-            'al_mando_id'       => 'required|exists:voluntarios,id',
+            'al_mando_id'       => 'nullable|exists:voluntarios,id',   // ← corregido: nullable
             'cantidad_personal' => 'nullable|integer|min:1',
             'km_llegada'        => 'nullable|numeric|min:0',
             'observaciones'     => 'nullable|string',
@@ -749,16 +769,19 @@ class SalidaUnidadController extends Controller
                 ->with('error', 'Las salidas administrativas requieren un oficial autorizante.');
         }
 
-        $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
-            ->whereNull('llegada_at')
-            ->where('id', '!=', $salida->id)
-            ->first();
+        // ← corregido: solo validar conflicto si viene un voluntario al mando
+        if ($request->al_mando_id) {
+            $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
+                ->whereNull('llegada_at')
+                ->where('id', '!=', $salida->id)
+                ->first();
 
-        if ($salidaAlMando) {
-            $voluntario = Voluntario::find($request->al_mando_id);
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa.");
+            if ($salidaAlMando) {
+                $voluntario = Voluntario::find($request->al_mando_id);
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa.");
+            }
         }
 
         $kmLlegada = $request->km_llegada !== null ? (float) $request->km_llegada : null;
@@ -776,7 +799,7 @@ class SalidaUnidadController extends Controller
         $salida->update([
             'clave_salida_id'   => $request->clave_salida_id,
             'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
-            'al_mando_id'       => $request->al_mando_id,
+            'al_mando_id'       => $request->al_mando_id ?: null,   // ← null si no viene
             'direccion'         => $request->direccion,
             'cantidad_personal' => $request->cantidad_personal,
             'km_llegada'        => $kmLlegada,

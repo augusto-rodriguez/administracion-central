@@ -154,14 +154,13 @@
                                     class="form-control mt-1 d-none"
                                     placeholder="O escribe el nombre del conductor...">
                             </div>
-
                             {{-- Al Mando --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">
-                                    Voluntario al Mando <span class="text-danger">*</span>
+                                    Voluntario al Mando
                                 </label>
-                                <select name="al_mando_id" id="selectOficialAlMando" class="form-select @error('al_mando_id') is-invalid @enderror" required>
-                                    <option value="">Seleccionar voluntario...</option>
+                                <select name="al_mando_id" id="selectOficialAlMando" class="form-select @error('al_mando_id') is-invalid @enderror">
+                                    <option value="">— Sin voluntario al mando (cuartelero solo) —</option>
                                     @foreach($voluntariosAlMando as $voluntario)
                                         <option value="{{ $voluntario->id }}" {{ old('al_mando_id') == $voluntario->id ? 'selected' : '' }}>
                                             {{ $voluntario->nombre }} — {{ $voluntario->compania->nombre }}
@@ -170,7 +169,6 @@
                                 </select>
                                 @error('al_mando_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
-
                             {{-- Km Salida --}}
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Km Salida</label>
