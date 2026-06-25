@@ -130,16 +130,31 @@
                                 @error('unidad_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
 
-                            {{-- Alerta sin conductor --}}
+                            {{-- Aviso sin conductor en turno --}}
                             <div class="col-12 d-none" id="alertaSinConductor">
                                 <div class="alert alert-warning py-2 mb-0">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>
-                                    Esta unidad no tiene conductor en turno activo. No se puede registrar la salida.
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Sin conductor en turno activo.</strong>
+                                    Selecciona un conductor autorizado para esta unidad.
                                 </div>
                             </div>
 
-                            {{-- Conductor --}}
-                            <div class="col-md-5">
+                            {{-- Selector de conductor autorizado (sin turno) --}}
+                            <div class="col-md-5 d-none" id="bloqueConductorAutorizado">
+                                <label class="form-label fw-bold">
+                                    Conductor autorizado
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size:10px">Sin turno activo</span>
+                                </label>
+                                <select id="selectConductorAutorizado" class="form-select">
+                                    <option value="">Cargando...</option>
+                                </select>
+                                <div class="text-muted small mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>Conductores habilitados para esta unidad aunque no estén en turno.
+                                </div>
+                            </div>
+
+                            {{-- Conductor en turno (modo normal) --}}
+                            <div class="col-md-5" id="bloqueConductorTurno">
                                 <label class="form-label fw-bold">Conductor</label>
                                 <select name="conductor_id" id="selectConductor" class="form-select">
                                     <option value="">Sin asignar...</option>
@@ -150,10 +165,9 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                <input type="text" name="conductor_libre" id="conductorLibre"
-                                    class="form-control mt-1 d-none"
-                                    placeholder="O escribe el nombre del conductor...">
                             </div>
+                            {{-- Input oculto que recibe el conductor_id cuando se usa el selector de autorizados --}}
+                            <input type="hidden" id="conductorAutorizadoId">
                             {{-- Al Mando --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">
@@ -748,48 +762,94 @@ actualizarOficial();
 
 // ── Autocompletar conductor según unidad (modo individual) ──
 document.getElementById('selectUnidad').addEventListener('change', function() {
-    const unidadId        = this.value;
-    const kmInput         = document.getElementById('kmSalida');
-    const kmTexto         = document.getElementById('kmReferenciaTexto');
-    const selectConductor = document.getElementById('selectConductor');
-    const conductorLibre  = document.getElementById('conductorLibre');
-    const btnSubmit       = document.querySelector('.modal-footer .btn-danger');
-    const alertaConductor = document.getElementById('alertaSinConductor');
+    const unidadId               = this.value;
+    const kmInput                = document.getElementById('kmSalida');
+    const kmTexto                = document.getElementById('kmReferenciaTexto');
+    const selectConductor        = document.getElementById('selectConductor');
+    const btnSubmit              = document.querySelector('.modal-footer .btn-danger');
+    const alertaConductor        = document.getElementById('alertaSinConductor');
+    const bloqueAutorizado       = document.getElementById('bloqueConductorAutorizado');
+    const selectAutorizado       = document.getElementById('selectConductorAutorizado');
+    const conductorAutorizadoId  = document.getElementById('conductorAutorizadoId');
+    const bloqueTurno            = document.getElementById('bloqueConductorTurno');
+
+    // Reset estado
+    conductorAutorizadoId.name = '';  // desvincular del form hasta que aplique
 
     if (unidadId && conductorPorUnidad[unidadId]) {
+        // ── Hay conductor en turno: autocarga y bloquea el selector ──
         const conductor = conductorPorUnidad[unidadId];
         const optionId  = conductor.tipo === 'maquinista'
             ? 'v_' + conductor.id
             : 'c_' + conductor.id;
 
-        selectConductor.value = optionId;
+        selectConductor.value               = optionId;
         selectConductor.style.pointerEvents = 'none';
-        selectConductor.style.opacity = '0.7';
+        selectConductor.style.opacity       = '0.7';
         selectConductor.removeAttribute('disabled');
-        conductorLibre.classList.add('d-none');
-        conductorLibre.value = '';
-        btnSubmit.disabled = false;
+        selectConductor.name                = 'conductor_id';  // campo activo
+        conductorAutorizadoId.name          = '';              // inactivo
+
         alertaConductor.classList.add('d-none');
+        bloqueAutorizado.classList.add('d-none');
+        bloqueTurno.classList.remove('d-none');
+        btnSubmit.disabled = false;
 
     } else if (unidadId) {
-        selectConductor.value = '';
+        // ── Sin conductor en turno: ocultar selector de turno, mostrar autorizados ──
+        selectConductor.value               = '';
         selectConductor.style.pointerEvents = 'none';
-        selectConductor.style.opacity = '0.7';
-        selectConductor.removeAttribute('disabled');
-        conductorLibre.classList.add('d-none');
-        btnSubmit.disabled = true;
+        selectConductor.style.opacity       = '0.5';
+        selectConductor.name                = '';  // desactivar para no enviar vacío
+        conductorAutorizadoId.name          = 'conductor_id';  // este pasa al back
+
         alertaConductor.classList.remove('d-none');
+        bloqueAutorizado.classList.remove('d-none');
+        bloqueTurno.classList.add('d-none');  // ocultar el selector de turno
+        btnSubmit.disabled = false;
+
+        // Cargar conductores autorizados vía AJAX
+        selectAutorizado.innerHTML = '<option value="">Cargando...</option>';
+        fetch(`/salidas/conductores-autorizados/${unidadId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.conductores && data.conductores.length > 0) {
+                    selectAutorizado.innerHTML = '<option value="">— Sin conductor —</option>';
+                    data.conductores.forEach(c => {
+                        const opt   = document.createElement('option');
+                        opt.value   = c.id;
+                        opt.text    = c.nombre;
+                        opt.classList.toggle('text-primary', c.tipo === 'cuartelero');
+                        selectAutorizado.appendChild(opt);
+                    });
+                } else {
+                    selectAutorizado.innerHTML = '<option value="">Sin conductores autorizados para esta unidad</option>';
+                }
+                // Sincronizar al input oculto que va al backend
+                selectAutorizado.addEventListener('change', function() {
+                    conductorAutorizadoId.value = this.value;
+                });
+            })
+            .catch(() => {
+                selectAutorizado.innerHTML = '<option value="">Error al cargar conductores</option>';
+            });
 
     } else {
+        // ── Sin unidad seleccionada: estado neutro ──
         selectConductor.style.pointerEvents = '';
-        selectConductor.style.opacity = '';
+        selectConductor.style.opacity       = '';
+        selectConductor.name                = 'conductor_id';
         selectConductor.removeAttribute('disabled');
-        btnSubmit.disabled = false;
+        conductorAutorizadoId.name          = '';
+
         alertaConductor.classList.add('d-none');
+        bloqueAutorizado.classList.add('d-none');
+        bloqueTurno.classList.remove('d-none');
+        btnSubmit.disabled = false;
     }
 
     if (!unidadId) {
-        kmInput.value = '';
+        kmInput.value   = '';
         kmTexto.textContent = '';
         return;
     }
@@ -814,16 +874,6 @@ const selectOficialAlMando = new TomSelect('#selectOficialAlMando', {
     maxOptions: 50,
     onChange: function(value) {
         document.getElementById('selectOficialAlMando').dispatchEvent(new Event('change'));
-    }
-});
-
-document.getElementById('selectConductor').addEventListener('change', function() {
-    const libre = document.getElementById('conductorLibre');
-    if (this.value) {
-        libre.classList.add('d-none');
-        libre.value = '';
-    } else {
-        libre.classList.remove('d-none');
     }
 });
 
@@ -994,10 +1044,31 @@ function buildConductorSelect(idx, unidadId) {
     html += `<option value="">— sin conductor —</option>`;
     opts.forEach(o => { html += `<option value="${o.id}" selected>${o.nombre}</option>`; });
     html += '</select>';
-    if (!unidadId || !conductorPorUnidad[unidadId]) {
-        html += `<input type="text" name="unidades[${idx}][conductor_libre]" class="form-control form-control-sm mt-1" placeholder="Nombre conductor...">`;
-    }
     return html;
+}
+
+// Carga asíncrona de conductores autorizados para una celda de fila conjunta
+function cargarConductoresAutorizadosCJ(idx, unidadId, cell) {
+    fetch(`/salidas/conductores-autorizados/${unidadId}`)
+        .then(r => r.json())
+        .then(data => {
+            const select = cell.querySelector('.cj-conductor');
+            if (!select) return;
+            if (data.conductores && data.conductores.length > 0) {
+                // Agregar opciones de autorizados con indicador visual
+                const sep = document.createElement('option');
+                sep.disabled = true;
+                sep.text = '── Sin turno activo ──';
+                select.appendChild(sep);
+                data.conductores.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.text  = c.nombre;
+                    select.appendChild(opt);
+                });
+            }
+        })
+        .catch(() => { /* sin autorizados: el campo libre ya está */ });
 }
 
 function agregarFilaUnidad() {
@@ -1045,8 +1116,10 @@ function agregarFilaUnidad() {
         cell.innerHTML = buildConductorSelect(idx, unidadId);
 
         if (unidadId && !conductorPorUnidad[unidadId]) {
-            cell.insertAdjacentHTML('beforeend',
-                '<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Sin conductor en turno</div>');
+            cell.insertAdjacentHTML('afterbegin',
+                '<div class="text-warning small mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Sin turno — elige de los autorizados</div>');
+            // Cargar autorizados asincrónicamente en el select de esta fila
+            cargarConductoresAutorizadosCJ(idx, unidadId, cell);
         }
 
         if (unidadId) {

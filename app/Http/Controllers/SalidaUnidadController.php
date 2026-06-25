@@ -178,20 +178,45 @@ class SalidaUnidadController extends Controller
         $conductorLibre = null;
 
         if ($request->conductor_id) {
-            $partes = explode('_', $request->conductor_id, 2);
+            // Soportamos tres prefijos:
+            //   v_{id}      → maquinista EN turno activo con esta unidad
+            //   c_{id}      → cuartelero EN turno activo con esta unidad
+            //   auth_v_{id} → maquinista autorizado, sin turno activo (flexible)
+            //   auth_c_{id} → cuartelero autorizado, sin turno activo (flexible)
+            $conductorId = $request->conductor_id;
+            $sinTurno    = str_starts_with($conductorId, 'auth_');
+            $conductorId = $sinTurno ? substr($conductorId, 5) : $conductorId; // quitar prefijo auth_
+
+            $partes = explode('_', $conductorId, 2);
             $tipo   = $partes[0];
             $id     = $partes[1] ?? null;
 
             if ($tipo === 'v' && $id) {
-                $turnoActivo = \App\Models\RegistroTurno::whereNull('salida_at')
-                    ->where('voluntario_id', $id)
-                    ->whereHas('unidades', fn($q) => $q->where('unidades.id', $request->unidad_id))
-                    ->first();
+                if (!$sinTurno) {
+                    // Validar que esté en turno activo con esta unidad
+                    $turnoActivo = \App\Models\RegistroTurno::whereNull('salida_at')
+                        ->where('voluntario_id', $id)
+                        ->whereHas('unidades', fn($q) => $q->where('unidades.id', $request->unidad_id))
+                        ->first();
 
-                if (!$turnoActivo) {
-                    return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'El maquinista seleccionado no está en turno activo con esa unidad.');
+                    if (!$turnoActivo) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'El maquinista seleccionado no está en turno activo con esa unidad.');
+                    }
+                } else {
+                    // Sin turno: verificar que al menos esté autorizado para esta unidad
+                    $autorizado = Voluntario::whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
+                        ->whereHas('unidadesAutorizadas', fn($q) => $q->where('unidades.id', $request->unidad_id))
+                        ->where('id', $id)
+                        ->where('activo', true)
+                        ->exists();
+
+                    if (!$autorizado) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'El maquinista seleccionado no está autorizado para conducir esta unidad.');
+                    }
                 }
 
                 $salidaConductor = SalidaUnidad::where('voluntario_id', $id)
@@ -207,18 +232,34 @@ class SalidaUnidadController extends Controller
                 $voluntarioId = $id;
 
             } elseif ($tipo === 'c' && $id) {
-                $turnoActivo = \App\Models\RegistroTurnoCuartelero::whereNull('salida_at')
-                    ->where('cuartelero_id', $id)
-                    ->whereHas('unidades', fn($q) => $q->where('unidades.id', $request->unidad_id))
-                    ->first();
+                $cuartelero = \App\Models\Cuartelero::find($id);
 
-                if (!$turnoActivo) {
-                    return redirect()->back()
-                        ->withInput()
-                        ->with('error', 'El cuartelero seleccionado no está en turno activo con esa unidad.');
+                if (!$sinTurno) {
+                    // Validar que esté en turno activo con esta unidad
+                    $turnoActivo = \App\Models\RegistroTurnoCuartelero::whereNull('salida_at')
+                        ->where('cuartelero_id', $id)
+                        ->whereHas('unidades', fn($q) => $q->where('unidades.id', $request->unidad_id))
+                        ->first();
+
+                    if (!$turnoActivo) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'El cuartelero seleccionado no está en turno activo con esa unidad.');
+                    }
+                } else {
+                    // Sin turno: verificar que esté autorizado
+                    $autorizado = \App\Models\Cuartelero::where('id', $id)
+                        ->where('activo', true)
+                        ->whereHas('unidadesAutorizadas', fn($q) => $q->where('unidades.id', $request->unidad_id))
+                        ->exists();
+
+                    if (!$autorizado) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'El cuartelero seleccionado no está autorizado para conducir esta unidad.');
+                    }
                 }
 
-                $cuartelero = \App\Models\Cuartelero::find($id);
                 $salidaConductor = SalidaUnidad::where('conductor_libre', '[Cuartelero] ' . $cuartelero->nombre)
                     ->whereNull('llegada_at')->first();
 
@@ -232,7 +273,8 @@ class SalidaUnidadController extends Controller
             }
 
         } else {
-            $conductorLibre = $request->conductor_libre;
+            // Sin conductor seleccionado: se registra sin conductor
+            $conductorLibre = null;
         }
 
         $salidaAt = now();
@@ -422,19 +464,34 @@ class SalidaUnidadController extends Controller
             return ['voluntario_id' => null, 'conductor_libre' => $conductorLibreInput ?: null];
         }
 
+        // Soportamos auth_ (autorizado sin turno) igual que en store()
+        $sinTurno = str_starts_with($conductorId, 'auth_');
+        $conductorId = $sinTurno ? substr($conductorId, 5) : $conductorId;
+
         $partes = explode('_', $conductorId, 2);
         $tipo   = $partes[0];
         $id     = $partes[1] ?? null;
 
         if ($tipo === 'v' && $id) {
-            $turnoActivo = \App\Models\RegistroTurno::whereNull('salida_at')
-                ->where('voluntario_id', $id)
-                ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
-                ->first();
+            if (!$sinTurno) {
+                $turnoActivo = \App\Models\RegistroTurno::whereNull('salida_at')
+                    ->where('voluntario_id', $id)
+                    ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
+                    ->first();
 
-            if (!$turnoActivo) {
-                return redirect()->back()->withInput()
-                    ->with('error', 'El maquinista seleccionado no está en turno activo con esa unidad.');
+                if (!$turnoActivo) {
+                    return redirect()->back()->withInput()
+                        ->with('error', 'El maquinista seleccionado no está en turno activo con esa unidad.');
+                }
+            } else {
+                $autorizado = Voluntario::whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
+                    ->whereHas('unidadesAutorizadas', fn($q) => $q->where('unidades.id', $unidadId))
+                    ->where('id', $id)->where('activo', true)->exists();
+
+                if (!$autorizado) {
+                    return redirect()->back()->withInput()
+                        ->with('error', 'El maquinista seleccionado no está autorizado para conducir esta unidad.');
+                }
             }
 
             $yaEnSalida = SalidaUnidad::where('voluntario_id', $id)->whereNull('llegada_at')->first();
@@ -447,14 +504,25 @@ class SalidaUnidadController extends Controller
             return ['voluntario_id' => $id, 'conductor_libre' => null];
 
         } elseif ($tipo === 'c' && $id) {
-            $turnoActivo = \App\Models\RegistroTurnoCuartelero::whereNull('salida_at')
-                ->where('cuartelero_id', $id)
-                ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
-                ->first();
+            if (!$sinTurno) {
+                $turnoActivo = \App\Models\RegistroTurnoCuartelero::whereNull('salida_at')
+                    ->where('cuartelero_id', $id)
+                    ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
+                    ->first();
 
-            if (!$turnoActivo) {
-                return redirect()->back()->withInput()
-                    ->with('error', 'El cuartelero seleccionado no está en turno activo con esa unidad.');
+                if (!$turnoActivo) {
+                    return redirect()->back()->withInput()
+                        ->with('error', 'El cuartelero seleccionado no está en turno activo con esa unidad.');
+                }
+            } else {
+                $autorizado = \App\Models\Cuartelero::where('id', $id)->where('activo', true)
+                    ->whereHas('unidadesAutorizadas', fn($q) => $q->where('unidades.id', $unidadId))
+                    ->exists();
+
+                if (!$autorizado) {
+                    return redirect()->back()->withInput()
+                        ->with('error', 'El cuartelero seleccionado no está autorizado para conducir esta unidad.');
+                }
             }
 
             $cuartelero = \App\Models\Cuartelero::find($id);
@@ -830,6 +898,47 @@ class SalidaUnidadController extends Controller
         return response()->json([
             'km'    => $ultima?->km_llegada,
             'fecha' => $ultima?->llegada_at?->format('d/m/Y H:i'),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // CONDUCTORES AUTORIZADOS PARA UNA UNIDAD (AJAX)
+    // Devuelve maquinistas y cuarteleros habilitados para conducir la unidad,
+    // independientemente de si tienen turno activo en este momento.
+    // ─────────────────────────────────────────────────────────────────────
+
+    public function conductoresAutorizados(Unidad $unidad)
+    {
+        // Maquinistas autorizados: rol 'maquinista' activo + unidad en su tabla pivote
+        // voluntario_unidad (relación unidadesAutorizadas() del modelo Voluntario).
+        $maquinistas = Voluntario::with('compania')
+            ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
+            ->whereHas('unidadesAutorizadas', fn($q) => $q->where('unidades.id', $unidad->id))
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get()
+            ->map(fn($v) => [
+                'id'     => 'auth_v_' . $v->id,
+                'nombre' => $v->nombre . ' — ' . $v->compania->nombre,
+                'tipo'   => 'maquinista',
+            ]);
+
+        // Cuarteleros autorizados: unidad en su tabla pivote cuartelero_unidad
+        // (relación unidadesAutorizadas() del modelo Cuartelero).
+        // Cuartelero no tiene columna 'activo'; usa fecha_fin IS NULL (scopeActivos).
+        $cuarteleros = \App\Models\Cuartelero::with('compania')
+            ->whereHas('unidadesAutorizadas', fn($q) => $q->where('unidades.id', $unidad->id))
+            ->activos()   // scope: whereNull('fecha_fin')
+            ->orderBy('nombre')
+            ->get()
+            ->map(fn($c) => [
+                'id'     => 'auth_c_' . $c->id,
+                'nombre' => '[Cuartelero] ' . $c->nombre . ' — ' . $c->compania->nombre,
+                'tipo'   => 'cuartelero',
+            ]);
+
+        return response()->json([
+            'conductores' => $maquinistas->merge($cuarteleros)->values(),
         ]);
     }
 

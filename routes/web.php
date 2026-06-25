@@ -87,6 +87,11 @@ Route::middleware(['rol'])->group(function () {
             [App\Http\Controllers\SalidaUnidadController::class, 'ultimoKm'])
             ->name('salidas.ultimo-km');
 
+        // ── NUEVA: conductores autorizados para una unidad (AJAX, sin turno requerido)
+        Route::get('salidas/conductores-autorizados/{unidad}',
+            [App\Http\Controllers\SalidaUnidadController::class, 'conductoresAutorizados'])
+            ->name('salidas.conductores-autorizados');
+
         Route::post('salidas/retornar-turno-cuartelero-cancelar', function () {
             session()->forget('retomar_turno_cuartelero');
             return redirect()->route('salidas.index');
@@ -104,7 +109,7 @@ Route::middleware(['rol'])->group(function () {
             [App\Http\Controllers\SalidaUnidadController::class, 'registrarLlegada'])
             ->name('salidas.llegada');
 
-        // ── Sobresalida (NUEVAS) ──────────────────────────────────────────
+        // ── Sobresalida ───────────────────────────────────────────────────
         Route::get('salidas/{salida}/sobresalida',
             [App\Http\Controllers\SalidaUnidadController::class, 'createSobresalida'])
             ->name('salidas.sobresalida.create');
@@ -162,9 +167,9 @@ Route::middleware(['rol'])->group(function () {
 
         Route::resource('cuarteleros', App\Http\Controllers\CuarteleroController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update']);
-        Route::post('cuarteleros/{cuartelero}/cerrar',         [App\Http\Controllers\CuarteleroController::class, 'cerrar'])         ->name('cuarteleros.cerrar');
-        Route::post('cuarteleros/{cuartelero}/autorizar-unidad', [App\Http\Controllers\CuarteleroController::class, 'autorizarUnidad'])->name('cuarteleros.autorizar-unidad');
-        Route::delete('cuarteleros/{cuartelero}/revocar-unidad', [App\Http\Controllers\CuarteleroController::class, 'revocarUnidad'])  ->name('cuarteleros.revocar-unidad');
+        Route::post('cuarteleros/{cuartelero}/cerrar',           [App\Http\Controllers\CuarteleroController::class, 'cerrar'])          ->name('cuarteleros.cerrar');
+        Route::post('cuarteleros/{cuartelero}/autorizar-unidad', [App\Http\Controllers\CuarteleroController::class, 'autorizarUnidad']) ->name('cuarteleros.autorizar-unidad');
+        Route::delete('cuarteleros/{cuartelero}/revocar-unidad', [App\Http\Controllers\CuarteleroController::class, 'revocarUnidad'])   ->name('cuarteleros.revocar-unidad');
 
         Route::resource('cargos', App\Http\Controllers\CargoController::class)
             ->except(['show']);
