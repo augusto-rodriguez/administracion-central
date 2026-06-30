@@ -92,6 +92,7 @@
                     <th>Roles</th>
                     <th>Cargo</th>
                     <th>Teléfono</th>
+                    <th>Fecha Ingreso</th>
                     <th>Estado</th>
                     <th></th>
                 </tr>
@@ -157,6 +158,9 @@
                         </td>
 
                         <td>{{ $voluntario->telefono ?? '—' }}</td>
+                        <td>
+                            {{ $voluntario->fecha_ingreso ? \Carbon\Carbon::parse($voluntario->fecha_ingreso)->format('d/m/Y') : '—' }}
+                        </td>
 
                         <td>
                             @if($voluntario->activo)
