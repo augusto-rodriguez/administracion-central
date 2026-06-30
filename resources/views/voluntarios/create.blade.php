@@ -83,6 +83,14 @@
                     @error('clave_actual') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Fecha de Ingreso</label>
+                    <input type="date" name="fecha_ingreso"
+                           class="form-control @error('fecha_ingreso') is-invalid @enderror"
+                           value="{{ old('fecha_ingreso') }}">
+                    @error('fecha_ingreso') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
                 {{-- Roles --}}
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Roles</label>

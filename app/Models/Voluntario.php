@@ -9,7 +9,11 @@ class Voluntario extends Model
     protected $table = 'voluntarios';
 
     protected $fillable = [
-        'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo', 'clave_actual'
+        'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo', 'clave_actual', 'fecha_ingreso'
+    ];
+
+    protected $casts = [
+        'fecha_ingreso' => 'date',
     ];
 
     public function compania()
@@ -52,6 +56,26 @@ class Voluntario extends Model
     public function getRolesListaAttribute(): string
     {
         return $this->roles->where('activo', true)->pluck('rol')->join(', ');
+    }
+
+    // ── Honorario (calculado: 15+ años desde fecha de ingreso) ────
+
+    public function getEsHonorarioAttribute(): bool
+    {
+        if (!$this->fecha_ingreso) {
+            return false;
+        }
+
+        return $this->fecha_ingreso->diffInYears(now()) >= 15;
+    }
+
+    public function getAnosServicioAttribute(): ?int
+    {
+        if (!$this->fecha_ingreso) {
+            return null;
+        }
+
+        return (int) $this->fecha_ingreso->diffInYears(now());
     }
 
     // ── Cargos ────────────────────────────────────────────────────────

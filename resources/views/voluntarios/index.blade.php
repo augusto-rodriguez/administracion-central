@@ -127,6 +127,9 @@
                         @else
                             <span class="badge bg-secondary">Inactivo</span>
                         @endif
+                        @if($voluntario->es_honorario)
+                            <span class="badge bg-info ms-1">Honorario</span>
+                        @endif
                     </td>
                     <td>
                         <a href="{{ route('voluntarios.show', $voluntario) }}"

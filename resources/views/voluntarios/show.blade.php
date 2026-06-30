@@ -33,12 +33,26 @@
                     <tr><th>Teléfono</th><td>{{ $voluntario->telefono ?? '—' }}</td></tr>
                     <tr><th>Email</th><td>{{ $voluntario->email ?? '—' }}</td></tr>
                     <tr>
+                        <th>Fecha de Ingreso</th>
+                        <td>
+                            @if($voluntario->fecha_ingreso)
+                                {{ $voluntario->fecha_ingreso->format('d/m/Y') }}
+                                <span class="text-muted small ms-1">({{ $voluntario->anos_servicio }} años)</span>
+                            @else
+                                —
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
                         <th>Estado</th>
                         <td>
                             @if($voluntario->activo)
                                 <span class="badge bg-success">Activo</span>
                             @else
                                 <span class="badge bg-secondary">Inactivo</span>
+                            @endif
+                            @if($voluntario->es_honorario)
+                                <span class="badge bg-info ms-1">Honorario</span>
                             @endif
                         </td>
                     </tr>
