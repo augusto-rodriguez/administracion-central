@@ -44,29 +44,33 @@
                         </td>
                     </tr>
                     <tr>
-                        <th>Estado</th>
-                        <td>
-                            @if($voluntario->activo)
-                                <span class="badge bg-success">Activo</span>
-                            @else
-                                <span class="badge bg-secondary">Inactivo</span>
-                            @endif
-                            @if($voluntario->es_honorario)
-                                <span class="badge bg-info ms-1">Honorario</span>
-                            @endif
-                        </td>
+                         <th>Estado</th>
+                            <td>
+                                @if($voluntario->activo)
+                                    <span class="badge bg-success">Activo</span>
+                                @else
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                @endif
+                            </td>
                     </tr>
                     <tr>
                         <th>Roles</th>
                         <td>
-                            @forelse($voluntario->roles->where('activo', true) as $rol)
+                           @forelse($voluntario->roles->where('activo', true) as $rol)
                                 @if($rol->rol === 'maquinista')
                                     <span class="badge bg-danger">Maquinista</span>
+
                                 @elseif($rol->rol === 'oficial')
                                     <span class="badge bg-primary">Oficial</span>
+
+                                @elseif($rol->rol === 'honorario')
+                                    <span class="badge bg-info">Honorario</span>
+
                                 @else
                                     <span class="badge bg-secondary">{{ ucfirst($rol->rol) }}</span>
+
                                 @endif
+
                             @empty
                                 <span class="text-muted small">—</span>
                             @endforelse

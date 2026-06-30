@@ -44,7 +44,7 @@ class VoluntarioController extends Controller
         $companias = $usuario->esCapitanCia()
             ? Compania::where('id', $usuario->voluntario?->compania_id)->get()
             : Compania::where('activa', true)->orderBy('numero')->get();
-        $rolesDisponibles = ['maquinista', 'oficial'];
+        $rolesDisponibles = ['maquinista', 'oficial', 'honorario'];
 
         $cargosCompania  = Cargo::where('tipo', 'compania')->where('activo', true)->orderBy('orden')->get();
         $cargosGenerales = Cargo::where('tipo', 'general')->where('activo', true)->orderBy('orden')->get();
@@ -177,7 +177,7 @@ class VoluntarioController extends Controller
         $companias = $usuario->esCapitanCia()
             ? Compania::where('id', $usuario->voluntario?->compania_id)->get()
             : Compania::where('activa', true)->orderBy('numero')->get();
-        $rolesDisponibles = ['maquinista', 'oficial'];
+        $rolesDisponibles = ['maquinista', 'oficial', 'honorario'];
         $voluntario->load(['roles', 'cargosActivos.cargo']);
 
         $cargoActivo = $voluntario->cargosActivos->first();

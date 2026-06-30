@@ -98,16 +98,6 @@
                     @error('fecha_ingreso') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
 
-                @if($voluntario->es_honorario)
-                <div class="col-md-3 d-flex align-items-end">
-                    <div class="alert alert-info mb-0 py-2 px-3 w-100">
-                        <i class="bi bi-award me-1"></i>
-                        <strong>Honorario</strong>
-                        <span class="small d-block text-muted">{{ $voluntario->anos_servicio }} años de servicio</span>
-                    </div>
-                </div>
-                @endif
-
                 {{-- Roles --}}
                 <div class="col-md-6">
                     <label class="form-label fw-bold">Roles</label>

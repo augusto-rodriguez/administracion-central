@@ -9,7 +9,14 @@ class Voluntario extends Model
     protected $table = 'voluntarios';
 
     protected $fillable = [
-        'compania_id', 'nombre', 'rut', 'telefono', 'email', 'activo', 'clave_actual', 'fecha_ingreso'
+        'compania_id',
+        'nombre',
+        'rut',
+        'telefono',
+        'email',
+        'activo',
+        'clave_actual',
+        'fecha_ingreso'
     ];
 
     protected $casts = [
@@ -40,34 +47,45 @@ class Voluntario extends Model
 
     public function turnoActivo()
     {
-        return $this->hasOne(RegistroTurno::class)->whereNull('salida_at');
+        return $this->hasOne(RegistroTurno::class)
+                    ->whereNull('salida_at');
     }
+
+    // ── Roles ───────────────────────────────────────────────────────────
 
     public function esMaquinista(): bool
     {
-        return $this->roles()->where('rol', 'maquinista')->where('activo', true)->exists();
+        return $this->roles()
+                    ->where('rol', 'maquinista')
+                    ->where('activo', true)
+                    ->exists();
     }
 
     public function esOficial(): bool
     {
-        return $this->roles()->where('rol', 'oficial')->where('activo', true)->exists();
+        return $this->roles()
+                    ->where('rol', 'oficial')
+                    ->where('activo', true)
+                    ->exists();
+    }
+
+    public function esHonorario(): bool
+    {
+        return $this->roles()
+                    ->where('rol', 'honorario')
+                    ->where('activo', true)
+                    ->exists();
     }
 
     public function getRolesListaAttribute(): string
     {
-        return $this->roles->where('activo', true)->pluck('rol')->join(', ');
+        return $this->roles
+                    ->where('activo', true)
+                    ->pluck('rol')
+                    ->join(', ');
     }
 
-    // ── Honorario (calculado: 15+ años desde fecha de ingreso) ────
-
-    public function getEsHonorarioAttribute(): bool
-    {
-        if (!$this->fecha_ingreso) {
-            return false;
-        }
-
-        return $this->fecha_ingreso->diffInYears(now()) >= 15;
-    }
+    // ── Años de servicio ────────────────────────────────────────────────
 
     public function getAnosServicioAttribute(): ?int
     {
@@ -78,7 +96,7 @@ class Voluntario extends Model
         return (int) $this->fecha_ingreso->diffInYears(now());
     }
 
-    // ── Cargos ────────────────────────────────────────────────────────
+    // ── Cargos ──────────────────────────────────────────────────────────
 
     public function cargos()
     {
@@ -87,7 +105,8 @@ class Voluntario extends Model
 
     public function cargosActivos()
     {
-        return $this->hasMany(VoluntarioCargo::class)->where('activo', true);
+        return $this->hasMany(VoluntarioCargo::class)
+                    ->where('activo', true);
     }
 
     public function cargoActivoEnCompania(int $companiaId): ?VoluntarioCargo
