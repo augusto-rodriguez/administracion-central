@@ -68,10 +68,10 @@
                         <th>Tiempo total</th>
                         <td><span class="badge bg-secondary fs-6">{{ $salida->tiempo_formateado }}</span></td>
                     </tr>
-                    <tr><th>Km salida</th><td>{{ formatKm($salida->km_salida, 1) }} km</td></tr>
+                    <tr><th>Km salida</th><td>{{ formatKm($salida->km_salida, 1) }}</td></tr>
                     <tr>
                         <th>Km llegada</th>
-                        <td>{{ $salida->km_llegada ? formatKm($salida->km_llegada, 1) . ' km' : '—' }}</td>
+                        <td>{{ $salida->km_llegada ? formatKm($salida->km_llegada, 1) : '—' }}</td>
                     </tr>
                     <tr>
                         <th>Km recorridos</th>
