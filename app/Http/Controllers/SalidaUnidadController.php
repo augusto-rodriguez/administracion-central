@@ -391,6 +391,7 @@ class SalidaUnidadController extends Controller
         if ($request->al_mando_id) {
             $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
                 ->whereNull('llegada_at')
+                ->where('id', '!=', $salida->id)  // ← AGREGAR ESTA LÍNEA
                 ->first();
 
             if ($salidaAlMando) {
