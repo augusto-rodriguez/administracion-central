@@ -48,6 +48,7 @@ Route::middleware(['rol'])->group(function () {
             Route::post('/{guardia}/compania',                         [App\Http\Controllers\GuardiaNocturnaController::class, 'guardarCompania'])     ->name('guardar-compania');
             Route::post('/{guardia}/cerrar',                           [App\Http\Controllers\GuardiaNocturnaController::class, 'cerrar'])              ->name('cerrar');
             Route::get('/{guardia}/heredar/{compania}',                [App\Http\Controllers\GuardiaNocturnaController::class, 'heredar'])             ->name('heredar');
+            Route::get('/cuartelero/{cuartelero}/unidades',            [App\Http\Controllers\GuardiaNocturnaController::class, 'unidadesCuartelero'])  ->name('unidades-cuartelero');
             Route::post('/{guardia}/agregar-voluntario',               [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarVoluntario'])   ->name('agregar-voluntario');
             Route::post('/{guardia}/observacion/{gnCompania}',         [App\Http\Controllers\GuardiaNocturnaController::class, 'agregarObservacion'])  ->name('agregar-observacion');
             Route::patch('/voluntario/{gnVoluntario}/hora-salida',     [App\Http\Controllers\GuardiaNocturnaController::class, 'registrarHoraSalida'])->name('hora-salida');

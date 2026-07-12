@@ -392,4 +392,26 @@ class GuardiaNocturnaController extends Controller
 
         return back()->with('success', 'Especialidades actualizadas correctamente.');
     }
+
+    public function unidadesCuartelero(Cuartelero $cuartelero)
+    {
+        $turno = RegistroTurnoCuartelero::with('unidades')
+            ->where('cuartelero_id', $cuartelero->id)
+            ->whereNull('salida_at')
+            ->first();
+
+        if (!$turno) {
+            return response()->json(['unidades' => [], 'en_turno' => false]);
+        }
+
+        $unidades = $turno->unidades->map(fn($u) => [
+            'unidad_id'          => $u->id,
+            'unidad_nombre'      => $u->nombre,
+            'tipo'               => 'cuartelero',
+            'responsable_id'     => $cuartelero->id,
+            'responsable_nombre' => $cuartelero->nombre,
+        ])->values();
+
+        return response()->json(['unidades' => $unidades, 'en_turno' => true]);
+    }
 }

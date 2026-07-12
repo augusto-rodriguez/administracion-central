@@ -349,7 +349,6 @@ document.querySelectorAll('.tomselect-oficial').forEach(el => {
     });
 });
 
-// Inicializar TomSelect cuarteleros
 document.querySelectorAll('.tomselect-cuartelero').forEach(el => {
     const companiaId = el.closest('form').querySelector('input[name="compania_id"]').value;
 
@@ -359,9 +358,67 @@ document.querySelectorAll('.tomselect-cuartelero').forEach(el => {
     });
 
     tsCuartelero.on('change', function(value) {
-        verificarCuarteleroEnUnidades(companiaId, value, el);
+        if (!value) return;
+        cargarUnidadesCuartelero(companiaId, value);
     });
 });
+
+function cargarUnidadesCuartelero(companiaId, cuarteleroId) {
+    const tbody     = document.getElementById('tbody-unidades-' + companiaId);
+    const container = document.getElementById('unidades-container-' + companiaId);
+    const loading   = document.getElementById('unidades-loading-' + companiaId);
+    const warning   = document.getElementById('unidades-warning-' + companiaId);
+
+    // Solo auto-cargar si la tabla está vacía o solo tiene la fila placeholder
+    const filasActuales = tbody.querySelectorAll('tr:not([id^="fila-vacia"])');
+    if (filasActuales.length > 0) return; // ya hay unidades cargadas, no pisar
+
+    loading.style.display   = 'block';
+    container.style.display = 'none';
+    warning.innerHTML       = '';
+
+    fetch(`/guardias-nocturnas/cuartelero/${cuarteleroId}/unidades`)
+        .then(r => r.json())
+        .then(data => {
+            loading.style.display   = 'none';
+            container.style.display = 'block';
+
+            if (!data.en_turno || data.unidades.length === 0) return;
+
+            // Limpiar tabla
+            const filaVacia = document.getElementById('fila-vacia-' + companiaId);
+            if (filaVacia) filaVacia.remove();
+
+            let html = '';
+            data.unidades.forEach((u, i) => {
+                html += `
+                    <tr data-cuartelero-id="${u.responsable_id}" data-idx="${i}">
+                        <td>
+                            <span class="badge bg-primary">${u.unidad_nombre}</span>
+                            <input type="hidden" name="unidades[${i}][unidad_id]" value="${u.unidad_id}">
+                            <input type="hidden" name="unidades[${i}][maquinista_id]" value="">
+                            <input type="hidden" name="unidades[${i}][cuartelero_id]" value="${u.responsable_id}">
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-dark">Cuartelero</span>
+                        </td>
+                        <td>${u.responsable_nombre}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="this.closest('tr').remove(); renumerarFilas(${companiaId})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        })
+        .catch(() => {
+            loading.style.display   = 'none';
+            container.style.display = 'block';
+        });
+}
 
 // Inicializar TomSelect voluntarios
 document.querySelectorAll('.tomselect-voluntarios').forEach(el => {
@@ -374,6 +431,7 @@ document.querySelectorAll('.tomselect-voluntarios').forEach(el => {
         },
     });
 });
+
 // Mostrar/ocultar formulario si sin reporte
 function toggleFormCompania(companiaId, sinReporte) {
     const form = document.getElementById('form-compania-' + companiaId);
@@ -423,8 +481,10 @@ function heredarSituacion(companiaId, guardiaId) {
                 if (u.tipo === 'maquinista') tipoBadge = '<span class="badge bg-danger">Maquinista</span>';
                 if (u.tipo === 'cuartelero') tipoBadge = '<span class="badge bg-info text-dark">Cuartelero</span>';
 
+                // ✅ AGREGADO: data-cuartelero y data-maquinista para búsqueda confiable
                 html += `
-                    <tr>
+                    <tr data-cuartelero-id="${u.tipo === 'cuartelero' ? u.responsable_id : ''}"
+                        data-maquinista-id="${u.tipo === 'maquinista' ? u.responsable_id : ''}">
                         <td>
                             <span class="badge bg-primary">${u.unidad_nombre}</span>
                             <input type="hidden" name="unidades[${i}][unidad_id]" value="${u.unidad_id}">
@@ -441,7 +501,7 @@ function heredarSituacion(companiaId, guardiaId) {
             html += '</tbody></table>';
             container.innerHTML = html;
 
-            // Verificar cuartelero después de heredar
+            // ✅ VERIFICAR cuartelero DESPUÉS de heredar la situación actual
             const cuarteleroSelect = document.querySelector(
                 `select[name="cuartelero_id"][id="cuartelero_${companiaId}"]`
             );
@@ -456,7 +516,7 @@ function heredarSituacion(companiaId, guardiaId) {
         .catch(() => {
             loading.style.display   = 'none';
             container.style.display = 'block';
-            warning.innerHTML = '<div class="alert alert-danger mx-3 mt-2 py-2">Error al cargar la situación actual.</div>';
+            warning.innerHTML = '<div class="alert alert-danger alert-sm mx-3 mt-2 py-2 mb-0">Error al cargar la situación actual.</div>';
         });
 }
 
@@ -464,6 +524,7 @@ function confirmarCierre() {
     new bootstrap.Modal(document.getElementById('modalCerrar')).show();
 }
 
+// ✅ FUNCIÓN VERIFICACIÓN MEJORADA
 function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
     const warningId = 'warning-cuartelero-' + companiaId;
     const existing  = document.getElementById(warningId);
@@ -474,17 +535,20 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
     const tsInstance   = selectEl.tomselect;
     const nombreCuart  = tsInstance.options[cuarteleroId]?.text ?? 'El cuartelero seleccionado';
 
-    const container    = document.getElementById('unidades-container-' + companiaId);
-    const filas        = container?.querySelectorAll('tbody tr') ?? [];
+    // Buscar en la tabla ACTUAL (después de heredar)
+    const tbody        = document.getElementById('tbody-unidades-' + companiaId);
+    const filas        = tbody?.querySelectorAll('tr') ?? [];
     let aparece        = false;
 
+    // ✅ Buscar en atributo data-cuartelero-id (más confiable)
     filas.forEach(fila => {
-        const inputCuart = fila.querySelector('input[name*="cuartelero_id"]');
-        if (inputCuart && inputCuart.value == cuarteleroId) {
+        const cuarteleroEnFila = fila.getAttribute('data-cuartelero-id');
+        if (cuarteleroEnFila && cuarteleroEnFila == cuarteleroId) {
             aparece = true;
         }
     });
 
+    // ✅ Solo mostrar error si la tabla tiene unidades Y el cuartelero no aparece
     if (!aparece && filas.length > 0) {
         const warning = document.createElement('div');
         warning.id    = warningId;
@@ -500,8 +564,6 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
         selectEl.closest('.col-md-6').appendChild(warning);
     }
 }
-
-
 
 // Datos disponibles por compañía para el modo manual
 const datosCompanias = @json($datosCompanias);
