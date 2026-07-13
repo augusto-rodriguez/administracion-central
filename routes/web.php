@@ -183,6 +183,11 @@ Route::middleware(['rol'])->group(function () {
         Route::resource('companias', App\Http\Controllers\CompaniaController::class);
         Route::resource('usuarios', App\Http\Controllers\UsuarioController::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+        // Registro de accesos
+        Route::get('login-logs',                  [App\Http\Controllers\LoginLogController::class, 'index'])   ->name('login-logs.index');
+        Route::get('login-logs/exportar',         [App\Http\Controllers\LoginLogController::class, 'exportar'])->name('login-logs.exportar');
+        Route::get('login-logs/usuario/{userId}', [App\Http\Controllers\LoginLogController::class, 'usuario']) ->name('login-logs.usuario');
     });
 
 });

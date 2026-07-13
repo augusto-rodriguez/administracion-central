@@ -175,6 +175,10 @@
                class="nav-link {{ request()->is('usuarios*') ? 'active' : '' }}">
                 <i class="bi bi-person-lock me-2"></i> Usuarios
             </a>
+              <a href="{{ route('login-logs.index') }}"
+               class="nav-link {{ request()->is('login-logs*') ? 'active' : '' }}">
+                <i class="bi bi-shield-lock me-2"></i> Registro de Accesos
+            </a>
         @endif
 
     </nav>
