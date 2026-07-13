@@ -222,11 +222,11 @@ class SalidaUnidadController extends Controller
                 $salidaConductor = SalidaUnidad::where('voluntario_id', $id)
                     ->whereNull('llegada_at')->first();
 
-                if ($salidaConductor) {
+                if ($salidaConductor && !$request->boolean('confirmar_conductor_activo')) {
                     $voluntario = Voluntario::find($id);
                     return redirect()->back()
                         ->withInput()
-                        ->with('error', "El maquinista {$voluntario->nombre} ya tiene una salida activa en la unidad {$salidaConductor->unidad->nombre}.");
+                        ->with('warning_conductor', "El maquinista {$voluntario->nombre} ya tiene una salida activa en la unidad {$salidaConductor->unidad->nombre}. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
                 }
 
                 $voluntarioId = $id;
@@ -263,10 +263,10 @@ class SalidaUnidadController extends Controller
                 $salidaConductor = SalidaUnidad::where('conductor_libre', '[Cuartelero] ' . $cuartelero->nombre)
                     ->whereNull('llegada_at')->first();
 
-                if ($salidaConductor) {
+                if ($salidaConductor && !$request->boolean('confirmar_conductor_activo')) {
                     return redirect()->back()
                         ->withInput()
-                        ->with('error', "El cuartelero {$cuartelero->nombre} ya tiene una salida activa en la unidad {$salidaConductor->unidad->nombre}.");
+                        ->with('warning_conductor', "El cuartelero {$cuartelero->nombre} ya tiene una salida activa en la unidad {$salidaConductor->unidad->nombre}. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
                 }
 
                 $conductorLibre = '[Cuartelero] ' . $cuartelero->nombre;
@@ -496,10 +496,10 @@ class SalidaUnidadController extends Controller
             }
 
             $yaEnSalida = SalidaUnidad::where('voluntario_id', $id)->whereNull('llegada_at')->first();
-            if ($yaEnSalida) {
+            if ($yaEnSalida && !request()->boolean('confirmar_conductor_activo')) {
                 $vol = Voluntario::find($id);
                 return redirect()->back()->withInput()
-                    ->with('error', "El maquinista {$vol->nombre} ya tiene una salida activa.");
+                    ->with('warning_conductor', "El maquinista {$vol->nombre} ya tiene una salida activa. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
             }
 
             return ['voluntario_id' => $id, 'conductor_libre' => null];
@@ -530,9 +530,9 @@ class SalidaUnidadController extends Controller
             $yaEnSalida = SalidaUnidad::where('conductor_libre', '[Cuartelero] ' . $cuartelero->nombre)
                 ->whereNull('llegada_at')->first();
 
-            if ($yaEnSalida) {
+            if ($yaEnSalida && !request()->boolean('confirmar_conductor_activo')) {
                 return redirect()->back()->withInput()
-                    ->with('error', "El cuartelero {$cuartelero->nombre} ya tiene una salida activa.");
+                    ->with('warning_conductor', "El cuartelero {$cuartelero->nombre} ya tiene una salida activa. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
             }
 
             return ['voluntario_id' => null, 'conductor_libre' => '[Cuartelero] ' . $cuartelero->nombre];

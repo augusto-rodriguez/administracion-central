@@ -36,8 +36,25 @@
             <form action="{{ route('salidas.store') }}" method="POST" id="formSalida">
                 @csrf
                 <input type="hidden" name="salida_at" id="salidaAtAjustada">
+                <input type="hidden" name="confirmar_conductor_activo" id="confirmarConductorActivo" value="0">
 
                 <div class="modal-body">
+
+                    {{-- Aviso de conductor con salida activa --}}
+                    @if(session('warning_conductor'))
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" id="alertaConductorActivo">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
+                        <div>
+                            <strong>{{ session('warning_conductor') }}</strong>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="checkConfirmarConductor">
+                                <label class="form-check-label" for="checkConfirmarConductor">
+                                    Entendido, deseo registrar la salida de todas formas
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
 
                     {{-- ══════════════════════════════════════════════════════
                          DATOS COMPARTIDOS (siempre visibles)
@@ -1161,6 +1178,13 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     aplicarModo();
     document.getElementById('filasUnidades').innerHTML = '';
     filaIndex = 0;
+    // Reset confirmación de conductor
+    const hiddenConfirm = document.getElementById('confirmarConductorActivo');
+    if (hiddenConfirm) hiddenConfirm.value = '0';
+    const checkConfirm = document.getElementById('checkConfirmarConductor');
+    if (checkConfirm) checkConfirm.checked = false;
+    const alertaConductor = document.getElementById('alertaConductorActivo');
+    if (alertaConductor) alertaConductor.remove();
 });
 
 // ── Hora de llegada — input editable en cada modal ──
@@ -1233,7 +1257,40 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     });
 })();
 
-@if($errors->any())
+// ── Confirmación de conductor con salida activa ──
+(function() {
+    const check  = document.getElementById('checkConfirmarConductor');
+    const hidden = document.getElementById('confirmarConductorActivo');
+    if (check) {
+        check.addEventListener('change', function() {
+            hidden.value = this.checked ? '1' : '0';
+        });
+    }
+})();
+
+@if(session('warning_conductor'))
+    var modal = new bootstrap.Modal(document.getElementById('modalNuevaSalida'));
+    modal.show();
+    // Re-disparar selección de unidad para restaurar el conductor automático
+    setTimeout(function() {
+        var selectUnidad = document.getElementById('selectUnidad');
+        if (selectUnidad && selectUnidad.value) {
+            selectUnidad.dispatchEvent(new Event('change'));
+
+            // Para conductores autorizados (sin turno), restaurar la selección tras AJAX
+            @if(old('conductor_id') && str_starts_with(old('conductor_id'), 'auth_'))
+            setTimeout(function() {
+                var selectAut = document.getElementById('selectConductorAutorizado');
+                var hiddenAut = document.getElementById('conductorAutorizadoId');
+                if (selectAut) {
+                    selectAut.value = '{{ old("conductor_id") }}';
+                    if (hiddenAut) hiddenAut.value = '{{ old("conductor_id") }}';
+                }
+            }, 800);
+            @endif
+        }
+    }, 150);
+@elseif($errors->any())
     var modal = new bootstrap.Modal(document.getElementById('modalNuevaSalida'));
     modal.show();
 @endif
