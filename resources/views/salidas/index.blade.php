@@ -37,6 +37,7 @@
                 @csrf
                 <input type="hidden" name="salida_at" id="salidaAtAjustada">
                 <input type="hidden" name="confirmar_conductor_activo" id="confirmarConductorActivo" value="0">
+                <input type="hidden" name="confirmar_al_mando_activo" id="confirmarAlMandoActivo" value="0">
 
                 <div class="modal-body">
 
@@ -49,6 +50,22 @@
                             <div class="form-check mt-2">
                                 <input class="form-check-input" type="checkbox" id="checkConfirmarConductor">
                                 <label class="form-check-label" for="checkConfirmarConductor">
+                                    Entendido, deseo registrar la salida de todas formas
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Aviso de voluntario al mando con salida activa --}}
+                    @if(session('warning_al_mando'))
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" id="alertaAlMandoActivo">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
+                        <div>
+                            <strong>{{ session('warning_al_mando') }}</strong>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="checkConfirmarAlMando">
+                                <label class="form-check-label" for="checkConfirmarAlMando">
                                     Entendido, deseo registrar la salida de todas formas
                                 </label>
                             </div>
@@ -1185,6 +1202,13 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     if (checkConfirm) checkConfirm.checked = false;
     const alertaConductor = document.getElementById('alertaConductorActivo');
     if (alertaConductor) alertaConductor.remove();
+    // Reset confirmación de al mando
+    const hiddenMando = document.getElementById('confirmarAlMandoActivo');
+    if (hiddenMando) hiddenMando.value = '0';
+    const checkMando = document.getElementById('checkConfirmarAlMando');
+    if (checkMando) checkMando.checked = false;
+    const alertaMando = document.getElementById('alertaAlMandoActivo');
+    if (alertaMando) alertaMando.remove();
 });
 
 // ── Hora de llegada — input editable en cada modal ──
@@ -1268,7 +1292,18 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
     }
 })();
 
-@if(session('warning_conductor'))
+// ── Confirmación de al mando con salida activa ──
+(function() {
+    const check  = document.getElementById('checkConfirmarAlMando');
+    const hidden = document.getElementById('confirmarAlMandoActivo');
+    if (check) {
+        check.addEventListener('change', function() {
+            hidden.value = this.checked ? '1' : '0';
+        });
+    }
+})();
+
+@if(session('warning_conductor') || session('warning_al_mando'))
     var modal = new bootstrap.Modal(document.getElementById('modalNuevaSalida'));
     modal.show();
     // Re-disparar selección de unidad para restaurar el conductor automático

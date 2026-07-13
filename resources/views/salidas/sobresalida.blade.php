@@ -68,6 +68,23 @@
 {{-- Formulario de sobresalida --}}
 <form action="{{ route('salidas.sobresalida.store', $salida) }}" method="POST">
 @csrf
+<input type="hidden" name="confirmar_al_mando_activo" id="confirmarAlMandoActivo" value="0">
+
+{{-- Aviso de voluntario al mando con salida activa --}}
+@if(session('warning_al_mando'))
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
+    <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
+    <div>
+        <strong>{{ session('warning_al_mando') }}</strong>
+        <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="checkConfirmarAlMando">
+            <label class="form-check-label" for="checkConfirmarAlMando">
+                Entendido, deseo registrar la sobresalida de todas formas
+            </label>
+        </div>
+    </div>
+</div>
+@endif
 
 <div class="card">
     <div class="card-header bg-warning-subtle fw-bold text-warning-emphasis">
@@ -263,6 +280,17 @@
 
     selectClave.addEventListener('change', actualizar);
     actualizar();
+})();
+
+// ── Confirmación de al mando con salida activa ──
+(function() {
+    const check  = document.getElementById('checkConfirmarAlMando');
+    const hidden = document.getElementById('confirmarAlMandoActivo');
+    if (check) {
+        check.addEventListener('change', function() {
+            hidden.value = this.checked ? '1' : '0';
+        });
+    }
 })();
 </script>
 @endpush

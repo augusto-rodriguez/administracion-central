@@ -166,11 +166,11 @@ class SalidaUnidadController extends Controller
                 ->whereNull('llegada_at')
                 ->first();
 
-            if ($salidaAlMando) {
+            if ($salidaAlMando && !$request->boolean('confirmar_al_mando_activo')) {
                 $voluntario = Voluntario::find($request->al_mando_id);
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de la unidad {$salidaAlMando->unidad->nombre} y aún no ha regresado.");
+                    ->with('warning_al_mando', "El voluntario {$voluntario->nombre} ya está al mando de la unidad {$salidaAlMando->unidad->nombre} y aún no ha regresado. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
             }
         }
 
@@ -391,14 +391,14 @@ class SalidaUnidadController extends Controller
         if ($request->al_mando_id) {
             $salidaAlMando = SalidaUnidad::where('al_mando_id', $request->al_mando_id)
                 ->whereNull('llegada_at')
-                ->where('id', '!=', $salida->id)  // ← AGREGAR ESTA LÍNEA
+                ->where('id', '!=', $salida->id)
                 ->first();
 
-            if ($salidaAlMando) {
+            if ($salidaAlMando && !$request->boolean('confirmar_al_mando_activo')) {
                 $voluntario = Voluntario::find($request->al_mando_id);
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra salida activa.");
+                    ->with('warning_al_mando', "El voluntario {$voluntario->nombre} ya está al mando de otra salida activa. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
             }
         }
 
@@ -578,10 +578,10 @@ class SalidaUnidadController extends Controller
         foreach ($request->unidades as $u) {
             if (!empty($u['al_mando_id'])) {
                 $enSalida = SalidaUnidad::where('al_mando_id', $u['al_mando_id'])->whereNull('llegada_at')->first();
-                if ($enSalida) {
+                if ($enSalida && !$request->boolean('confirmar_al_mando_activo')) {
                     $vol = Voluntario::find($u['al_mando_id']);
                     return redirect()->back()->withInput()
-                        ->with('error', "El voluntario {$vol->nombre} ya está al mando de otra salida activa.");
+                        ->with('warning_al_mando', "El voluntario {$vol->nombre} ya está al mando de otra salida activa. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
                 }
             }
         }
@@ -828,6 +828,7 @@ class SalidaUnidadController extends Controller
             'km_llegada'        => 'nullable|numeric|min:0',
             'observaciones'     => 'nullable|string',
             'salida_at'         => 'required|date|before_or_equal:now',
+            'llegada_at'        => 'nullable|date|after:salida_at|before_or_equal:now',
         ]);
 
         $clave = ClaveSalida::find($request->clave_salida_id);
@@ -845,11 +846,11 @@ class SalidaUnidadController extends Controller
                 ->where('id', '!=', $salida->id)
                 ->first();
 
-            if ($salidaAlMando) {
+            if ($salidaAlMando && !$request->boolean('confirmar_al_mando_activo')) {
                 $voluntario = Voluntario::find($request->al_mando_id);
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa.");
+                    ->with('warning_al_mando', "El voluntario {$voluntario->nombre} ya está al mando de otra unidad activa. Si deseas continuar de todas formas, confirma y presiona registrar nuevamente.");
             }
         }
 
@@ -865,6 +866,12 @@ class SalidaUnidadController extends Controller
             ? ($kmLlegada - $salida->km_salida)
             : null;
 
+        // Parsear llegada_at si viene
+        $llegadaAt = $salida->llegada_at; // mantener el valor actual por defecto
+        if ($request->filled('llegada_at')) {
+            $llegadaAt = \Carbon\Carbon::parse($request->llegada_at);
+        }
+
         $salida->update([
             'clave_salida_id'   => $request->clave_salida_id,
             'oficial_id'        => $clave->tipo === 'administrativa' ? $request->oficial_id : null,
@@ -874,6 +881,7 @@ class SalidaUnidadController extends Controller
             'km_llegada'        => $kmLlegada,
             'km_recorrido'      => $kmRecorrido,
             'salida_at'         => \Carbon\Carbon::parse($request->salida_at),
+            'llegada_at'        => $llegadaAt,
             'observaciones'     => $request->observaciones,
         ]);
 
