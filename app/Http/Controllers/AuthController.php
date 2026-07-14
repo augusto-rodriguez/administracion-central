@@ -78,7 +78,7 @@ class AuthController extends Controller
         LoginLog::create([
             'user_id'      => $user?->id,
             'evento'       => $evento,
-            'email'        => $request->input('email'),
+            'email' => $request->input('email') ?? $user?->email,
             'ip'           => $request->ip(),
             'user_agent'   => mb_substr($ua, 0, 512),
             'navegador'    => $this->parsearNavegador($ua),

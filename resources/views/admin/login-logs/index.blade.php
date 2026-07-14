@@ -157,7 +157,7 @@
                                     @break
                             @endswitch
                         </td>
-                        <td>{{ $log->user?->name ?? '—' }}</td>
+                        <td>{{ $log->user?->nombre ?? '—' }}</td>
                         <td><small>{{ $log->email ?? '—' }}</small></td>
                         <td>
                             <code class="text-dark">{{ $log->ip }}</code>
