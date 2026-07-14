@@ -309,7 +309,7 @@ class ReporteController extends Controller
             ->map(fn($regs) => [
                 'nombre'   => $regs->first()->maquinista->nombre ?? '—',
                 'compania' => $regs->first()->maquinista->compania->nombre ?? '—',
-                'total'    => $regs->count(),
+                'total'    => $regs->pluck('guardia_nocturna_compania_id')->unique()->count(),
                 'unidades' => $regs->pluck('unidad.nombre')->unique()->implode(', '),
             ])->sortByDesc('total')->take(20)->values();
 
