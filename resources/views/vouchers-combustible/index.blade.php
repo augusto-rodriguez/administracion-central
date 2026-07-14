@@ -2,9 +2,10 @@
 @section('title', 'Vouchers de Combustible')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+{{-- Encabezado --}}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-4">
     <h4 class="mb-0"><i class="bi bi-fuel-pump me-2"></i>Vouchers de Combustible</h4>
-    <button class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#modalNuevoVoucher">
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalNuevoVoucher">
         <i class="bi bi-plus-circle me-1"></i>Registrar Voucher
     </button>
 </div>
@@ -24,7 +25,7 @@
 
 {{-- Modal Nuevo Voucher --}}
 <div class="modal fade" id="modalNuevoVoucher" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">
@@ -37,27 +38,27 @@
                 <div class="modal-body">
                     <div class="row g-3">
 
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Fecha de Carga <span class="text-danger">*</span></label>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-bold small">Fecha de Carga <span class="text-danger">*</span></label>
                             <input type="date" name="fecha_carga"
-                                   class="form-control @error('fecha_carga') is-invalid @enderror"
+                                   class="form-control form-control-sm @error('fecha_carga') is-invalid @enderror"
                                    value="{{ old('fecha_carga', date('Y-m-d')) }}" required>
                             @error('fecha_carga') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">N° Voucher <span class="text-danger">*</span></label>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fw-bold small">N° Voucher <span class="text-danger">*</span></label>
                             <input type="text" name="numero_voucher"
-                                   class="form-control @error('numero_voucher') is-invalid @enderror"
+                                   class="form-control form-control-sm @error('numero_voucher') is-invalid @enderror"
                                    value="{{ old('numero_voucher') }}"
                                    placeholder="Ej: 00123456" required>
                             @error('numero_voucher') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Unidad <span class="text-danger">*</span></label>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold small">Unidad <span class="text-danger">*</span></label>
                             <select name="unidad_id" id="selectUnidadVoucher"
-                                    class="form-select @error('unidad_id') is-invalid @enderror" required>
+                                    class="form-select form-select-sm @error('unidad_id') is-invalid @enderror" required>
                                 <option value="">Seleccionar unidad...</option>
                                 @foreach($unidades->groupBy('compania.nombre') as $compania => $uds)
                                     <optgroup label="{{ $compania }}">
@@ -72,22 +73,19 @@
                             @error('unidad_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Km al momento de carga <span class="text-danger">*</span></label>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label fw-bold small">Km al momento de carga <span class="text-danger">*</span></label>
                             <input type="number" name="km_carga" step="1" min="0"
-                                   class="form-control @error('km_carga') is-invalid @enderror"
+                                   class="form-control form-control-sm @error('km_carga') is-invalid @enderror"
                                    value="{{ old('km_carga') }}"
-                                   placeholder="Solo números sin puntos ni guiones" required>
-                            <div class="text-muted small mt-1">
-                                <i class="bi bi-info-circle me-1"></i>Sin puntos ni guiones
-                            </div>
+                                   placeholder="Sin puntos ni guiones" required>
                             @error('km_carga') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-8">
-                            <label class="form-label fw-bold">Conductor <span class="text-danger">*</span></label>
+                        <div class="col-6 col-md-8">
+                            <label class="form-label fw-bold small">Conductor <span class="text-danger">*</span></label>
                             <select name="conductor_nombre" id="selectConductorVoucher"
-                                    class="form-select @error('conductor_nombre') is-invalid @enderror" required>
+                                    class="form-select form-select-sm @error('conductor_nombre') is-invalid @enderror" required>
                                 <option value="">Seleccionar conductor...</option>
                                 @foreach($conductores as $conductor)
                                     <option value="{{ $conductor['nombre'] }}"
@@ -99,46 +97,43 @@
                             @error('conductor_nombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Litros <span class="text-danger">*</span></label>
+                        <div class="col-4 col-md-4">
+                            <label class="form-label fw-bold small">Litros <span class="text-danger">*</span></label>
                             <input type="number" name="litros" id="inputLitros"
                                    step="0.001" min="0.001" max="9999.999"
-                                   class="form-control @error('litros') is-invalid @enderror"
+                                   class="form-control form-control-sm @error('litros') is-invalid @enderror"
                                    value="{{ old('litros') }}"
-                                   placeholder="Ej: 48.190" required>
-                            <div class="text-muted small mt-1">
-                                <i class="bi bi-info-circle me-1"></i>Usar punto como decimal (Ej: 48.190)
-                            </div>
+                                   placeholder="48.190" required>
                             @error('litros') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Valor Unitario ($/L) <span class="text-danger">*</span></label>
-                            <div class="input-group">
+                        <div class="col-4 col-md-4">
+                            <label class="form-label fw-bold small">$/L <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-sm">
                                 <span class="input-group-text">$</span>
                                 <input type="number" name="valor_unitario" id="inputValorUnitario"
                                        step="1" min="1"
                                        class="form-control @error('valor_unitario') is-invalid @enderror"
                                        value="{{ old('valor_unitario') }}"
-                                       placeholder="Ej: 1350" required>
+                                       placeholder="1350" required>
                             </div>
                             @error('valor_unitario') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Total</label>
-                            <div class="input-group">
+                        <div class="col-4 col-md-4">
+                            <label class="form-label fw-bold small">Total</label>
+                            <div class="input-group input-group-sm">
                                 <span class="input-group-text">$</span>
                                 <input type="text" id="totalCalculado" class="form-control fw-bold bg-light"
-                                       readonly placeholder="Se calcula automático">
+                                       readonly placeholder="Auto">
                             </div>
-                            <div class="text-muted small mt-1" id="totalDetalle"></div>
+                            <div class="text-muted small mt-1 d-none d-md-block" id="totalDetalle"></div>
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label fw-bold">Observaciones</label>
+                            <label class="form-label fw-bold small">Observaciones</label>
                             <input type="text" name="observaciones"
-                                   class="form-control"
+                                   class="form-control form-control-sm"
                                    value="{{ old('observaciones') }}"
                                    placeholder="Opcional...">
                         </div>
@@ -146,8 +141,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger btn-sm">
                         <i class="bi bi-fuel-pump me-1"></i>Registrar Voucher
                     </button>
                 </div>
@@ -156,15 +151,15 @@
     </div>
 </div>
 
-{{-- Filtros + Exportar (un solo formulario) --}}
+{{-- Filtros + Exportar --}}
 <div class="card mb-4">
     <div class="card-body py-3">
         <form action="{{ route('vouchers-combustible.index') }}" method="GET"
               class="row g-2 align-items-end" id="formFiltros">
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <label class="form-label fw-bold mb-1 small">Compañía</label>
                 <select name="compania_id" class="form-select form-select-sm" id="filtroCompania">
-                    <option value="">Todas las compañías</option>
+                    <option value="">Todas</option>
                     @foreach($companias as $compania)
                         <option value="{{ $compania->id }}"
                                 {{ request('compania_id') == $compania->id ? 'selected' : '' }}>
@@ -173,10 +168,10 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <label class="form-label fw-bold mb-1 small">Unidad</label>
                 <select name="unidad_id" class="form-select form-select-sm" id="filtroUnidad">
-                    <option value="">Todas las unidades</option>
+                    <option value="">Todas</option>
                     @foreach($unidades->groupBy('compania.nombre') as $comp => $uds)
                         <optgroup label="{{ $comp }}">
                             @foreach($uds as $unidad)
@@ -190,7 +185,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-2">
                 <label class="form-label fw-bold mb-1 small">Mes</label>
                 <select name="mes" class="form-select form-select-sm">
                     <option value="">Todos</option>
@@ -201,7 +196,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-2">
                 <label class="form-label fw-bold mb-1 small">Año</label>
                 <select name="anio" class="form-select form-select-sm">
                     @foreach(range(now()->year, now()->year - 3) as $y)
@@ -212,23 +207,22 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2 d-flex gap-1">
-                {{-- Filtrar --}}
-                <button type="submit" class="btn btn-danger btn-sm flex-fill">
-                    <i class="bi bi-search me-1"></i>Filtrar
-                </button>
-                {{-- Limpiar --}}
-                <a href="{{ route('vouchers-combustible.index') }}"
-                   class="btn btn-outline-secondary btn-sm"
-                   title="Limpiar filtros">
-                    <i class="bi bi-x-lg"></i>
-                </a>
-                {{-- Exportar con los mismos filtros --}}
-                <button type="button" class="btn btn-success btn-sm"
-                        title="Exportar Excel con filtros actuales"
-                        onclick="exportarConFiltros()">
-                    <i class="bi bi-file-earmark-excel"></i>
-                </button>
+            <div class="col-12 col-md-2">
+                <div class="d-flex gap-1">
+                    <button type="submit" class="btn btn-danger btn-sm flex-fill">
+                        <i class="bi bi-search me-1"></i>Filtrar
+                    </button>
+                    <a href="{{ route('vouchers-combustible.index') }}"
+                       class="btn btn-outline-secondary btn-sm"
+                       title="Limpiar filtros">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    <button type="button" class="btn btn-success btn-sm"
+                            title="Exportar Excel con filtros actuales"
+                            onclick="exportarConFiltros()">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -243,49 +237,91 @@
         @endif
     </div>
     <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Fecha</th>
-                    <th>N° Voucher</th>
-                    <th>Unidad</th>
-                    <th>Compañía</th>
-                    <th>Km Carga</th>
-                    <th>Conductor</th>
-                    <th>Litros</th>
-                    <th>$/L</th>
-                    <th>Total</th>
-                    <th>Obs.</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($vouchers as $v)
-                <tr>
-                    <td>{{ $v->fecha_carga->format('d/m/Y') }}</td>
-                    <td><span class="badge bg-secondary">{{ $v->numero_voucher }}</span></td>
-                    <td class="fw-bold">{{ $v->unidad->nombre }}</td>
-                    <td>{{ $v->unidad->compania->nombre }}</td>
-                    <td>{{ number_format($v->km_carga, 0, ',', '.') }} km</td>
-                    <td>{{ $v->conductor_nombre }}</td>
-                    <td>{{ $v->litros_formateados }}</td>
-                    <td>{{ $v->valor_unitario_formateado }}</td>
-                    <td class="fw-bold text-success">{{ $v->total_formateado }}</td>
-                    <td>{{ $v->observaciones ?? '—' }}</td>
-                    <td>
+
+        {{-- Vista tabla desktop --}}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 d-none d-md-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>N° Voucher</th>
+                        <th>Unidad</th>
+                        <th>Compañía</th>
+                        <th>Km Carga</th>
+                        <th>Conductor</th>
+                        <th>Litros</th>
+                        <th>$/L</th>
+                        <th>Total</th>
+                        <th>Obs.</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($vouchers as $v)
+                    <tr>
+                        <td class="text-nowrap">{{ $v->fecha_carga->format('d/m/Y') }}</td>
+                        <td><span class="badge bg-secondary">{{ $v->numero_voucher }}</span></td>
+                        <td class="fw-bold text-nowrap">{{ $v->unidad->nombre }}</td>
+                        <td class="text-nowrap">{{ $v->unidad->compania->nombre }}</td>
+                        <td class="text-nowrap">{{ number_format($v->km_carga, 0, ',', '.') }} km</td>
+                        <td class="text-nowrap">{{ $v->conductor_nombre }}</td>
+                        <td>{{ $v->litros_formateados }}</td>
+                        <td>{{ $v->valor_unitario_formateado }}</td>
+                        <td class="fw-bold text-success text-nowrap">{{ $v->total_formateado }}</td>
+                        <td>{{ $v->observaciones ?? '—' }}</td>
+                        <td>
+                            <a href="{{ route('vouchers-combustible.edit', $v) }}"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="11" class="text-center text-muted py-4">No hay vouchers registrados</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Vista cards móvil --}}
+        <div class="d-md-none">
+            @forelse($vouchers as $v)
+                <div class="border-bottom px-3 py-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="fw-bold">{{ $v->unidad->nombre }}</span>
+                            <span class="text-muted small ms-1">{{ $v->unidad->compania->nombre }}</span>
+                        </div>
+                        <span class="badge bg-secondary">{{ $v->numero_voucher }}</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 small text-muted mb-2">
+                        <span><i class="bi bi-calendar me-1"></i>{{ $v->fecha_carga->format('d/m/Y') }}</span>
+                        <span><i class="bi bi-speedometer me-1"></i>{{ number_format($v->km_carga, 0, ',', '.') }} km</span>
+                        <span><i class="bi bi-person me-1"></i>{{ $v->conductor_nombre }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small">
+                            <span>{{ $v->litros_formateados }} × {{ $v->valor_unitario_formateado }}</span>
+                            <span class="fw-bold text-success ms-2">{{ $v->total_formateado }}</span>
+                        </div>
                         <a href="{{ route('vouchers-combustible.edit', $v) }}"
                            class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-pencil"></i>
                         </a>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="11" class="text-center text-muted py-4">No hay vouchers registrados</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+                    </div>
+                    @if($v->observaciones)
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-chat-left-text me-1"></i>{{ $v->observaciones }}
+                        </div>
+                    @endif
+                </div>
+            @empty
+                <div class="text-center text-muted py-4">No hay vouchers registrados</div>
+            @endforelse
+        </div>
+
         <div class="p-3 d-flex justify-content-center">
             {{ $vouchers->links('pagination::bootstrap-5') }}
         </div>
