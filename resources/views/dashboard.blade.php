@@ -2,28 +2,33 @@
 @section('title', 'Dashboard')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
-    <div class="d-flex align-items-center gap-3">
+{{-- ── Encabezado ─────────────────────────────────────────────────── --}}
+<div class="mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+        <span class="text-muted small">{{ now()->format('d/m/Y H:i') }}</span>
+    </div>
 
-        {{-- Comandante de guardia --}}
-        <div class="d-flex align-items-center gap-2">
-            @if($guardiaActual)
-                <span class="badge bg-dark d-flex align-items-center gap-1 py-2 px-3">
-                    <i class="bi bi-shield-fill me-1"></i>
-                    Cdte. Guardia:
-                    <strong class="ms-1">
-                        {{ $guardiaActual->voluntario->nombre }}
-                        ({{ $guardiaActual->voluntario->cargosActivos->whereNull('compania_id')->first()?->cargo->nombre ?? 'Comandante' }})
-                    </strong>
-                </span>
-            @else
-                <span class="badge bg-warning text-dark d-flex align-items-center gap-1 py-2 px-3">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    Sin comandante de guardia
-                </span>
-            @endif
-            @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !auth()->user()->esCapitanCia())
+    {{-- Comandante de guardia --}}
+    <div class="mt-3 d-flex flex-column flex-md-row align-items-md-center gap-2">
+        @if($guardiaActual)
+            <span class="badge bg-dark d-flex align-items-center gap-1 py-2 px-3 text-wrap text-start">
+                <i class="bi bi-shield-fill me-1"></i>
+                Cdte. Guardia:
+                <strong class="ms-1">
+                    {{ $guardiaActual->voluntario->nombre }}
+                    ({{ $guardiaActual->voluntario->cargosActivos->whereNull('compania_id')->first()?->cargo->nombre ?? 'Comandante' }})
+                </strong>
+            </span>
+        @else
+            <span class="badge bg-warning text-dark d-flex align-items-center gap-1 py-2 px-3">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Sin comandante de guardia
+            </span>
+        @endif
+
+        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !auth()->user()->esCapitanCia())
+            <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-dark"
                         data-bs-toggle="modal" data-bs-target="#modalGuardia"
                         title="Cambiar comandante de guardia">
@@ -34,10 +39,8 @@
                         title="Registrar oficial fuera de servicio">
                     <i class="bi bi-person-slash me-1"></i>Fuera de servicio
                 </button>
-            @endif
-        </div>
-
-        <span class="text-muted">{{ now()->format('d/m/Y H:i') }}</span>
+            </div>
+        @endif
     </div>
 </div>
 
@@ -102,7 +105,7 @@
                     </p>
                     <ul class="list-group mb-4">
                         @foreach($fueraServicio as $fs)
-                            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <li class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 py-2">
                                 <div>
                                     <span class="fw-bold">{{ $fs->voluntario->nombre }}</span>
                                     <span class="text-muted small ms-2">
@@ -185,30 +188,30 @@
         $compania   = $voluntario?->compania;
     @endphp
 
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-6">
+    <div class="row justify-content-center mt-4 mt-md-5">
+        <div class="col-12 col-md-6">
             <div class="card text-center shadow-sm">
-                <div class="card-body py-5">
+                <div class="card-body py-4 py-md-5">
                     <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center
-                                justify-content-center mb-4"
-                         style="width:90px;height:90px;">
-                        <i class="bi bi-patch-check-fill text-warning" style="font-size:2.5rem;"></i>
+                                justify-content-center mb-3 mb-md-4"
+                         style="width:70px;height:70px;">
+                        <i class="bi bi-patch-check-fill text-warning" style="font-size:2rem;"></i>
                     </div>
 
-                    <h3 class="fw-bold mb-1">
+                    <h3 class="fw-bold mb-1 fs-4 fs-md-3">
                         Bienvenido, Capitán
                     </h3>
 
                     @if($compania)
-                        <p class="text-muted fs-5 mb-3">
+                        <p class="text-muted fs-6 fs-md-5 mb-3">
                             {{ $compania->nombre }}
                         </p>
                     @endif
 
                     @if($voluntario)
-                        <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-4 py-2">
+                        <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-3 px-md-4 py-2">
                             <i class="bi bi-person-fill text-secondary"></i>
-                            <span class="fw-bold">{{ $voluntario->nombre }}</span>
+                            <span class="fw-bold small">{{ $voluntario->nombre }}</span>
                         </div>
                     @endif
                 </div>
@@ -222,55 +225,55 @@
 @elseif(auth()->user()->esAdmin() || auth()->user()->esComandante())
 
     {{-- Tarjetas resumen --}}
-    <div class="row g-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-danger bg-opacity-10 rounded p-3">
-                        <i class="bi bi-building fs-3 text-danger"></i>
+    <div class="row g-3 g-md-4">
+        <div class="col-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3">
+                    <div class="bg-danger bg-opacity-10 rounded p-2 p-md-3 flex-shrink-0">
+                        <i class="bi bi-building fs-4 fs-md-3 text-danger"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Compañías</div>
-                        <div class="fs-3 fw-bold">{{ $totalCompanias }}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Compañías</div>
+                        <div class="fs-4 fs-md-3 fw-bold">{{ $totalCompanias }}</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-primary bg-opacity-10 rounded p-3">
-                        <i class="bi bi-truck-front fs-3 text-primary"></i>
+        <div class="col-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3">
+                    <div class="bg-primary bg-opacity-10 rounded p-2 p-md-3 flex-shrink-0">
+                        <i class="bi bi-truck-front fs-4 fs-md-3 text-primary"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Unidades</div>
-                        <div class="fs-3 fw-bold">{{ $totalUnidades }}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Unidades</div>
+                        <div class="fs-4 fs-md-3 fw-bold">{{ $totalUnidades }}</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-info bg-opacity-10 rounded p-3">
-                        <i class="bi bi-person-gear fs-3 text-info"></i>
+        <div class="col-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3">
+                    <div class="bg-info bg-opacity-10 rounded p-2 p-md-3 flex-shrink-0">
+                        <i class="bi bi-person-gear fs-4 fs-md-3 text-info"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Cuarteleros</div>
-                        <div class="fs-3 fw-bold">{{ $totalCuarteleros }}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Cuarteleros</div>
+                        <div class="fs-4 fs-md-3 fw-bold">{{ $totalCuarteleros }}</div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="bg-warning bg-opacity-10 rounded p-3">
-                        <i class="bi bi-person-badge fs-3 text-warning"></i>
+        <div class="col-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center gap-2 gap-md-3 p-2 p-md-3">
+                    <div class="bg-warning bg-opacity-10 rounded p-2 p-md-3 flex-shrink-0">
+                        <i class="bi bi-person-badge fs-4 fs-md-3 text-warning"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Maquinistas en servicio</div>
-                        <div class="fs-3 fw-bold">{{ $enServicio }}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Maquinistas en servicio</div>
+                        <div class="fs-4 fs-md-3 fw-bold">{{ $enServicio }}</div>
                     </div>
                 </div>
             </div>
@@ -298,7 +301,7 @@
                     @endphp
                     <div class="row g-3">
                         @foreach($porCompania as $compania => $turnos)
-                        <div class="col-md-6 col-xl-3">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="card border h-100">
                                 <div class="card-header py-2 bg-danger bg-opacity-10">
                                     <div class="fw-bold text-danger small">
@@ -309,36 +312,38 @@
                                     </div>
                                 </div>
                                 <div class="card-body p-0">
-                                    <table class="table table-hover table-sm mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Maquinista</th>
-                                                <th>Unidades</th>
-                                                <th>Tiempo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($turnos as $turno)
-                                            <tr>
-                                                <td>
-                                                    <i class="bi bi-person-fill text-success me-1"></i>
-                                                    {{ $turno->voluntario->nombre }}
-                                                </td>
-                                                <td>
-                                                    @foreach($turno->unidades as $unidad)
-                                                        <span class="badge bg-primary me-1">{{ $unidad->nombre }}</span>
-                                                    @endforeach
-                                                </td>
-                                                <td>
-                                                    <span class="badge cronometro"
-                                                          data-entrada="{{ $turno->entrada_at->timestamp }}">
-                                                        Calculando...
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-sm mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Maquinista</th>
+                                                    <th>Unidades</th>
+                                                    <th>Tiempo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($turnos as $turno)
+                                                <tr>
+                                                    <td class="text-nowrap">
+                                                        <i class="bi bi-person-fill text-success me-1"></i>
+                                                        {{ $turno->voluntario->nombre }}
+                                                    </td>
+                                                    <td>
+                                                        @foreach($turno->unidades as $unidad)
+                                                            <span class="badge bg-primary me-1">{{ $unidad->nombre }}</span>
+                                                        @endforeach
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge cronometro"
+                                                              data-entrada="{{ $turno->entrada_at->timestamp }}">
+                                                            Calculando...
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -365,38 +370,40 @@
                         <p class="mt-2 mb-0">Sin cuarteleros en servicio</p>
                     </div>
                 @else
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Cuartelero</th>
-                                <th>Compañía</th>
-                                <th>Unidades</th>
-                                <th>Tiempo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($turnosActivosCuarteleros as $turno)
-                            <tr>
-                                <td>
-                                    <i class="bi bi-person-gear text-primary me-1"></i>
-                                    {{ $turno->cuartelero->nombre }}
-                                </td>
-                                <td class="text-muted small">{{ $turno->cuartelero->compania->nombre }}</td>
-                                <td>
-                                    @foreach($turno->unidades as $unidad)
-                                        <span class="badge bg-primary me-1">{{ $unidad->nombre }}</span>
-                                    @endforeach
-                                </td>
-                                <td>
-                                    <span class="badge cronometro"
-                                          data-entrada="{{ $turno->entrada_at->timestamp }}">
-                                        Calculando...
-                                    </span>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Cuartelero</th>
+                                    <th>Compañía</th>
+                                    <th>Unidades</th>
+                                    <th>Tiempo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($turnosActivosCuarteleros as $turno)
+                                <tr>
+                                    <td class="text-nowrap">
+                                        <i class="bi bi-person-gear text-primary me-1"></i>
+                                        {{ $turno->cuartelero->nombre }}
+                                    </td>
+                                    <td class="text-muted small text-nowrap">{{ $turno->cuartelero->compania->nombre }}</td>
+                                    <td>
+                                        @foreach($turno->unidades as $unidad)
+                                            <span class="badge bg-primary me-1">{{ $unidad->nombre }}</span>
+                                        @endforeach
+                                    </td>
+                                    <td>
+                                        <span class="badge cronometro"
+                                              data-entrada="{{ $turno->entrada_at->timestamp }}">
+                                            Calculando...
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endif
             </div>
         </div>
@@ -418,41 +425,43 @@
                         <p class="mt-2 mb-0">Sin salidas activas en este momento</p>
                     </div>
                 @else
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Unidad</th>
-                                <th>Compañía</th>
-                                <th>Clave</th>
-                                <th>Conductor</th>
-                                <th>Dirección</th>
-                                <th>Tiempo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($salidasActivas as $salida)
-                            <tr>
-                                <td>
-                                    <span class="badge bg-danger">{{ $salida->unidad->nombre }}</span>
-                                </td>
-                                <td class="text-muted small">{{ $salida->unidad->compania->nombre }}</td>
-                                <td>
-                                    <span class="badge bg-secondary">
-                                        {{ $salida->claveSalida->codigo }} — {{ $salida->claveSalida->tipo }}
-                                    </span>
-                                </td>
-                                <td>{{ $salida->conductor_nombre }}</td>
-                                <td class="small">{{ $salida->direccion }}</td>
-                                <td>
-                                    <span class="badge cronometro"
-                                          data-entrada="{{ $salida->salida_at->timestamp }}">
-                                        Calculando...
-                                    </span>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th>Compañía</th>
+                                    <th>Clave</th>
+                                    <th>Conductor</th>
+                                    <th>Dirección</th>
+                                    <th>Tiempo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($salidasActivas as $salida)
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-danger">{{ $salida->unidad->nombre }}</span>
+                                    </td>
+                                    <td class="text-muted small text-nowrap">{{ $salida->unidad->compania->nombre }}</td>
+                                    <td class="text-nowrap">
+                                        <span class="badge bg-secondary">
+                                            {{ $salida->claveSalida->codigo }} — {{ $salida->claveSalida->tipo }}
+                                        </span>
+                                    </td>
+                                    <td class="text-nowrap">{{ $salida->conductor_nombre }}</td>
+                                    <td class="small">{{ $salida->direccion }}</td>
+                                    <td>
+                                        <span class="badge cronometro"
+                                              data-entrada="{{ $salida->salida_at->timestamp }}">
+                                            Calculando...
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endif
             </div>
         </div>
@@ -464,7 +473,7 @@
 @else
 
     @if($libroActivo)
-        <div class="alert alert-success d-flex align-items-center justify-content-between gap-2 mb-4">
+        <div class="alert alert-success d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-4">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-journal-check fs-5"></i>
                 <div>
@@ -479,7 +488,7 @@
             </a>
         </div>
     @else
-        <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2 mb-4">
+        <div class="alert alert-warning d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-4">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-journal-x fs-5"></i>
                 <div>
@@ -550,25 +559,25 @@
         ];
     @endphp
 
-    <div class="row g-4">
+    <div class="row g-3 g-md-4">
         @foreach($accesos as $acceso)
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <a href="{{ $acceso['ruta'] }}" class="text-decoration-none">
                 <div class="card h-100 border-0 shadow-sm acceso-card"
                      style="transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer;">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-5">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center mb-4
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-3 py-md-5">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center mb-2 mb-md-4
                                     bg-{{ $acceso['color'] }} bg-opacity-10"
-                             style="width: 80px; height: 80px;">
+                             style="width: 60px; height: 60px;">
                             <i class="bi {{ $acceso['icono'] }} text-{{ $acceso['color'] }}"
-                               style="font-size: 2rem;"></i>
+                               style="font-size: 1.5rem;"></i>
                         </div>
-                        <h5 class="fw-bold mb-2 text-dark">{{ $acceso['titulo'] }}</h5>
-                        <p class="text-muted small mb-0">{{ $acceso['desc'] }}</p>
+                        <h6 class="fw-bold mb-1 mb-md-2 text-dark">{{ $acceso['titulo'] }}</h6>
+                        <p class="text-muted small mb-0 d-none d-md-block">{{ $acceso['desc'] }}</p>
                     </div>
                     <div class="card-footer border-0 bg-{{ $acceso['color'] }} bg-opacity-10 text-center py-2">
                         <small class="text-{{ $acceso['color'] }} fw-bold">
-                            <i class="bi bi-arrow-right me-1"></i>Ir al módulo
+                            <i class="bi bi-arrow-right me-1"></i><span class="d-none d-md-inline">Ir al módulo</span><span class="d-md-none">Abrir</span>
                         </small>
                     </div>
                 </div>
