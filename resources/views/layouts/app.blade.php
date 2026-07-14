@@ -14,6 +14,8 @@
 
 <style>
     body { background-color: #f8f9fa; }
+
+    /* ── Sidebar desktop ──────────────────────────── */
     .sidebar { min-height:100vh; background:#1a1a2e; color:white; }
     .sidebar .nav-link { color:#adb5bd; padding:10px 20px; border-radius:6px; margin:2px 8px; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active { background:#e63946; color:white; }
@@ -22,15 +24,115 @@
     .card { border:none; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
     .pagination { font-size:0.85rem; }
     .pagination .page-link { padding:0.25rem 0.6rem; }
+
+    /* ── Navbar móvil ─────────────────────────────── */
+    .mobile-navbar {
+        background: #1a1a2e;
+        padding: 10px 16px;
+        z-index: 1050;
+    }
+
+    /* ── Offcanvas móvil ──────────────────────────── */
+    .offcanvas-mobile {
+        background: #1a1a2e;
+        color: white;
+        max-width: 280px;
+    }
+    .offcanvas-mobile .offcanvas-header {
+        border-bottom: 1px solid #2d2d44;
+        padding: 16px;
+    }
+    .offcanvas-mobile .btn-close {
+        filter: invert(1);
+    }
+    .offcanvas-mobile .nav-link {
+        color: #adb5bd;
+        padding: 9px 16px;
+        border-radius: 6px;
+        margin: 2px 8px;
+        font-size: 0.9rem;
+    }
+    .offcanvas-mobile .nav-link:hover,
+    .offcanvas-mobile .nav-link.active {
+        background: #e63946;
+        color: white;
+    }
+    .offcanvas-mobile .nav-section-label {
+        padding: 4px 16px;
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .offcanvas-mobile .nav-divider {
+        border-color: #2d2d44;
+        margin: 8px 16px;
+    }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 767.98px) {
+        .main-content {
+            padding: 16px;
+            padding-top: 20px;
+        }
+    }
 </style>
 </head>
 
 <body>
+
+{{-- ══ NAVBAR MÓVIL (solo visible en < md) ══════════════════════════ --}}
+<div class="mobile-navbar d-md-none d-flex align-items-center justify-content-between sticky-top">
+    <div class="d-flex align-items-center gap-2">
+        <img src="{{ asset('images/logo2.png') }}" alt="Logo" style="width:36px; height:36px; object-fit:contain;">
+        <span class="text-white fw-bold" style="font-size:0.85rem;">Administración Central</span>
+    </div>
+    <button class="btn btn-outline-light btn-sm" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu">
+        <i class="bi bi-list fs-5"></i>
+    </button>
+</div>
+
+{{-- ══ OFFCANVAS MÓVIL ══════════════════════════════════════════════ --}}
+<div class="offcanvas offcanvas-start offcanvas-mobile d-md-none" tabindex="-1" id="offcanvasMenu">
+    <div class="offcanvas-header">
+        <div class="d-flex align-items-center gap-2">
+            <img src="{{ asset('images/logo2.png') }}" alt="Logo" style="width:40px; height:40px; object-fit:contain;">
+            <span class="fw-bold" style="font-size:0.85rem;">Administración Central</span>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0 d-flex flex-column">
+        <nav class="nav flex-column flex-grow-1 pt-2">
+            @include('layouts._nav_links')
+        </nav>
+
+        <hr class="nav-divider">
+        <div class="px-3 pb-3">
+            <div class="small mb-1" style="color: #e9ecef;">
+                <i class="bi bi-person-circle me-1"></i>{{ auth()->user()->nombre }}
+                <span class="badge bg-secondary ms-1">{{ auth()->user()->rol }}</span>
+            </div>
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm w-100 mb-2"
+                    data-bs-toggle="modal" data-bs-target="#modalMiUsuario">
+                <i class="bi bi-person-gear me-1"></i>Mi usuario
+            </button>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                    <i class="bi bi-box-arrow-right me-1"></i>Cerrar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="container-fluid">
 <div class="row">
 
-{{-- Sidebar --}}
-<div class="col-md-2 sidebar px-0">
+{{-- ══ SIDEBAR DESKTOP (oculto en < md) ═════════════════════════════ --}}
+<div class="col-md-2 sidebar px-0 d-none d-md-block">
 
     <div class="brand text-center">
         <img src="{{ asset('images/logo2.png') }}" alt="Logo Bomberos"
@@ -41,146 +143,7 @@
     </div>
 
     <nav class="nav flex-column mt-3">
-
-        {{-- Inicio --}}
-        <a href="{{ route('dashboard') }}"
-           class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-speedometer2 me-2"></i> Inicio
-        </a>
-
-        {{-- Comandante + Admin + Capitán Cía --}}
-        @if(auth()->user()->esComandante() || auth()->user()->esAdmin() || auth()->user()->esCapitanCia())
-            <a href="{{ route('voluntarios.index') }}"
-               class="nav-link {{ request()->is('voluntarios*') ? 'active' : '' }}">
-                <i class="bi bi-people me-2"></i> Voluntarios
-            </a>
-        @endif
-
-        {{-- Comandante + Admin (no Capitán Cía) --}}
-        @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
-            <a href="{{ route('cuarteleros.index') }}"
-               class="nav-link {{ request()->is('cuarteleros*') ? 'active' : '' }}">
-                <i class="bi bi-person-gear me-2"></i> Cuarteleros
-            </a>
-            <a href="{{ route('cargos.index') }}"
-                class="nav-link {{ request()->is('cargos*') ? 'active' : '' }}">
-                <i class="bi bi-award me-2"></i> Cargos
-            </a>
-        @endif
-
-        {{-- Comandante + Admin + Capitán Cía --}}
-        @if(auth()->user()->esComandante() || auth()->user()->esAdmin() || auth()->user()->esCapitanCia())
-            <a href="{{ route('unidades.index') }}"
-               class="nav-link {{ request()->is('unidades*') ? 'active' : '' }}">
-                <i class="bi bi-truck-front me-2"></i> Unidades
-            </a>
-        @endif
-
-        {{-- Comandante + Admin (no Capitán Cía) --}}
-        @if(auth()->user()->esComandante() || auth()->user()->esAdmin())
-            <a href="{{ route('claves-salida.index') }}"
-               class="nav-link {{ request()->is('claves-salida*') ? 'active' : '' }}">
-                <i class="bi bi-tag me-2"></i> Claves de Salida
-            </a>
-        @endif
-
-        {{-- Admin --}}
-        @if(auth()->user()->esAdmin())
-            <a href="{{ route('companias.index') }}"
-               class="nav-link {{ request()->is('companias*') ? 'active' : '' }}">
-                <i class="bi bi-building me-2"></i> Compañías
-            </a>
-        @endif
-
-        {{-- ── OPERACIONES (operadores + admin) ─────────────────── --}}
-        @if(!auth()->user()->esComandante() && !auth()->user()->esCapitanCia() || auth()->user()->esAdmin())
-            <hr style="border-color:#2d2d44;margin:8px 16px;">
-            <div style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
-                Operaciones
-            </div>
-
-            <a href="{{ route('turnos.index') }}"
-               class="nav-link {{ request()->is('turnos*') ? 'active' : '' }}">
-                <i class="bi bi-clock-history me-2"></i> Puestas en Servicio
-            </a>
-            <a href="{{ route('salidas.index') }}"
-               class="nav-link {{ request()->is('salidas*') ? 'active' : '' }}">
-                <i class="bi bi-arrow-up-right-circle me-2"></i> Registro Salidas
-            </a>
-            <a href="{{ route('vouchers-combustible.index') }}"
-               class="nav-link {{ request()->routeIs('vouchers-combustible.*') ? 'active' : '' }}">
-                <i class="bi bi-fuel-pump me-2"></i> Registro Combustible
-            </a>
-            <a href="{{ route('libro-novedades.index') }}"
-               class="nav-link {{ request()->is('libro-novedades*') ? 'active' : '' }}">
-                <i class="bi bi-journal-text me-2"></i> Libro de Novedades
-            </a>
-            <a href="{{ route('citaciones.index') }}"
-               class="nav-link {{ request()->is('citaciones*') ? 'active' : '' }}">
-                <i class="bi bi-megaphone me-2"></i> Citaciones
-            </a>
-            <a href="{{ route('boletines.index') }}"
-               class="nav-link {{ request()->is('boletines*') ? 'active' : '' }}">
-                <i class="bi bi-file-earmark-text me-2"></i> Boletines
-            </a>
-            <a href="{{ route('guardias-nocturnas.index') }}"
-               class="nav-link {{ request()->is('guardias-nocturnas*') ? 'active' : '' }}">
-                <i class="bi bi-moon-stars me-2"></i> Guardias Nocturnas
-            </a>
-        @endif
-
-        {{-- ── REPORTES ───────────────────────────────────────────── --}}
-        <hr style="border-color:#2d2d44;margin:8px 16px;">
-        <div style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
-            Reportes
-        </div>
-
-        {{-- Maquinistas y Salidas: todos los roles --}}
-        <a href="{{ route('reportes.index') }}"
-           class="nav-link ps-4 {{ request()->is('reportes') || request()->is('reportes?*') ? 'active' : '' }}">
-            <i class="bi bi-person-badge me-2"></i> Maquinistas
-        </a>
-        <a href="{{ route('reportes.salidas') }}"
-           class="nav-link ps-4 {{ request()->is('reportes/salidas*') ? 'active' : '' }}">
-            <i class="bi bi-arrow-up-right-circle me-2"></i> Salidas
-        </a>
-
-        {{-- Reportes extendidos: Admin + Comandante + Capitán Cía --}}
-        @if(auth()->user()->esAdmin() || auth()->user()->esComandante() || auth()->user()->esCapitanCia())
-            <a href="{{ route('estadisticas.index') }}"
-                class="nav-link ps-4 {{ request()->is('estadisticas*') ? 'active' : '' }}">
-                <i class="bi bi-trophy me-2"></i> Estadísticas Maquinistas
-            </a>
-        @endif
-
-        {{-- Reportes solo Admin + Comandante --}}
-        @if(auth()->user()->esAdmin() || auth()->user()->esComandante())
-            <a href="{{ route('reportes.combustible') }}"
-                class="nav-link ps-4 {{ request()->is('reportes/combustible*') ? 'active' : '' }}">
-                <i class="bi bi-fuel-pump me-2"></i> Estadísticas Combustible
-            </a>
-            <a href="{{ route('reportes.guardias-nocturnas') }}"
-                class="nav-link ps-4 {{ request()->is('reportes/guardias-nocturnas*') ? 'active' : '' }}">
-                <i class="bi bi-moon-stars me-2"></i> Guardias Nocturnas
-            </a>
-        @endif
-
-        {{-- ── ADMINISTRACIÓN (solo admin) ───────────────────────── --}}
-        @if(auth()->user()->esAdmin())
-            <hr style="border-color:#2d2d44;margin:8px 16px;">
-            <div style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
-                Administración
-            </div>
-            <a href="{{ route('usuarios.index') }}"
-               class="nav-link {{ request()->is('usuarios*') ? 'active' : '' }}">
-                <i class="bi bi-person-lock me-2"></i> Usuarios
-            </a>
-              <a href="{{ route('login-logs.index') }}"
-               class="nav-link {{ request()->is('login-logs*') ? 'active' : '' }}">
-                <i class="bi bi-shield-lock me-2"></i> Registro de Accesos
-            </a>
-        @endif
-
+        @include('layouts._nav_links')
     </nav>
 
     <hr style="border-color:#2d2d44;margin:8px 16px;">
@@ -190,7 +153,6 @@
             <i class="bi bi-person-circle me-1"></i>{{ auth()->user()->nombre }}
             <span class="badge bg-secondary ms-1">{{ auth()->user()->rol }}</span>
         </div>
-        {{-- Mi usuario --}}
         <button type="button"
                 class="btn btn-outline-secondary btn-sm w-100 mb-2"
                 data-bs-toggle="modal" data-bs-target="#modalMiUsuario">
@@ -336,6 +298,17 @@
         @if(session('abrir_modal_usuario') || session('password_error') || session('password_success'))
             new bootstrap.Modal(document.getElementById('modalMiUsuario')).show();
         @endif
+
+        // Cerrar offcanvas al hacer click en un link
+        const offcanvasEl = document.getElementById('offcanvasMenu');
+        if (offcanvasEl) {
+            offcanvasEl.querySelectorAll('a.nav-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                    if (offcanvas) offcanvas.hide();
+                });
+            });
+        }
     });
 </script>
 
