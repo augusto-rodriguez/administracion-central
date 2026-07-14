@@ -2,7 +2,7 @@
 @section('title', 'Puestas en Servicio')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="mb-4">
     <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Puestas en Servicio</h4>
 </div>
 
@@ -27,10 +27,12 @@
         @foreach(session('form_data.unidades', []) as $uid)
             <input type="hidden" name="unidades[]" value="{{ $uid }}">
         @endforeach
-        <button type="submit" class="btn btn-warning">
-            <i class="bi bi-arrow-left-right me-1"></i>Sí, registrar cambio
-        </button>
-        <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary ms-2">Cancelar</a>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Sí, registrar cambio
+            </button>
+            <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        </div>
     </form>
 </div>
 @endif
@@ -55,10 +57,12 @@
         @foreach(session('form_data_cuartelero.unidades', []) as $uid)
             <input type="hidden" name="unidades[]" value="{{ $uid }}">
         @endforeach
-        <button type="submit" class="btn btn-warning">
-            <i class="bi bi-arrow-left-right me-1"></i>Sí, registrar cambio
-        </button>
-        <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary ms-2">Cancelar</a>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Sí, registrar cambio
+            </button>
+            <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        </div>
     </form>
 </div>
 @endif
@@ -71,7 +75,7 @@
     <div class="card-body">
         <div class="row g-3 mb-3">
             <div class="col-12">
-                <label class="form-label fw-bold">Tipo de conductor</label>
+                <label class="form-label fw-bold small">Tipo de conductor</label>
                 <div class="d-flex gap-3">
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="tipo_conductor"
@@ -93,17 +97,17 @@
 
         {{-- Formulario Maquinista --}}
         <form id="formMaquinista" action="{{ route('turnos.store') }}" method="POST">
-            @csrf 
+            @csrf
             <p class="text-muted small mb-3">
                 <i class="bi bi-info-circle me-1"></i>
                 La hora de puesta en servicio se registra automáticamente. Si necesita ajustar la fecha u hora de entrada, utilice el botón <i class="bi bi-clock-history"></i> al final de la fila.
             </p>
             <input type="hidden" name="entrada_at" id="entradaAtMaquinista" value="">
             <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Voluntario <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold small">Voluntario <span class="text-danger">*</span></label>
                     <select name="voluntario_id"
-                            class="form-select @error('voluntario_id') is-invalid @enderror"
+                            class="form-select form-select-sm @error('voluntario_id') is-invalid @enderror"
                             id="selectVoluntario" required>
                         <option value="">Buscar maquinista...</option>
                         @foreach($voluntarios as $voluntario)
@@ -115,20 +119,20 @@
                     </select>
                     @error('voluntario_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Unidades <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold small">Unidades <span class="text-danger">*</span></label>
                     <div id="unidadesContainer" class="border rounded p-2 bg-light" style="min-height:42px">
                         <span class="text-muted small">Selecciona primero un voluntario...</span>
                     </div>
                     @error('unidades') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Observaciones de la(s) unidad(es)</label>
-                    <input type="text" name="observaciones" class="form-control"
+                <div class="col-9 col-md-3">
+                    <label class="form-label fw-bold small">Observaciones</label>
+                    <input type="text" name="observaciones" class="form-control form-control-sm"
                            placeholder="Opcional..." value="{{ old('observaciones') }}">
                 </div>
-                <div class="col-md-1 d-flex flex-column">
-                    <label class="form-label fw-bold" style="visibility:hidden">&#8204;</label>
+                <div class="col-3 col-md-1 d-flex flex-column">
+                    <label class="form-label fw-bold small" style="visibility:hidden">&#8204;</label>
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm"
                             id="btnAjusteHoraMaquinista"
@@ -140,16 +144,16 @@
             </div>
 
             <div id="panelHoraMaquinista" class="mt-3 p-3 border rounded bg-light" style="display:none">
-                <div class="d-flex align-items-end gap-3 flex-wrap">
+                <div class="d-flex flex-column flex-md-row align-items-md-end gap-3">
                     <div>
                         <label class="form-label fw-bold mb-1 small text-warning-emphasis">
                             <i class="bi bi-exclamation-circle me-1"></i>Ajuste de hora de entrada
                         </label>
-                        <input type="datetime-local" id="inputHoraMaquinista" class="form-control form-control-sm" style="width:220px">
+                        <input type="datetime-local" id="inputHoraMaquinista" class="form-control form-control-sm" style="max-width:220px">
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-warning btn-sm" id="btnConfirmarHoraMaquinista">
-                            <i class="bi bi-check-lg me-1"></i>Confirmar ajuste
+                            <i class="bi bi-check-lg me-1"></i>Confirmar
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCancelarHoraMaquinista">
                             Cancelar
@@ -165,7 +169,7 @@
             </div>
 
             <div class="mt-3">
-                <button type="submit" class="btn btn-danger">
+                <button type="submit" class="btn btn-danger btn-sm">
                     <i class="bi bi-box-arrow-in-right me-1"></i>Registrar Entrada
                 </button>
             </div>
@@ -180,10 +184,10 @@
             </p>
             <input type="hidden" name="entrada_at" id="entradaAtCuartelero" value="">
             <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Cuartelero <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold small">Cuartelero <span class="text-danger">*</span></label>
                     <select name="cuartelero_id"
-                            class="form-select @error('cuartelero_id') is-invalid @enderror"
+                            class="form-select form-select-sm @error('cuartelero_id') is-invalid @enderror"
                             id="selectCuartelero">
                         <option value="">Buscar cuartelero...</option>
                         @foreach($cuarteleros as $cuartelero)
@@ -195,18 +199,18 @@
                     </select>
                     @error('cuartelero_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Unidades <span class="text-danger">*</span></label>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold small">Unidades <span class="text-danger">*</span></label>
                     <div id="unidadesCuarteleroContainer" class="border rounded p-2 bg-light" style="min-height:42px">
                         <span class="text-muted small">Selecciona primero un cuartelero...</span>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Observaciones de la(s) unidad(es)</label>
-                    <input type="text" name="observaciones" class="form-control" placeholder="Opcional...">
+                <div class="col-9 col-md-3">
+                    <label class="form-label fw-bold small">Observaciones</label>
+                    <input type="text" name="observaciones" class="form-control form-control-sm" placeholder="Opcional...">
                 </div>
-                <div class="col-md-1 d-flex flex-column">
-                    <label class="form-label fw-bold" style="visibility:hidden">&#8204;</label>
+                <div class="col-3 col-md-1 d-flex flex-column">
+                    <label class="form-label fw-bold small" style="visibility:hidden">&#8204;</label>
                     <button type="button"
                             class="btn btn-outline-secondary btn-sm"
                             id="btnAjusteHoraCuartelero"
@@ -218,16 +222,16 @@
             </div>
 
             <div id="panelHoraCuartelero" class="mt-3 p-3 border rounded bg-light" style="display:none">
-                <div class="d-flex align-items-end gap-3 flex-wrap">
+                <div class="d-flex flex-column flex-md-row align-items-md-end gap-3">
                     <div>
                         <label class="form-label fw-bold mb-1 small text-warning-emphasis">
                             <i class="bi bi-exclamation-circle me-1"></i>Ajuste de hora de entrada
                         </label>
-                        <input type="datetime-local" id="inputHoraCuartelero" class="form-control form-control-sm" style="width:220px">
+                        <input type="datetime-local" id="inputHoraCuartelero" class="form-control form-control-sm" style="max-width:220px">
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-warning btn-sm" id="btnConfirmarHoraCuartelero">
-                            <i class="bi bi-check-lg me-1"></i>Confirmar ajuste
+                            <i class="bi bi-check-lg me-1"></i>Confirmar
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCancelarHoraCuartelero">
                             Cancelar
@@ -241,9 +245,9 @@
                     Si no ajustas la hora, se usará la hora actual al momento de guardar.
                 </div>
             </div>
-            
+
             <div class="mt-3">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bi bi-box-arrow-in-right me-1"></i>Registrar Entrada
                 </button>
             </div>
@@ -251,7 +255,7 @@
     </div>
 </div>
 
-{{-- En Servicio Ahora (unificado) --}}
+{{-- En Servicio Ahora --}}
 @php
     $enServicioMaquinistas = \App\Models\RegistroTurno::with(['voluntario.compania', 'unidades'])
         ->whereNull('salida_at')->orderBy('entrada_at', 'desc')->get();
@@ -262,166 +266,219 @@
 
 @if($totalEnServicio)
 <div class="card mb-4">
-    <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white fw-bold d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-1">
         <div>
             <i class="bi bi-activity text-danger me-2"></i>En Servicio Ahora
             <span class="badge bg-danger ms-1">{{ $totalEnServicio }}</span>
         </div>
         <span class="text-muted small fw-normal">
-            <i class="bi bi-info-circle me-1"></i>Puedes hacer click en el nombre de la unidad para quitarla del turno actual
+            <i class="bi bi-info-circle me-1"></i>Click en la unidad para quitarla del turno
         </span>
     </div>
     <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Tipo</th>
-                    <th>Nombre</th>
-                    <th>Compañía</th>
-                    <th>Unidades</th>
-                    <th>Entrada</th>
-                    <th>Tiempo</th>
-                    <th>Observaciones</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($enServicioMaquinistas as $turno)
-                <tr class="table-danger bg-opacity-25">
-                    <td>
-                        <span class="badge bg-danger">
-                            <i class="bi bi-person-badge me-1"></i>Maquinista
-                        </span>
-                    </td>
-                    <td class="fw-bold">{{ $turno->voluntario->nombre }}</td>
-                    <td>{{ $turno->voluntario->compania->nombre }}</td>
-                    <td>
-                        @foreach($turno->unidades as $unidad)
-                            <span class="badge bg-secondary me-1 mb-1"
-                                role="button"
-                                style="cursor:pointer"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modalQuitarUnidad{{ $turno->id }}_{{ $unidad->id }}">
-                                <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
-                            </span>
 
-                            {{-- Modal quitar unidad --}}
-                            <div class="modal fade" id="modalQuitarUnidad{{ $turno->id }}_{{ $unidad->id }}" tabindex="-1">
-                                <div class="modal-dialog modal-sm">
-                                    <div class="modal-content">
-                                        <div class="modal-header py-2">
-                                            <h6 class="modal-title">
-                                                <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
-                                            </h6>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body py-2 text-center">
-                                            <p class="mb-3 text-muted small">¿Quitar esta unidad del turno activo?</p>
-                                            <form action="{{ route('turnos.quitar-unidad', [$turno, $unidad]) }}" method="POST">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm w-100">
-                                                    <i class="bi bi-dash-circle me-1"></i>Quitar del turno
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </td>
-                    <td>{{ $turno->entrada_at->format('d/m/Y H:i') }}</td>
-                    <td>
-                        <span class="badge cronometro" data-entrada="{{ $turno->entrada_at->timestamp }}">
-                            Calculando...
-                        </span>
-                    </td>
-                    <td>{{ $turno->observaciones ?? '—' }}</td>
-                    <td>
-                        {{-- Botón Salida con confirmación de hora --}}
-                        <button type="button" class="btn btn-sm btn-danger btn-salida-turno"
-                                data-turno-id="{{ $turno->id }}"
-                                data-tipo="maquinista"
+        {{-- Tabla desktop --}}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 d-none d-md-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Nombre</th>
+                        <th>Compañía</th>
+                        <th>Unidades</th>
+                        <th>Entrada</th>
+                        <th>Tiempo</th>
+                        <th>Obs.</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($enServicioMaquinistas as $turno)
+                    <tr class="table-danger bg-opacity-25">
+                        <td><span class="badge bg-danger"><i class="bi bi-person-badge me-1"></i>Maq.</span></td>
+                        <td class="fw-bold text-nowrap">{{ $turno->voluntario->nombre }}</td>
+                        <td class="text-nowrap">{{ $turno->voluntario->compania->nombre }}</td>
+                        <td>
+                            @foreach($turno->unidades as $unidad)
+                                <span class="badge bg-secondary me-1 mb-1" role="button" style="cursor:pointer"
+                                      data-bs-toggle="modal" data-bs-target="#modalQuitarUnidad{{ $turno->id }}_{{ $unidad->id }}">
+                                    <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
+                                </span>
+                            @endforeach
+                        </td>
+                        <td class="text-nowrap">{{ $turno->entrada_at->format('d/m/Y H:i') }}</td>
+                        <td><span class="badge cronometro" data-entrada="{{ $turno->entrada_at->timestamp }}">Calculando...</span></td>
+                        <td>{{ $turno->observaciones ?? '—' }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger btn-salida-turno"
+                                    data-turno-id="{{ $turno->id }}" data-tipo="maquinista"
+                                    data-action="{{ route('turnos.salida', $turno) }}"
+                                    data-nombre="{{ $turno->voluntario->nombre }}"
+                                    data-entrada="{{ $turno->entrada_at->format('d/m/Y H:i') }}">
+                                <i class="bi bi-box-arrow-right me-1"></i>Salida
+                            </button>
+                        </td>
+                    </tr>
+                    @endforeach
+
+                    @foreach($enServicioCuarteleros as $turno)
+                    <tr class="table-primary bg-opacity-25">
+                        <td><span class="badge bg-primary"><i class="bi bi-person-gear me-1"></i>Cuart.</span></td>
+                        <td class="fw-bold text-nowrap">{{ $turno->cuartelero->nombre }}</td>
+                        <td class="text-nowrap">{{ $turno->cuartelero->compania->nombre }}</td>
+                        <td>
+                            @foreach($turno->unidades as $unidad)
+                                <span class="badge bg-secondary me-1 mb-1" role="button" style="cursor:pointer"
+                                      data-bs-toggle="modal" data-bs-target="#modalQuitarUnidadC{{ $turno->id }}_{{ $unidad->id }}">
+                                    <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
+                                </span>
+                            @endforeach
+                        </td>
+                        <td class="text-nowrap">{{ $turno->entrada_at->format('d/m/Y H:i') }}</td>
+                        <td><span class="badge cronometro" data-entrada="{{ $turno->entrada_at->timestamp }}">Calculando...</span></td>
+                        <td>{{ $turno->observaciones ?? '—' }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary btn-salida-turno"
+                                    data-turno-id="{{ $turno->id }}" data-tipo="cuartelero"
+                                    data-action="{{ route('cuarteleros.turnos.salida', $turno) }}"
+                                    data-nombre="{{ $turno->cuartelero->nombre }}"
+                                    data-entrada="{{ $turno->entrada_at->format('d/m/Y H:i') }}">
+                                <i class="bi bi-box-arrow-right me-1"></i>Salida
+                            </button>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Cards móvil --}}
+        <div class="d-md-none">
+            @foreach($enServicioMaquinistas as $turno)
+                <div class="border-bottom px-3 py-3" style="background:rgba(220,53,69,0.05)">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-danger me-1"><i class="bi bi-person-badge me-1"></i>Maq.</span>
+                            <span class="fw-bold">{{ $turno->voluntario->nombre }}</span>
+                            <div class="text-muted small">{{ $turno->voluntario->compania->nombre }}</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger btn-salida-turno flex-shrink-0"
+                                data-turno-id="{{ $turno->id }}" data-tipo="maquinista"
                                 data-action="{{ route('turnos.salida', $turno) }}"
                                 data-nombre="{{ $turno->voluntario->nombre }}"
                                 data-entrada="{{ $turno->entrada_at->format('d/m/Y H:i') }}">
                             <i class="bi bi-box-arrow-right me-1"></i>Salida
                         </button>
-                    </td>
-                </tr>
-                @endforeach
-
-                @foreach($enServicioCuarteleros as $turno)
-                <tr class="table-primary bg-opacity-25">
-                    <td>
-                        <span class="badge bg-primary">
-                            <i class="bi bi-person-gear me-1"></i>Cuartelero
-                        </span>
-                    </td>
-                    <td class="fw-bold">{{ $turno->cuartelero->nombre }}</td>
-                    <td>{{ $turno->cuartelero->compania->nombre }}</td>
-                    <td>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
                         @foreach($turno->unidades as $unidad)
-                            <span class="badge bg-secondary me-1 mb-1"
-                                role="button"
-                                style="cursor:pointer"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modalQuitarUnidadC{{ $turno->id }}_{{ $unidad->id }}">
+                            <span class="badge bg-secondary" role="button" style="cursor:pointer"
+                                  data-bs-toggle="modal" data-bs-target="#modalQuitarUnidad{{ $turno->id }}_{{ $unidad->id }}">
                                 <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
                             </span>
-
-                            {{-- Modal quitar unidad --}}
-                            <div class="modal fade" id="modalQuitarUnidadC{{ $turno->id }}_{{ $unidad->id }}" tabindex="-1">
-                                <div class="modal-dialog modal-sm">
-                                    <div class="modal-content">
-                                        <div class="modal-header py-2">
-                                            <h6 class="modal-title">
-                                                <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
-                                            </h6>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body py-2 text-center">
-                                            <p class="mb-3 text-muted small">¿Quitar esta unidad del turno activo?</p>
-                                            <form action="{{ route('cuarteleros.turnos.quitar-unidad', [$turno, $unidad]) }}" method="POST">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm w-100">
-                                                    <i class="bi bi-dash-circle me-1"></i>Quitar del turno
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         @endforeach
-                    </td>
-                    <td>{{ $turno->entrada_at->format('d/m/Y H:i') }}</td>
-                    <td>
-                        <span class="badge cronometro" data-entrada="{{ $turno->entrada_at->timestamp }}">
-                            Calculando...
-                        </span>
-                    </td>
-                    <td>{{ $turno->observaciones ?? '—' }}</td>
-                    <td>
-                        {{-- Botón Salida con confirmación de hora --}}
-                        <button type="button" class="btn btn-sm btn-primary btn-salida-turno"
-                                data-turno-id="{{ $turno->id }}"
-                                data-tipo="cuartelero"
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                        <span><i class="bi bi-clock me-1"></i>{{ $turno->entrada_at->format('d/m/Y H:i') }}</span>
+                        <span class="badge cronometro" data-entrada="{{ $turno->entrada_at->timestamp }}">Calculando...</span>
+                    </div>
+                    @if($turno->observaciones)
+                        <div class="small text-muted mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $turno->observaciones }}</div>
+                    @endif
+                </div>
+            @endforeach
+
+            @foreach($enServicioCuarteleros as $turno)
+                <div class="border-bottom px-3 py-3" style="background:rgba(13,110,253,0.05)">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-primary me-1"><i class="bi bi-person-gear me-1"></i>Cuart.</span>
+                            <span class="fw-bold">{{ $turno->cuartelero->nombre }}</span>
+                            <div class="text-muted small">{{ $turno->cuartelero->compania->nombre }}</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary btn-salida-turno flex-shrink-0"
+                                data-turno-id="{{ $turno->id }}" data-tipo="cuartelero"
                                 data-action="{{ route('cuarteleros.turnos.salida', $turno) }}"
                                 data-nombre="{{ $turno->cuartelero->nombre }}"
                                 data-entrada="{{ $turno->entrada_at->format('d/m/Y H:i') }}">
                             <i class="bi bi-box-arrow-right me-1"></i>Salida
                         </button>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        @foreach($turno->unidades as $unidad)
+                            <span class="badge bg-secondary" role="button" style="cursor:pointer"
+                                  data-bs-toggle="modal" data-bs-target="#modalQuitarUnidadC{{ $turno->id }}_{{ $unidad->id }}">
+                                <i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}
+                            </span>
+                        @endforeach
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                        <span><i class="bi bi-clock me-1"></i>{{ $turno->entrada_at->format('d/m/Y H:i') }}</span>
+                        <span class="badge cronometro" data-entrada="{{ $turno->entrada_at->timestamp }}">Calculando...</span>
+                    </div>
+                    @if($turno->observaciones)
+                        <div class="small text-muted mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $turno->observaciones }}</div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+
     </div>
 </div>
+
+{{-- Modales quitar unidad (fuera de las tablas para evitar problemas) --}}
+@foreach($enServicioMaquinistas as $turno)
+    @foreach($turno->unidades as $unidad)
+        <div class="modal fade" id="modalQuitarUnidad{{ $turno->id }}_{{ $unidad->id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h6 class="modal-title"><i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body py-2 text-center">
+                        <p class="mb-3 text-muted small">¿Quitar esta unidad del turno activo?</p>
+                        <form action="{{ route('turnos.quitar-unidad', [$turno, $unidad]) }}" method="POST">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm w-100">
+                                <i class="bi bi-dash-circle me-1"></i>Quitar del turno
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endforeach
+
+@foreach($enServicioCuarteleros as $turno)
+    @foreach($turno->unidades as $unidad)
+        <div class="modal fade" id="modalQuitarUnidadC{{ $turno->id }}_{{ $unidad->id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h6 class="modal-title"><i class="bi bi-truck-front me-1"></i>{{ $unidad->nombre }}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body py-2 text-center">
+                        <p class="mb-3 text-muted small">¿Quitar esta unidad del turno activo?</p>
+                        <form action="{{ route('cuarteleros.turnos.quitar-unidad', [$turno, $unidad]) }}" method="POST">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm w-100">
+                                <i class="bi bi-dash-circle me-1"></i>Quitar del turno
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endforeach
 @endif
 
 {{-- Modal único de confirmación de hora de salida --}}
 <div class="modal fade" id="modalConfirmarSalida" tabindex="-1">
-    <div class="modal-dialog modal-sm">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white py-2">
                 <h6 class="modal-title mb-0">
@@ -435,7 +492,7 @@
                 <p class="mb-3 small text-muted">Entrada: <span id="modalSalidaEntrada">—</span></p>
 
                 <label class="form-label fw-bold small">Hora de salida</label>
-                <input type="time" id="modalInputHoraSalida" class="form-control mb-1">
+                <input type="time" id="modalInputHoraSalida" class="form-control form-control-sm mb-1">
                 <div class="text-muted small" id="modalHoraIndicador">
                     <i class="bi bi-arrow-repeat me-1"></i>Hora actual
                 </div>
@@ -446,7 +503,6 @@
                     <i class="bi bi-check-lg me-1"></i>Confirmar salida
                 </button>
             </div>
-            {{-- Formulario oculto que se envía al confirmar --}}
             <form id="formSalidaTurno" method="POST" style="display:none">
                 @csrf
                 <input type="hidden" name="salida_at" id="salidaAtTurno">
@@ -461,77 +517,122 @@
         <i class="bi bi-list-ul me-2"></i>Historial de Turnos
     </div>
     <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Tipo</th>
-                    <th>Nombre</th>
-                    <th>Compañía</th>
-                    <th>Unidades</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Tiempo</th>
-                    <th>Observaciones</th>
-                    <th></th>
-                </tr>
-            </thead>
-        <tbody>
+
+        {{-- Tabla desktop --}}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 d-none d-md-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Nombre</th>
+                        <th>Compañía</th>
+                        <th>Unidades</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Tiempo</th>
+                        <th>Obs.</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($turnos as $item)
+                    <tr>
+                        <td>
+                            @if($item->tipo === 'maquinista')
+                                <span class="badge bg-danger"><i class="bi bi-person-badge me-1"></i>Maq.</span>
+                            @else
+                                <span class="badge bg-primary"><i class="bi bi-person-gear me-1"></i>Cuart.</span>
+                            @endif
+                        </td>
+                        <td class="fw-bold text-nowrap">
+                            {{ $item->tipo === 'maquinista' ? $item->voluntario->nombre : $item->cuartelero->nombre }}
+                        </td>
+                        <td class="text-nowrap">
+                            {{ $item->tipo === 'maquinista' ? $item->voluntario->compania->nombre : $item->cuartelero->compania->nombre }}
+                        </td>
+                        <td>
+                            @foreach($item->unidades as $unidad)
+                                <span class="badge bg-secondary me-1">{{ $unidad->nombre }}</span>
+                            @endforeach
+                        </td>
+                        <td class="text-nowrap">{{ $item->entrada_at->format('d/m/Y H:i') }}</td>
+                        <td class="text-nowrap">{{ $item->salida_at ? $item->salida_at->format('d/m/Y H:i') : '—' }}</td>
+                        <td><span class="badge bg-secondary">{{ $item->tiempo_formateado }}</span></td>
+                        <td>{{ $item->observaciones ?? '—' }}</td>
+                        <td>
+                            @php $editable = $item->salida_at && $item->salida_at->gt(now()->subHours(12)); @endphp
+                            @if($editable)
+                                @if($item->tipo === 'maquinista')
+                                    <a href="{{ route('turnos.edit', $item->id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                @else
+                                    <a href="{{ route('cuarteleros.turnos.edit', $item->id) }}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                @endif
+                            @endif
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">No hay turnos registrados</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Cards móvil --}}
+        <div class="d-md-none">
             @forelse($turnos as $item)
-            <tr>
-                <td>
-                    @if($item->tipo === 'maquinista')
-                        <span class="badge bg-danger">
-                            <i class="bi bi-person-badge me-1"></i>Maquinista
-                        </span>
-                    @else
-                        <span class="badge bg-primary">
-                            <i class="bi bi-person-gear me-1"></i>Cuartelero
-                        </span>
-                    @endif
-                </td>
-                <td class="fw-bold">
-                    {{ $item->tipo === 'maquinista' ? $item->voluntario->nombre : $item->cuartelero->nombre }}
-                </td>
-                <td>
-                    {{ $item->tipo === 'maquinista' ? $item->voluntario->compania->nombre : $item->cuartelero->compania->nombre }}
-                </td>
-                <td>
-                    @foreach($item->unidades as $unidad)
-                        <span class="badge bg-secondary me-1">{{ $unidad->nombre }}</span>
-                    @endforeach
-                </td>
-                <td>{{ $item->entrada_at->format('d/m/Y H:i') }}</td>
-                <td>{{ $item->salida_at ? $item->salida_at->format('d/m/Y H:i') : '—' }}</td>
-                <td><span class="badge bg-secondary">{{ $item->tiempo_formateado }}</span></td>
-                <td>{{ $item->observaciones ?? '—' }}</td>
-                <td>
-                    @php
-                        $editable = $item->salida_at && $item->salida_at->gt(now()->subHours(12));
-                    @endphp
-                    @if($editable)
-                        @if($item->tipo === 'maquinista')
-                            <a href="{{ route('turnos.edit', $item->id) }}"
-                               class="btn btn-sm btn-outline-warning"
-                               title="Editar datos del turno (disponible hasta 12h después del cierre)">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
-                        @else
-                            <a href="{{ route('cuarteleros.turnos.edit', $item->id) }}"
-                               class="btn btn-sm btn-outline-warning"
-                               title="Editar datos del turno (disponible hasta 12h después del cierre)">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                <div class="border-bottom px-3 py-3">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            @if($item->tipo === 'maquinista')
+                                <span class="badge bg-danger me-1"><i class="bi bi-person-badge me-1"></i>Maq.</span>
+                            @else
+                                <span class="badge bg-primary me-1"><i class="bi bi-person-gear me-1"></i>Cuart.</span>
+                            @endif
+                            <span class="fw-bold">
+                                {{ $item->tipo === 'maquinista' ? $item->voluntario->nombre : $item->cuartelero->nombre }}
+                            </span>
+                            <div class="text-muted small">
+                                {{ $item->tipo === 'maquinista' ? $item->voluntario->compania->nombre : $item->cuartelero->compania->nombre }}
+                            </div>
+                        </div>
+                        @php $editable = $item->salida_at && $item->salida_at->gt(now()->subHours(12)); @endphp
+                        @if($editable)
+                            @if($item->tipo === 'maquinista')
+                                <a href="{{ route('turnos.edit', $item->id) }}" class="btn btn-sm btn-outline-warning flex-shrink-0">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            @else
+                                <a href="{{ route('cuarteleros.turnos.edit', $item->id) }}" class="btn btn-sm btn-outline-warning flex-shrink-0">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            @endif
                         @endif
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mb-1">
+                        @foreach($item->unidades as $unidad)
+                            <span class="badge bg-secondary">{{ $unidad->nombre }}</span>
+                        @endforeach
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 small text-muted">
+                        <span><i class="bi bi-box-arrow-in-right text-success me-1"></i>{{ $item->entrada_at->format('d/m/Y H:i') }}</span>
+                        <span><i class="bi bi-box-arrow-right text-danger me-1"></i>{{ $item->salida_at ? $item->salida_at->format('d/m/Y H:i') : '—' }}</span>
+                        <span class="badge bg-secondary">{{ $item->tiempo_formateado }}</span>
+                    </div>
+                    @if($item->observaciones)
+                        <div class="small text-muted mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->observaciones }}</div>
                     @endif
-                </td>
-            </tr>
+                </div>
             @empty
-            <tr>
-                <td colspan="8" class="text-center text-muted py-4">No hay turnos registrados</td>
-            </tr>
+                <div class="text-center text-muted py-4">No hay turnos registrados</div>
             @endforelse
-        </tbody>
-        </table>
+        </div>
+
         <div class="p-3 d-flex justify-content-center">
             {{ $turnos->links('pagination::bootstrap-5') }}
         </div>
@@ -564,12 +665,10 @@ const unidadesPorCuartelero = {
     @endforeach
 };
 
-// Inicializar tooltips
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
     new bootstrap.Tooltip(el);
 });
 
-// Alternar formularios según tipo
 document.querySelectorAll('input[name="tipo_conductor"]').forEach(radio => {
     radio.addEventListener('change', function() {
         document.getElementById('formMaquinista').style.display =
@@ -579,7 +678,6 @@ document.querySelectorAll('input[name="tipo_conductor"]').forEach(radio => {
     });
 });
 
-// Tom Select
 const tsVoluntario = new TomSelect('#selectVoluntario', {
     placeholder: 'Buscar voluntario...',
     searchField: ['text'],
@@ -649,8 +747,6 @@ document.getElementById('selectCuartelero').addEventListener('change', function(
         </div>
     `).join('');
 });
-
-// ─── Ajuste de hora de entrada ────────────────────────────────────────────────
 
 function horaActualLocal() {
     const now = new Date();
@@ -730,8 +826,6 @@ configurarAjusteHora({
     indicadorId:   'horaAjustadaCuartelero',
 });
 
-// ─── Modal de confirmación de hora de SALIDA de turno ────────────────────────
-
 const modalConfirmarSalida = new bootstrap.Modal(document.getElementById('modalConfirmarSalida'));
 const inputHoraSalidaModal = document.getElementById('modalInputHoraSalida');
 const horaSalidaIndicador  = document.getElementById('modalHoraIndicador');
@@ -764,29 +858,19 @@ function tickSalida() {
     }
 }
 
-// Al hacer clic en cualquier botón "Salida" de la tabla
 document.querySelectorAll('.btn-salida-turno').forEach(btn => {
     btn.addEventListener('click', function() {
-        // Poblar datos del modal
         document.getElementById('modalSalidaNombre').textContent  = this.dataset.nombre;
         document.getElementById('modalSalidaEntrada').textContent = this.dataset.entrada;
-
-        // Apuntar el formulario oculto a la acción correcta
         formSalidaTurno.action = this.dataset.action;
-
-        // Resetear estado del input de hora
         horaSalidaModificada = false;
         tickSalida();
-
-        // Iniciar el tick automático mientras el modal esté abierto
         clearInterval(tickSalidaInterval);
         tickSalidaInterval = setInterval(tickSalida, 30000);
-
         modalConfirmarSalida.show();
     });
 });
 
-// El usuario toca el input → dejar de actualizar automáticamente
 inputHoraSalidaModal.addEventListener('change', function() {
     const ahora = horaActualHHMM();
     if (this.value > ahora) {
@@ -805,18 +889,14 @@ inputHoraSalidaModal.addEventListener('change', function() {
     }
 });
 
-// Confirmar y enviar
 document.getElementById('btnConfirmarSalidaTurno').addEventListener('click', function() {
     formSalidaTurno.submit();
 });
 
-// Al cerrar el modal, limpiar el intervalo
 document.getElementById('modalConfirmarSalida').addEventListener('hidden.bs.modal', function() {
     clearInterval(tickSalidaInterval);
     horaSalidaModificada = false;
 });
-
-// ─── Cronómetros ─────────────────────────────────────────────────────────────
 
 function actualizarCronometros() {
     document.querySelectorAll('.cronometro').forEach(el => {
