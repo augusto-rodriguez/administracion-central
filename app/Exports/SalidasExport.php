@@ -21,7 +21,7 @@ class SalidasExport implements FromCollection, WithHeadings, WithMapping, WithSt
 
     public function collection()
     {
-        $query = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'oficial', 'voluntario'])
+        $query = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'oficial', 'voluntario','alMando'])
             ->whereNotNull('llegada_at');
 
         if (!empty($this->filtros['desde'])) {
@@ -50,7 +50,7 @@ class SalidasExport implements FromCollection, WithHeadings, WithMapping, WithSt
     {
         return [
             'Unidad', 'Compañía', 'Clave', 'Descripción',
-            'Dirección', 'Conductor', 'Oficial Autorizante',
+            'Dirección', 'Conductor','Al Mando','Oficial Autorizante',
             'Fecha Salida', 'Hora Salida',
             'Fecha Llegada', 'Hora Llegada',
             'Tiempo', 'Km Salida', 'Km Llegada', 'Km Recorridos',
@@ -61,23 +61,24 @@ class SalidasExport implements FromCollection, WithHeadings, WithMapping, WithSt
     public function columnWidths(): array
     {
         return [
-            'A' => 8,  // Unidad
-            'B' => 18,  // Compañía
-            'C' => 7,  // Clave
-            'D' => 35,  // Descripción
-            'E' => 50,  // Dirección
-            'F' => 25,  // Conductor
-            'G' => 25,  // Oficial
-            'H' => 12,  // Fecha Salida
-            'I' => 10,  // Hora Salida
-            'J' => 12,  // Fecha Llegada
-            'K' => 10,  // Hora Llegada
-            'L' => 12,  // Tiempo
-            'M' => 12,  // Km Salida
-            'N' => 12,  // Km Llegada
-            'O' => 7,  // Km Recorridos
-            'P' => 7,  // Personal
-            'Q' => 30,  // Observaciones
+            'A' => 8,
+            'B' => 18,
+            'C' => 7,
+            'D' => 35,
+            'E' => 50,
+            'F' => 25, // Conductor
+            'G' => 25, // Al Mando
+            'H' => 25, // Oficial
+            'I' => 12,
+            'J' => 10,
+            'K' => 12,
+            'L' => 10,
+            'M' => 12,
+            'N' => 12,
+            'O' => 12,
+            'P' => 7,
+            'Q' => 7,
+            'R' => 30,
         ];
     }
 
@@ -95,6 +96,7 @@ class SalidasExport implements FromCollection, WithHeadings, WithMapping, WithSt
             $salida->claveSalida->descripcion,
             $salida->direccion,
             $salida->conductor_nombre,
+            $salida->alMando?->nombre ?? '—',
             $salida->oficial?->nombre ?? '—',
             $salida->salida_at->format('d/m/Y'),
             $salida->salida_at->format('H:i'),
