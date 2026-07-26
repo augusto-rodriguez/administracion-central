@@ -108,12 +108,21 @@ class ReporteSalidaController extends Controller
         ));
     }
 
+    // public function exportar(Request $request)
+    // {
+    //     $filename = 'salidas_' . ($request->desde ?? 'inicio') . '_al_' . ($request->hasta ?? 'hoy') . '.xlsx';
+
+    //     return Excel::download(
+    //         new SalidasExport($request->all()),
+    //         $filename
+    //     );
+    // }
     public function exportar(Request $request)
     {
         $filename = 'salidas_' . ($request->desde ?? 'inicio') . '_al_' . ($request->hasta ?? 'hoy') . '.xlsx';
 
         return Excel::download(
-            new SalidasExport($request->all()),
+            new SalidasExport($request->all(), $request->input('columnas', [])),
             $filename
         );
     }

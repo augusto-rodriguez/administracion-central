@@ -180,9 +180,12 @@
                     <div class="text-muted" style="font-size:0.7rem">Tiempo total</div>
                     <div class="fw-bold fs-5 text-danger">{{ $totalHoras }}h {{ $totalMins }}min</div>
                 </div>
-                <a href="{{ route('reportes.salidas.exportar', request()->query()) }}" class="btn btn-success btn-sm">
+                <!-- <a href="{{ route('reportes.salidas.exportar', request()->query()) }}" class="btn btn-success btn-sm">
                     <i class="bi bi-file-earmark-excel me-1"></i>Exportar
-                </a>
+                </a> -->
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalExportar">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Exportar
+                </button>
             </div>
         </div>
     </div>
@@ -290,10 +293,99 @@
 </div>
 @endif
 
+{{-- Modal Exportar --}}
+<div class="modal fade" id="modalExportar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="GET" action="{{ route('reportes.salidas.exportar') }}">
+                {{-- Pasar filtros actuales como hidden --}}
+                @foreach(request()->except('columnas') as $key => $value)
+                    @if($value !== null && $value !== '')
+                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                    @endif
+                @endforeach
+
+                <div class="modal-header py-2">
+                    <h6 class="modal-title"><i class="bi bi-file-earmark-excel me-2"></i>Exportar a Excel</h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <p class="text-muted small mb-2">Selecciona las columnas que deseas incluir:</p>
+
+                    <div class="form-check mb-2 border-bottom pb-2">
+                        <input class="form-check-input" type="checkbox" id="chkTodos" checked>
+                        <label class="form-check-label fw-bold" for="chkTodos">Todos</label>
+                    </div>
+
+                    <div class="row g-1" id="columnasExportar">
+                        @php
+                            $columnasDisponibles = [
+                                'unidad'      => 'Unidad',
+                                'compania'    => 'Compañía',
+                                'clave'       => 'Clave',
+                                'descripcion' => 'Descripción',
+                                'direccion'   => 'Dirección',
+                                'conductor'   => 'Conductor',
+                                'al_mando'    => 'Al Mando',
+                                'oficial'     => 'Oficial Autorizante',
+                                'fecha_salida'=> 'Fecha Salida',
+                                'hora_salida' => 'Hora Salida',
+                                'fecha_llegada'=> 'Fecha Llegada',
+                                'hora_llegada'=> 'Hora Llegada',
+                                'tiempo'      => 'Tiempo',
+                                'km_salida'   => 'Km Salida',
+                                'km_llegada'  => 'Km Llegada',
+                                'km_recorridos'=> 'Km Recorridos',
+                                'personal'    => 'Personal',
+                                'observaciones'=> 'Observaciones',
+                            ];
+                        @endphp
+                        @foreach($columnasDisponibles as $key => $label)
+                            <div class="col-6">
+                                <div class="form-check">
+                                    <input class="form-check-input columna-check" type="checkbox"
+                                           name="columnas[]" value="{{ $key }}" id="col_{{ $key }}" checked>
+                                    <label class="form-check-label small" for="col_{{ $key }}">{{ $label }}</label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-success" id="btnDescargar">
+                        <i class="bi bi-download me-1"></i>Descargar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
+    // Toggle "Todos"
+    const chkTodos = document.getElementById('chkTodos');
+    const checksColumnas = document.querySelectorAll('.columna-check');
+    const btnDescargar = document.getElementById('btnDescargar');
+
+    chkTodos.addEventListener('change', function () {
+        checksColumnas.forEach(c => c.checked = this.checked);
+        actualizarBoton();
+    });
+
+    checksColumnas.forEach(c => c.addEventListener('change', function () {
+        chkTodos.checked = [...checksColumnas].every(c => c.checked);
+        chkTodos.indeterminate = !chkTodos.checked && [...checksColumnas].some(c => c.checked);
+        actualizarBoton();
+    }));
+
+    function actualizarBoton() {
+        const alguno = [...checksColumnas].some(c => c.checked);
+        btnDescargar.disabled = !alguno;
+    }
     const selectMaquinista = new TomSelect('#selectMaquinista', {
         placeholder: 'Buscar conductor...',
         searchField: ['text'],
