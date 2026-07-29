@@ -153,7 +153,14 @@ class LibroNovedadesController extends Controller
         $libro = $libroNovedade;
         $libro->load('operador', 'cerradoPor');
 
-        return view('libro_novedades.edit', compact('libro'));
+        // ── Libro anterior cerrado (para modal de novedades) ─────────
+        $libroAnterior = LibroNovedades::where('estado', 'cerrado')
+            ->where('id', '!=', $libro->id)
+            ->orderByDesc('fecha')
+            ->orderByDesc('hora_inicio')
+            ->first();
+
+        return view('libro_novedades.edit', compact('libro', 'libroAnterior'));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

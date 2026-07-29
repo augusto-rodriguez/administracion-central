@@ -18,9 +18,17 @@
         </h4>
         <small class="text-muted">{{ $libro->fecha->format('d/m/Y') }}</small>
     </div>
-    <a href="{{ route('libro-novedades.index') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Volver
-    </a>
+    <div class="d-flex gap-2">
+        @if($libroAnterior)
+            <button type="button" class="btn btn-outline-info btn-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalNovedadesAnterior">
+                <i class="bi bi-journal-arrow-up me-1"></i>Ver novedades turno anterior
+            </button>
+        @endif
+        <a href="{{ route('libro-novedades.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
 </div>
 
 
@@ -178,6 +186,78 @@
         </button>
     </div>
 </form>
+
+{{-- ── MODAL NOVEDADES TURNO ANTERIOR ─────────────────────────────────── --}}
+@if($libroAnterior)
+<div class="modal fade" id="modalNovedadesAnterior" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-journal-arrow-up me-2"></i>Novedades del turno anterior
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {{-- Info del turno anterior --}}
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <span class="badge bg-secondary fs-6">
+                        <i class="bi bi-calendar me-1"></i>{{ $libroAnterior->fecha->format('d/m/Y') }}
+                    </span>
+                    @if($libroAnterior->turno === 'dia')
+                        <span class="badge bg-warning text-dark fs-6">
+                            <i class="bi bi-sun me-1"></i>Turno Día
+                        </span>
+                    @else
+                        <span class="badge bg-dark fs-6">
+                            <i class="bi bi-moon-stars me-1"></i>Turno Noche
+                        </span>
+                    @endif
+                    <span class="badge bg-secondary fs-6">
+                        <i class="bi bi-person me-1"></i>{{ $libroAnterior->operador->nombre ?? '—' }}
+                    </span>
+                </div>
+
+                {{-- Cronológico de novedades --}}
+                <div class="mb-4">
+                    <h6 class="fw-bold"><i class="bi bi-clock-history me-1"></i>Cronológico de novedades</h6>
+                    @if($libroAnterior->novedades_cronologicas)
+                        <div class="bg-light rounded p-3" style="white-space: pre-wrap;">{{ $libroAnterior->novedades_cronologicas }}</div>
+                    @else
+                        <p class="text-muted small mb-0">Sin novedades registradas.</p>
+                    @endif
+                </div>
+
+                {{-- Observaciones telecomunicaciones --}}
+                <div class="mb-4">
+                    <h6 class="fw-bold"><i class="bi bi-broadcast me-1"></i>Observaciones en telecomunicaciones</h6>
+                    @if($libroAnterior->observaciones_telecomunicaciones)
+                        <div class="bg-light rounded p-3" style="white-space: pre-wrap;">{{ $libroAnterior->observaciones_telecomunicaciones }}</div>
+                    @else
+                        <p class="text-muted small mb-0">Sin observaciones registradas.</p>
+                    @endif
+                </div>
+
+                {{-- Novedades VIPER --}}
+                <div class="mb-0">
+                    <h6 class="fw-bold"><i class="bi bi-display me-1"></i>Novedades del VIPER</h6>
+                    @if($libroAnterior->novedades_viper)
+                        <div class="bg-light rounded p-3" style="white-space: pre-wrap;">{{ $libroAnterior->novedades_viper }}</div>
+                    @else
+                        <p class="text-muted small mb-0">Sin novedades del VIPER registradas.</p>
+                    @endif
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{{ route('libro-novedades.show', $libroAnterior) }}" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-eye me-1"></i>Ver libro completo
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 {{-- ── MODAL CONFIRMACIÓN CIERRE ──────────────────────────────────────── --}}
 <div class="modal fade" id="modalCerrar" tabindex="-1">
