@@ -249,9 +249,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <a href="{{ route('libro-novedades.show', $libroAnterior) }}" class="btn btn-outline-info btn-sm">
+                <!-- <a href="{{ route('libro-novedades.show', $libroAnterior) }}" class="btn btn-outline-info btn-sm">
                     <i class="bi bi-eye me-1"></i>Ver libro completo
-                </a>
+                </a> -->
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
