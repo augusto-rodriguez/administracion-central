@@ -23,7 +23,6 @@ class ReporteController extends Controller
 
         $companias   = Compania::where('activa', true)->orderBy('numero')->get();
 
-        // Capitán: solo ve voluntarios y cuarteleros de su compañía
         $voluntarios = Voluntario::with('compania')
             ->where('activo', true)
             ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
@@ -47,14 +46,12 @@ class ReporteController extends Controller
             10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
         ];
 
-        $anios = range(now()->year, 2025);
+        $anios = range(now()->year, 2026);
 
-        // Para el capitán, forzar siempre compania_id a la suya en tab=compania
         $companiaIdFiltro = $esCapitan
             ? $companiaIdCapitan
             : $request->compania_id;
 
-        // Reporte por compañía (maquinistas)
         if ($tab === 'compania' && ($request->filled('compania_id') || $esCapitan) && $request->filled('anio')) {
             $query = RegistroTurno::with(['voluntario.compania', 'unidades'])
                 ->whereHas('voluntario', fn($q) => $q->where('compania_id', $companiaIdFiltro))
@@ -71,13 +68,11 @@ class ReporteController extends Controller
             $totalMinutos = $turnos->sum('total_minutos');
         }
 
-        // Reporte por voluntario
         if ($tab === 'voluntario' && $request->filled('voluntario_id')) {
             $query = RegistroTurno::with(['voluntario.compania', 'unidades'])
                 ->where('voluntario_id', $request->voluntario_id)
                 ->whereNotNull('salida_at');
 
-            // Capitán: validar que el voluntario sea de su compañía
             if ($esCapitan) {
                 $query->whereHas('voluntario', fn($q) => $q->where('compania_id', $companiaIdCapitan));
             }
@@ -91,7 +86,6 @@ class ReporteController extends Controller
             $totalMinutos = $turnos->sum('total_minutos');
         }
 
-        // Reporte por cuartelero (capitán también puede ver los de su compañía)
         if ($tab === 'cuartelero' && $request->filled('cuartelero_id')) {
             $query = RegistroTurnoCuartelero::with(['cuartelero.compania', 'unidades'])
                 ->where('cuartelero_id', $request->cuartelero_id)
@@ -175,7 +169,7 @@ class ReporteController extends Controller
     {
         $companias = Compania::where('activa', true)->orderBy('numero')->get();
         $unidades  = \App\Models\Unidad::with('compania')->where('activa', true)->orderBy('nombre')->get();
-        $anios     = range(now()->year, 2025);
+        $anios     = range(now()->year, 2026);
         $meses     = [
             1 => 'Enero',    2 => 'Febrero',   3 => 'Marzo',
             4 => 'Abril',    5 => 'Mayo',       6 => 'Junio',
@@ -241,7 +235,7 @@ class ReporteController extends Controller
     public function guardiasNocturnas(Request $request)
     {
         $companias = Compania::where('activa', true)->orderBy('numero')->get();
-        $anios     = range(now()->year, 2025);
+        $anios     = range(now()->year, 2026);
         $meses     = [
             1 => 'Enero',    2 => 'Febrero',   3 => 'Marzo',
             4 => 'Abril',    5 => 'Mayo',       6 => 'Junio',
