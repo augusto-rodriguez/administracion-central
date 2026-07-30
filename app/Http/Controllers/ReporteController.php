@@ -306,6 +306,7 @@ class ReporteController extends Controller
 
         $rankingMaquinistas = \App\Models\GuardiaNocturnaUnidad::whereIn('guardia_nocturna_compania_id', $gnCompaniaIds)
             ->whereNotNull('maquinista_id')
+            ->whereHas('unidad', fn($q) => $q->where('compania_id', '!=', 5))
             ->with(['maquinista.compania', 'unidad'])->get()
             ->groupBy('maquinista_id')
             ->map(fn($regs) => [
