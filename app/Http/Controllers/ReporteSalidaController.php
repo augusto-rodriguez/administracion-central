@@ -29,14 +29,22 @@ class ReporteSalidaController extends Controller
 
         $claves = ClaveSalida::where('activa', true)->orderBy('tipo')->orderBy('codigo')->get();
 
+        // $oficiales = Voluntario::with('compania')
+        //     ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
+        //         ->where('activo', true)
+        //         ->where('puede_autorizar_salidas', true))
+        //     ->where('activo', true)
+        //     ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
+        //     ->orderBy('nombre')
+        //     ->get();
+
         $oficiales = Voluntario::with('compania')
-            ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
-                ->where('activo', true)
-                ->where('puede_autorizar_salidas', true))
+        ->whereHas('roles', fn($q) => $q->where('rol', 'oficial')
             ->where('activo', true)
-            ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
-            ->orderBy('nombre')
-            ->get();
+            ->where('puede_autorizar_salidas', true))
+        ->where('activo', true)
+        ->orderBy('nombre')
+        ->get();
 
         $maquinistas = Voluntario::with('compania')
             ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
