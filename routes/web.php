@@ -149,7 +149,7 @@ Route::middleware(['rol'])->group(function () {
         Route::post('voluntarios/{voluntario}/autorizar-unidad',   [App\Http\Controllers\VoluntarioController::class, 'autorizarUnidad'])  ->name('voluntarios.autorizar-unidad');
         Route::delete('voluntarios/{voluntario}/revocar-unidad',   [App\Http\Controllers\VoluntarioController::class, 'revocarUnidad'])    ->name('voluntarios.revocar-unidad');
         Route::post('voluntarios/{voluntario}/toggle-autorizante', [App\Http\Controllers\VoluntarioController::class, 'toggleAutorizante'])->name('voluntarios.toggle-autorizante');
-
+        Route::get('reportes/guardias-nocturnas', [App\Http\Controllers\ReporteController::class, 'guardiasNocturnas'])  ->name('reportes.guardias-nocturnas');
         Route::resource('unidades', App\Http\Controllers\UnidadController::class)
             ->parameters(['unidades' => 'unidad']);
 
@@ -161,7 +161,7 @@ Route::middleware(['rol'])->group(function () {
     Route::middleware('rol:admin,comandante')->group(function () {
 
         Route::get('reportes/combustible',        [App\Http\Controllers\ReporteController::class, 'combustible'])        ->name('reportes.combustible');
-        Route::get('reportes/guardias-nocturnas', [App\Http\Controllers\ReporteController::class, 'guardiasNocturnas'])  ->name('reportes.guardias-nocturnas');
+       
 
         Route::resource('claves-salida', App\Http\Controllers\ClaveSalidaController::class)
             ->only(['index', 'create', 'store', 'edit', 'update']);

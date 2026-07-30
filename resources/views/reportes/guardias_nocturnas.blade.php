@@ -3,7 +3,14 @@
 @section('content')
 
 <div class="mb-4">
-    <h4 class="mb-0"><i class="bi bi-moon-stars me-2"></i>Reportes — Guardias Nocturnas</h4>
+    <h4 class="mb-0">
+        <i class="bi bi-moon-stars me-2"></i>Reportes — Guardias Nocturnas
+        @if($esCapitan)
+            <span class="text-muted fs-6 fw-normal ms-2">
+                — {{ auth()->user()->voluntario?->compania->nombre }}
+            </span>
+        @endif
+    </h4>
 </div>
 
 {{-- Tabs --}}
@@ -13,11 +20,13 @@
             <i class="bi bi-graph-up me-1"></i><span class="d-none d-sm-inline">Estadísticas</span>
         </button>
     </li>
+    @if(!$esCapitan)
     <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistorial">
             <i class="bi bi-clock-history me-1"></i><span class="d-none d-sm-inline">Historial</span>
         </button>
     </li>
+    @endif
 </ul>
 
 <div class="tab-content">
@@ -29,6 +38,7 @@
         <div class="card mb-4">
             <div class="card-header bg-light fw-bold">
                 <i class="bi bi-funnel me-2"></i>Filtros
+                <span class="text-muted fw-normal small ms-1">(Registros desde 18 Junio 2026 en adelante)</span>
             </div>
             <div class="card-body py-3">
                 <form method="GET" action="{{ route('reportes.guardias-nocturnas') }}">
@@ -51,6 +61,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @if(!$esCapitan)
                         <div class="col-8 col-md-4">
                             <label class="form-label fw-bold mb-1 small">Compañía</label>
                             <select name="compania_id" class="form-select form-select-sm">
@@ -62,6 +73,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @endif
                         <div class="col-4 col-md-2">
                             <button type="submit" class="btn btn-danger btn-sm w-100">
                                 <i class="bi bi-search me-1"></i>Filtrar
@@ -277,6 +289,7 @@
     </div>{{-- fin tab estadísticas --}}
 
     {{-- ══ TAB HISTORIAL ═════════════════════════════════════════════ --}}
+    @if(!$esCapitan)
     <div class="tab-pane fade" id="tabHistorial">
         {{-- Filtro por fecha --}}
         <div class="card mb-4">
@@ -405,6 +418,7 @@
         </div>
         <div class="mt-3">{{ $historial->links() }}</div>
     </div>{{-- fin tab historial --}}
+    @endif
 
 </div>{{-- fin tab-content --}}
 
@@ -442,11 +456,13 @@ new Chart(document.getElementById('graficoEvolucion'), {
     }
 });
 
+@if(!$esCapitan)
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('tab') === 'historial') {
     const tabHistorial = document.querySelector('[data-bs-target="#tabHistorial"]');
     bootstrap.Tab.getOrCreateInstance(tabHistorial).show();
 }
+@endif
 </script>
 @endpush
 

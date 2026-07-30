@@ -117,6 +117,10 @@
         class="nav-link ps-4 {{ request()->is('reportes/combustible*') ? 'active' : '' }}">
         <i class="bi bi-fuel-pump me-2"></i> Estadísticas Combustible
     </a>
+@endif
+
+{{-- Guardias Nocturnas: Admin + Comandante + Capitán Cía --}}
+@if(auth()->user()->esAdmin() || auth()->user()->esComandante() || auth()->user()->esCapitanCia())
     <a href="{{ route('reportes.guardias-nocturnas') }}"
         class="nav-link ps-4 {{ request()->is('reportes/guardias-nocturnas*') ? 'active' : '' }}">
         <i class="bi bi-moon-stars me-2"></i> Guardias Nocturnas
