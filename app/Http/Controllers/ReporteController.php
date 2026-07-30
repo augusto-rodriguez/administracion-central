@@ -23,7 +23,13 @@ class ReporteController extends Controller
 
         $companias   = Compania::where('activa', true)->orderBy('numero')->get();
 
+        // $voluntarios = Voluntario::with('compania')
+        //     ->where('activo', true)
+        //     ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
+        //     ->orderBy('nombre')
+        //     ->get();
         $voluntarios = Voluntario::with('compania')
+            ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
             ->where('activo', true)
             ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
             ->orderBy('nombre')
