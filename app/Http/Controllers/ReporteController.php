@@ -457,6 +457,8 @@ class ReporteController extends Controller
             'companias as sin_reporte_count' => fn($q) => $q->where('sin_reporte', true),
         ])
         ->with('cerradoPor')
+        // Capitán: solo guardias donde participó su compañía
+        ->when($esCapitan, fn($q) => $q->whereHas('companias', fn($q2) => $q2->where('compania_id', $companiaIdCapitan)))
         ->when($request->filled('hist_fecha'), fn($q) => $q->whereDate('fecha', $request->hist_fecha))
         ->when(!$request->filled('hist_fecha') && $request->filled('hist_desde'), fn($q) => $q->whereDate('fecha', '>=', $request->hist_desde))
         ->when(!$request->filled('hist_fecha') && $request->filled('hist_hasta'), fn($q) => $q->whereDate('fecha', '<=', $request->hist_hasta))

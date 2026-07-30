@@ -20,13 +20,11 @@
             <i class="bi bi-graph-up me-1"></i><span class="d-none d-sm-inline">Estadísticas</span>
         </button>
     </li>
-    @if(!$esCapitan)
     <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistorial">
             <i class="bi bi-clock-history me-1"></i><span class="d-none d-sm-inline">Historial</span>
         </button>
     </li>
-    @endif
 </ul>
 
 <div class="tab-content">
@@ -289,7 +287,6 @@
     </div>{{-- fin tab estadísticas --}}
 
     {{-- ══ TAB HISTORIAL ═════════════════════════════════════════════ --}}
-    @if(!$esCapitan)
     <div class="tab-pane fade" id="tabHistorial">
         {{-- Filtro por fecha --}}
         <div class="card mb-4">
@@ -418,7 +415,6 @@
         </div>
         <div class="mt-3">{{ $historial->links() }}</div>
     </div>{{-- fin tab historial --}}
-    @endif
 
 </div>{{-- fin tab-content --}}
 
@@ -456,13 +452,11 @@ new Chart(document.getElementById('graficoEvolucion'), {
     }
 });
 
-@if(!$esCapitan)
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('tab') === 'historial') {
     const tabHistorial = document.querySelector('[data-bs-target="#tabHistorial"]');
     bootstrap.Tab.getOrCreateInstance(tabHistorial).show();
 }
-@endif
 </script>
 @endpush
 
