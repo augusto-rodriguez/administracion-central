@@ -17,6 +17,7 @@
 <div class="card mb-4">
     <div class="card-header bg-white fw-bold">
         <i class="bi bi-funnel me-2"></i>Filtros
+        <span class="text-muted fw-normal small ms-1">(Registros desde 18 Junio 2026 en adelante)</span>
     </div>
     <div class="card-body py-3">
         <form method="GET" action="{{ route('reportes.salidas') }}">
