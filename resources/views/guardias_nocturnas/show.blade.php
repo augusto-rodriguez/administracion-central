@@ -2,6 +2,16 @@
 @section('title', 'Guardia Nocturna — ' . $guardia->fecha->format('d/m/Y'))
 @section('content')
 
+@php
+    $esCapitan = auth()->user()->esCapitanCia();
+    $companiaIdCapitan = $esCapitan ? auth()->user()->voluntario?->compania_id : null;
+
+    // Capitán: solo su compañía. Resto: todas.
+    $companiasVisibles = $esCapitan
+        ? $guardia->companias->where('compania_id', $companiaIdCapitan)
+        : $guardia->companias;
+@endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="mb-0">
@@ -16,7 +26,7 @@
     <div class="d-flex align-items-center gap-3">
 
         @php
-            $totalVoluntarios = $guardia->companias
+            $totalVoluntarios = $companiasVisibles
                 ->where('sin_reporte', false)
                 ->sum(fn($c) => $c->voluntarios->count());
         @endphp
@@ -28,12 +38,14 @@
             <div class="text-muted small mt-1">voluntarios en guardia</div>
         </div>
 
+        @if(!$esCapitan)
         <a href="{{ route('guardias-nocturnas.pdf', $guardia) }}"
            class="btn btn-outline-danger btn-sm" target="_blank">
             <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
         </a>
+        @endif
 
-        <a href="{{ auth()->user()->esAdmin() || auth()->user()->esComandante()
+        <a href="{{ auth()->user()->esAdmin() || auth()->user()->esComandante() || $esCapitan
                     ? route('reportes.guardias-nocturnas') . '?tab=historial'
                     : route('guardias-nocturnas.index') }}"
         class="btn btn-outline-secondary btn-sm">
@@ -42,7 +54,7 @@
     </div>
 </div>
 
-@foreach($guardia->companias as $gnCompania)
+@foreach($companiasVisibles as $gnCompania)
 <div class="card mb-4">
     <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
         <span>
@@ -105,7 +117,7 @@
                                     <span class="d-flex align-items-center gap-2">
                                         <i class="bi bi-person-fill text-success"></i>
                                         {{ $gnVol->voluntario->nombre ?? '—' }}
-                                        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+                                        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !$esCapitan)
                                             <button type="button"
                                                     class="btn btn-outline-danger btn-xs p-0 px-1"
                                                     style="font-size: 0.65rem; line-height: 1.4;"
@@ -140,7 +152,7 @@
                         <p class="text-muted small mb-2">Sin voluntarios registrados.</p>
                     @endif
 
-                    @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+                    @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !$esCapitan)
                         <button type="button"
                                 class="btn btn-sm btn-outline-success"
                                 onclick="abrirModalAgregar({{ $gnCompania->compania_id }}, '{{ $gnCompania->compania->nombre }}')">
@@ -206,7 +218,7 @@
                 <div class="col-12">
                     <h6 class="fw-bold mb-2">
                         <i class="bi bi-star me-1 text-warning"></i>Especialidades
-                        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+                        @if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !$esCapitan)
                             <button type="button"
                                     class="btn btn-xs btn-outline-secondary ms-2"
                                     style="font-size: 0.72rem; padding: 1px 6px;"
@@ -274,15 +286,19 @@
 </div>
 @endforeach
 
-@if($guardia->companias->isEmpty())
+@if($companiasVisibles->isEmpty())
     <div class="alert alert-warning">
         <i class="bi bi-exclamation-triangle me-2"></i>
-        No se registró ninguna compañía en esta guardia nocturna.
+        @if($esCapitan)
+            No se registró información de tu compañía en esta guardia nocturna.
+        @else
+            No se registró ninguna compañía en esta guardia nocturna.
+        @endif
     </div>
 @endif
 
-{{-- Modales solo para operadores --}}
-@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+{{-- Modales solo para operadores (no admin, no comandante, no capitán) --}}
+@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !$esCapitan)
 
     {{-- Modal observación --}}
     <div class="modal fade" id="modalObservacion" tabindex="-1">
@@ -459,7 +475,7 @@
 
 @push('scripts')
 <script>
-@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante())
+@if(!auth()->user()->esAdmin() && !auth()->user()->esComandante() && !$esCapitan)
 
 const voluntariosPorCompania = {
     @foreach($guardia->companias as $gnComp)
@@ -522,16 +538,13 @@ function abrirModalEspecialidades(gnCompaniaId, companiaNombre, opRescate, opHaz
     document.getElementById('modalEspecialidadesTitulo').innerHTML =
         `<i class="bi bi-star me-2"></i>Especialidades — ${companiaNombre}`;
 
-    // Mostrar/ocultar campos según especialidades de la compañía
     document.getElementById('campoRescate').style.display  = tieneRescate ? 'block' : 'none';
     document.getElementById('camposHazmat').style.display  = tieneHazmat  ? 'block' : 'none';
 
-    // Cargar valores actuales
     document.getElementById('inputOperadoresRescate').value = opRescate ?? '';
     document.getElementById('inputOperadoresHazmat').value  = opHazmat  ?? '';
     document.getElementById('inputTecnicosHazmat').value    = tecHazmat ?? '';
 
-    // Apuntar el form a la ruta de guardar compañía
     document.getElementById('formEspecialidades').action =
         `/guardias-nocturnas/{{ $guardia->id }}/especialidades/${gnCompaniaId}`;
 
