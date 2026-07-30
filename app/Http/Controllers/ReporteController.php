@@ -23,11 +23,6 @@ class ReporteController extends Controller
 
         $companias   = Compania::where('activa', true)->orderBy('numero')->get();
 
-        // $voluntarios = Voluntario::with('compania')
-        //     ->where('activo', true)
-        //     ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
-        //     ->orderBy('nombre')
-        //     ->get();
         $voluntarios = Voluntario::with('compania')
             ->whereHas('roles', fn($q) => $q->where('rol', 'maquinista')->where('activo', true))
             ->where('activo', true)
@@ -238,119 +233,6 @@ class ReporteController extends Controller
         ));
     }
 
-    // public function guardiasNocturnas(Request $request)
-    // {
-    //     $companias = Compania::where('activa', true)->orderBy('numero')->get();
-    //     $anios     = range(now()->year, 2026);
-    //     $meses     = [
-    //         1 => 'Enero',    2 => 'Febrero',   3 => 'Marzo',
-    //         4 => 'Abril',    5 => 'Mayo',       6 => 'Junio',
-    //         7 => 'Julio',    8 => 'Agosto',     9 => 'Septiembre',
-    //         10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
-    //     ];
-
-    //     $anio       = $request->anio ?? now()->year;
-    //     $mes        = $request->mes ?? null;
-    //     $companiaId = $request->compania_id ?? null;
-
-    //     $queryBase = \App\Models\GuardiaNocturna::where('estado', 'cerrada')
-    //         ->whereYear('fecha', $anio);
-    //     if ($mes) $queryBase->whereMonth('fecha', $mes);
-    //     $guardiaIds = $queryBase->pluck('id');
-
-    //     $queryCompanias = \App\Models\GuardiaNocturnaCompania::whereIn('guardia_nocturna_id', $guardiaIds)
-    //         ->where('sin_reporte', false);
-    //     if ($companiaId) $queryCompanias->where('compania_id', $companiaId);
-    //     $gnCompaniaIds = $queryCompanias->pluck('id');
-
-    //     $rankingAsistencia = \App\Models\GuardiaNocturnaVoluntario::whereIn('guardia_nocturna_compania_id', $gnCompaniaIds)
-    //         ->with(['voluntario.compania', 'guardiaCompania.compania'])
-    //         ->get()
-    //         ->groupBy('voluntario_id')
-    //         ->map(fn($regs) => [
-    //             'nombre'   => $regs->first()->voluntario->nombre ?? '—',
-    //             'compania' => $regs->first()->voluntario->compania->nombre ?? '—',
-    //             'total'    => $regs->count(),
-    //         ])
-    //         ->sortByDesc('total')->take(20)->values();
-
-    //     $rankingOficiales = \App\Models\GuardiaNocturnaCompania::whereIn('id', $gnCompaniaIds)
-    //         ->whereNotNull('oficial_a_cargo_id')
-    //         ->with(['oficialACargo', 'compania'])
-    //         ->get()
-    //         ->groupBy('oficial_a_cargo_id')
-    //         ->map(fn($regs) => [
-    //             'nombre'   => $regs->first()->oficialACargo->nombre ?? '—',
-    //             'compania' => $regs->first()->compania->nombre ?? '—',
-    //             'total'    => $regs->count(),
-    //         ])
-    //         ->sortByDesc('total')->take(20)->values();
-
-    //     $resumenCompanias = \App\Models\GuardiaNocturnaCompania::whereIn('guardia_nocturna_id', $guardiaIds)
-    //         ->with('compania')->get()
-    //         ->groupBy('compania_id')
-    //         ->map(fn($regs) => [
-    //             'compania'       => $regs->first()->compania->nombre ?? '—',
-    //             'numero'         => $regs->first()->compania->numero ?? '—',
-    //             'total_guardias' => $regs->count(),
-    //             'sin_reporte'    => $regs->where('sin_reporte', true)->count(),
-    //             'con_reporte'    => $regs->where('sin_reporte', false)->count(),
-    //             'promedio_vol'   => round(
-    //                 $regs->where('sin_reporte', false)->map(
-    //                     fn($r) => $r->voluntarios()->count()
-    //                 )->avg() ?? 0, 1
-    //             ),
-    //         ])->sortBy('numero')->values();
-
-    //     $rankingMaquinistas = \App\Models\GuardiaNocturnaUnidad::whereIn('guardia_nocturna_compania_id', $gnCompaniaIds)
-    //         ->whereNotNull('maquinista_id')
-    //         ->with(['maquinista.compania', 'unidad'])->get()
-    //         ->groupBy('maquinista_id')
-    //         ->map(fn($regs) => [
-    //             'nombre'   => $regs->first()->maquinista->nombre ?? '—',
-    //             'compania' => $regs->first()->maquinista->compania->nombre ?? '—',
-    //             'total'    => $regs->pluck('guardia_nocturna_compania_id')->unique()->count(),
-    //             'unidades' => $regs->pluck('unidad.nombre')->unique()->implode(', '),
-    //         ])->sortByDesc('total')->take(20)->values();
-
-    //     $evolucionMensual = \App\Models\GuardiaNocturna::where('estado', 'cerrada')
-    //         ->whereYear('fecha', $anio)
-    //         ->with(['companias.voluntarios'])->get()
-    //         ->groupBy(fn($g) => $g->fecha->month)
-    //         ->map(fn($guardias) => [
-    //             'promedio_vol' => round(
-    //                 $guardias->map(fn($g) =>
-    //                     $g->companias->where('sin_reporte', false)->sum(fn($c) => $c->voluntarios->count())
-    //                 )->avg() ?? 0, 1
-    //             ),
-    //         ]);
-
-    //     foreach (range(1, 12) as $m) {
-    //         if (!isset($evolucionMensual[$m])) $evolucionMensual[$m] = ['promedio_vol' => 0];
-    //     }
-    //     $evolucionMensual = collect($evolucionMensual)->sortKeys();
-
-    //     $historial = \App\Models\GuardiaNocturna::withCount([
-    //         'companias',
-    //         'companias as sin_reporte_count' => fn($q) => $q->where('sin_reporte', true),
-    //     ])
-    //     ->with('cerradoPor')
-    //     ->when($request->filled('hist_fecha'), fn($q) => $q->whereDate('fecha', $request->hist_fecha))
-    //     ->when(!$request->filled('hist_fecha') && $request->filled('hist_desde'), fn($q) => $q->whereDate('fecha', '>=', $request->hist_desde))
-    //     ->when(!$request->filled('hist_fecha') && $request->filled('hist_hasta'), fn($q) => $q->whereDate('fecha', '<=', $request->hist_hasta))
-    //     ->orderByDesc('fecha')
-    //     ->paginate(20)
-    //     ->withQueryString();
-
-    //     return view('reportes.guardias_nocturnas', compact(
-    //         'companias', 'anios', 'meses',
-    //         'anio', 'mes', 'companiaId',
-    //         'rankingAsistencia', 'rankingOficiales',
-    //         'resumenCompanias', 'rankingMaquinistas',
-    //         'evolucionMensual', 'historial'
-    //     ));
-    // }
-
     public function guardiasNocturnas(Request $request)
     {
         $usuario   = auth()->user();
@@ -368,7 +250,6 @@ class ReporteController extends Controller
 
         $anio       = $request->anio ?? now()->year;
         $mes        = $request->mes ?? null;
-        // Capitán: forzar siempre su compañía
         $companiaId = $esCapitan ? $companiaIdCapitan : ($request->compania_id ?? null);
 
         $queryBase = \App\Models\GuardiaNocturna::where('estado', 'cerrada')
@@ -377,7 +258,8 @@ class ReporteController extends Controller
         $guardiaIds = $queryBase->pluck('id');
 
         $queryCompanias = \App\Models\GuardiaNocturnaCompania::whereIn('guardia_nocturna_id', $guardiaIds)
-            ->where('sin_reporte', false);
+            ->where('sin_reporte', false)
+            ->where('compania_id', '!=', 5);
         if ($companiaId) $queryCompanias->where('compania_id', $companiaId);
         $gnCompaniaIds = $queryCompanias->pluck('id');
 
@@ -405,6 +287,7 @@ class ReporteController extends Controller
             ->sortByDesc('total')->take(20)->values();
 
         $resumenCompanias = \App\Models\GuardiaNocturnaCompania::whereIn('guardia_nocturna_id', $guardiaIds)
+            ->where('compania_id', '!=', 5)
             ->when($esCapitan, fn($q) => $q->where('compania_id', $companiaIdCapitan))
             ->with('compania')->get()
             ->groupBy('compania_id')
@@ -441,6 +324,7 @@ class ReporteController extends Controller
                     $guardias->map(fn($g) =>
                         $g->companias
                             ->where('sin_reporte', false)
+                            ->where('compania_id', '!=', 5)
                             ->when($esCapitan, fn($c) => $c->where('compania_id', $companiaIdCapitan))
                             ->sum(fn($c) => $c->voluntarios->count())
                     )->avg() ?? 0, 1
@@ -457,7 +341,6 @@ class ReporteController extends Controller
             'companias as sin_reporte_count' => fn($q) => $q->where('sin_reporte', true),
         ])
         ->with('cerradoPor')
-        // Capitán: solo guardias donde participó su compañía
         ->when($esCapitan, fn($q) => $q->whereHas('companias', fn($q2) => $q2->where('compania_id', $companiaIdCapitan)))
         ->when($request->filled('hist_fecha'), fn($q) => $q->whereDate('fecha', $request->hist_fecha))
         ->when(!$request->filled('hist_fecha') && $request->filled('hist_desde'), fn($q) => $q->whereDate('fecha', '>=', $request->hist_desde))
