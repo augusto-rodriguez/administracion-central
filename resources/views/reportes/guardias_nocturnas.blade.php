@@ -335,9 +335,11 @@
                             <tr>
                                 <th>Fecha</th>
                                 <th>Estado</th>
+                                @if(!$esCapitan)
                                 <th class="text-center">Con reporte</th>
                                 <th class="text-center">Sin reporte</th>
                                 <th>Cerrado por</th>
+                                @endif
                                 <th>Cerrado a las</th>
                                 <th></th>
                             </tr>
@@ -353,6 +355,7 @@
                                         <span class="badge bg-success"><i class="bi bi-lock me-1"></i>Cerrada</span>
                                     @endif
                                 </td>
+                                @if(!$esCapitan)
                                 <td class="text-center">
                                     <span class="badge bg-success">{{ $guardia->companias_count - $guardia->sin_reporte_count }}</span>
                                 </td>
@@ -364,14 +367,15 @@
                                     @endif
                                 </td>
                                 <td class="text-muted small text-nowrap">{{ $guardia->cerradoPor->nombre ?? '—' }}</td>
+                                @endif
                                 <td class="text-muted small">{{ $guardia->cerrado_at ? $guardia->cerrado_at->format('H:i') : '—' }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('guardias-nocturnas.show', $guardia) }}"
-                                       class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                    class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="7" class="text-center text-muted py-4">No hay guardias nocturnas registradas.</td></tr>
+                            <tr><td colspan="{{ $esCapitan ? 4 : 7 }}" class="text-center text-muted py-4">No hay guardias nocturnas registradas.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -391,15 +395,17 @@
                                     @endif
                                 </div>
                                 <a href="{{ route('guardias-nocturnas.show', $guardia) }}"
-                                   class="btn btn-sm btn-outline-primary flex-shrink-0"><i class="bi bi-eye"></i></a>
+                                class="btn btn-sm btn-outline-primary flex-shrink-0"><i class="bi bi-eye"></i></a>
                             </div>
                             <div class="d-flex flex-wrap gap-2 small text-muted">
-                                <span class="badge bg-success">{{ $guardia->companias_count - $guardia->sin_reporte_count }} con rep.</span>
-                                @if($guardia->sin_reporte_count > 0)
-                                    <span class="badge bg-danger">{{ $guardia->sin_reporte_count }} sin rep.</span>
-                                @endif
-                                @if($guardia->cerradoPor)
-                                    <span><i class="bi bi-person me-1"></i>{{ $guardia->cerradoPor->nombre }}</span>
+                                @if(!$esCapitan)
+                                    <span class="badge bg-success">{{ $guardia->companias_count - $guardia->sin_reporte_count }} con rep.</span>
+                                    @if($guardia->sin_reporte_count > 0)
+                                        <span class="badge bg-danger">{{ $guardia->sin_reporte_count }} sin rep.</span>
+                                    @endif
+                                    @if($guardia->cerradoPor)
+                                        <span><i class="bi bi-person me-1"></i>{{ $guardia->cerradoPor->nombre }}</span>
+                                    @endif
                                 @endif
                                 @if($guardia->cerrado_at)
                                     <span><i class="bi bi-clock me-1"></i>{{ $guardia->cerrado_at->format('H:i') }}</span>
