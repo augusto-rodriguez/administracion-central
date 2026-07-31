@@ -125,6 +125,7 @@ class SalidaUnidadController extends Controller
             'conductor_libre'   => 'nullable|string|max:255',
             'cantidad_personal' => 'nullable|integer|min:1',
             'observaciones'     => 'nullable|string',
+            'descripcion_emergencia' => 'nullable|string|max:500',
             'salida_at'         => 'nullable|date|before_or_equal:now',
         ]);
 
@@ -299,6 +300,7 @@ class SalidaUnidadController extends Controller
             'km_salida'         => $request->km_salida,
             'salida_at'         => $salidaAt,
             'observaciones'     => $request->observaciones,
+            'descripcion_emergencia' => $request->descripcion_emergencia,
             'salida_padre_id'   => null,
         ]);
 
@@ -362,6 +364,7 @@ class SalidaUnidadController extends Controller
             'al_mando_id'       => 'nullable|exists:voluntarios,id',   // ← corregido: nullable
             'cantidad_personal' => 'nullable|integer|min:1',
             'observaciones'     => 'nullable|string',
+            'descripcion_emergencia' => 'nullable|string|max:500',
             'salida_at'         => 'nullable|date|before_or_equal:now',
         ]);
 
@@ -448,6 +451,7 @@ class SalidaUnidadController extends Controller
             'km_salida'         => $kmHeredado,
             'salida_at'         => $salidaAt,
             'observaciones'     => $request->observaciones,
+            'descripcion_emergencia' => $request->descripcion_emergencia,
             // llegada_at intencionalmente null: este es el tramo activo
         ]);
 
@@ -827,6 +831,7 @@ class SalidaUnidadController extends Controller
             'cantidad_personal' => 'nullable|integer|min:1',
             'km_llegada'        => 'nullable|numeric|min:0',
             'observaciones'     => 'nullable|string',
+            'descripcion_emergencia' => 'nullable|string|max:500',
             'salida_at'         => 'required|date|before_or_equal:now',
             'llegada_at'        => 'nullable|date|after:salida_at|before_or_equal:now',
         ]);
@@ -883,6 +888,7 @@ class SalidaUnidadController extends Controller
             'salida_at'         => \Carbon\Carbon::parse($request->salida_at),
             'llegada_at'        => $llegadaAt,
             'observaciones'     => $request->observaciones,
+            'descripcion_emergencia' => $request->descripcion_emergencia,
         ]);
 
         $msg = 'Salida actualizada correctamente.';

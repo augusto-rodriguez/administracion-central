@@ -248,6 +248,13 @@
                        value="{{ old('observaciones', $salida->observaciones) }}" placeholder="Opcional...">
             </div>
 
+            <div class="col-12">
+                <label class="form-label mb-1 small fw-bold">Descripción de la emergencia</label>
+                <input type="text" name="descripcion_emergencia" class="form-control form-control-sm"
+                    value="{{ old('descripcion_emergencia', $salida->descripcion_emergencia) }}"
+                    placeholder="Breve descripción de la emergencia..." maxlength="500">
+            </div>
+
         </div>
 
         <div class="mt-3 d-flex gap-2">

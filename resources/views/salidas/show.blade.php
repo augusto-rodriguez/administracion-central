@@ -48,6 +48,7 @@
                     <tr><th>Al mando</th><td>{{ $salida->alMando?->nombre ?? '—' }}</td></tr>
                     <tr><th>Personal</th><td>{{ $salida->cantidad_personal ?? '—' }}</td></tr>
                     <tr><th>Observaciones</th><td>{{ $salida->observaciones ?? '—' }}</td></tr>
+                    <tr><th>Descripción emergencia</th><td>{{ $salida->descripcion_emergencia ?? '—' }}</td></tr>
                 </table>
             </div>
         </div>

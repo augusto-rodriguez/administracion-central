@@ -15,7 +15,7 @@ class SalidaUnidad extends Model
         'conductor_libre', 'direccion', 'cantidad_personal',
         'km_salida', 'km_llegada', 'km_recorrido',
         'salida_at', 'llegada_at', 'observaciones',
-        'salida_padre_id',
+        'salida_padre_id', 'descripcion_emergencia',
     ];
 
     protected $casts = [
