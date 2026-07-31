@@ -339,6 +339,7 @@
                                 'km_recorridos'=> 'Km Recorridos',
                                 'personal'    => 'Personal',
                                 'observaciones'=> 'Observaciones',
+                                'descripcion_emergencia' => '0-1',
                             ];
                         @endphp
                         @foreach($columnasDisponibles as $key => $label)

@@ -39,6 +39,7 @@ class SalidasExport implements FromCollection, WithHeadings, WithMapping, WithSt
         'km_recorridos' => ['heading' => 'Km Recorridos',       'width' => 7],
         'personal'      => ['heading' => 'Personal',            'width' => 7],
         'observaciones' => ['heading' => 'Observaciones',       'width' => 30],
+        'descripcion_emergencia'  => ['heading' => 'Descripción Emergencia',    'width' => 40],
     ];
 
     public function __construct(array $filtros, array $columnas = [])
@@ -123,6 +124,7 @@ class SalidasExport implements FromCollection, WithHeadings, WithMapping, WithSt
             'km_recorridos' => $salida->km_recorrido ?? '—',
             'personal'      => $salida->cantidad_personal ?? '—',
             'observaciones' => $salida->observaciones ?? '—',
+            'descripcion_emergencia' => $salida->descripcion_emergencia ?? '—',
         ];
 
         return array_values(array_intersect_key($todas, $this->columnasSeleccionadas));
