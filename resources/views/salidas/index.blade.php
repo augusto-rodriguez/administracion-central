@@ -234,18 +234,19 @@
                                        value="{{ old('cantidad_personal') }}" placeholder="Opcional" min="1">
                             </div>
 
+                            {{-- Descripción de la emergencia (solo emergencias) --}}
+                            <div class="col-md-6 d-none" id="bloqueDescripcionEmergencia">
+                                <label class="form-label fw-bold">Descripción de la emergencia (0-1)</label>
+                                <input type="text" name="descripcion_emergencia" class="form-control"
+                                    value="{{ old('descripcion_emergencia') }}"
+                                    placeholder="Breve descripción de la emergencia..." maxlength="500">
+                            </div>
+
                             {{-- Observaciones --}}
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Observaciones</label>
                                 <input type="text" name="observaciones" class="form-control"
-                                       value="{{ old('observaciones') }}" placeholder="Opcional...">
-                            </div>
-
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold">Descripción de la emergencia</label>
-                                <input type="text" name="descripcion_emergencia" class="form-control"
-                                    value="{{ old('descripcion_emergencia') }}"
-                                    placeholder="Breve descripción de la emergencia..." maxlength="500">
+                                    value="{{ old('observaciones') }}" placeholder="Opcional...">
                             </div>
 
                         </div>
@@ -1246,6 +1247,20 @@ document.getElementById('modalNuevaSalida').addEventListener('hidden.bs.modal', 
         if (ind)   ind.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Hora actual (se actualiza sola)';
         sincronizarLlegada(salidaId, ahora);
     }
+
+    // Campo descripcion de emrgencia solo para claves de emergencia
+    document.getElementById('selectClave').addEventListener('change', function () {
+        const selected = this.options[this.selectedIndex];
+        const tipo = selected?.dataset?.tipo || '';
+        const bloque = document.getElementById('bloqueDescripcionEmergencia');
+
+        if (tipo === 'emergencia') {
+            bloque.classList.remove('d-none');
+        } else {
+            bloque.classList.add('d-none');
+            bloque.querySelector('input').value = '';
+        }
+    });
 
     document.querySelectorAll('.modal[id^="modalLlegada"]').forEach(function(modal) {
         const salidaId = modal.id.replace('modalLlegada', '');
