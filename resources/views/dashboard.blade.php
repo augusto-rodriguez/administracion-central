@@ -4,9 +4,19 @@
 
 {{-- ── Encabezado ─────────────────────────────────────────────────── --}}
 <div class="mb-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+    <!-- <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
         <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
         <span class="text-muted small">{{ now()->format('d/m/Y H:i') }}</span>
+    </div> -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+        <div class="d-flex align-items-center gap-2 text-muted small">
+            <span>{{ now()->format('d/m/Y H:i') }}</span>
+            <span id="clima" class="d-inline-flex align-items-center gap-1" style="display:none!important">
+                <span id="climaIcono"></span>
+                <span id="climaTemp"></span>
+            </span>
+        </div>
     </div>
 
     {{-- Comandante de guardia --}}
@@ -592,6 +602,35 @@
 
 @push('scripts')
 <script>
+// ── Clima San Pedro de la Paz ──
+(function () {
+    const LAT = -36.8558, LON = -73.1085;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code&timezone=America/Santiago`;
+
+    const iconos = {
+        0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+        45: '🌫️', 48: '🌫️',
+        51: '🌦️', 53: '🌧️', 55: '🌧️',
+        61: '🌧️', 63: '🌧️', 65: '🌧️',
+        71: '🌨️', 73: '🌨️', 75: '❄️',
+        80: '🌦️', 81: '🌧️', 82: '⛈️',
+        95: '⛈️', 96: '⛈️', 99: '⛈️',
+    };
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            const temp = Math.round(data.current.temperature_2m);
+            const code = data.current.weather_code;
+            const icono = iconos[code] || '🌡️';
+
+            document.getElementById('climaIcono').textContent = icono;
+            document.getElementById('climaTemp').textContent = `${temp}°C`;
+            document.getElementById('clima').style.cssText = '';
+        })
+        .catch(() => {});
+})();
+
 document.querySelectorAll('.acceso-card').forEach(card => {
     card.addEventListener('mouseenter', () => {
         card.style.transform = 'translateY(-4px)';
