@@ -197,7 +197,7 @@
             <table class="tabla">
                 <thead>
                     <tr>
-                        <th>Unidad</th><th>Clave</th><th>Dirección</th><th>Salida</th><th>Llegada</th>
+                        <th>Unidad</th><th>Clave</th><th>Dirección</th><th>Descripción</th><th>Salida</th><th>Llegada</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -206,6 +206,7 @@
                         <td>{{ $s->unidad->nombre ?? '—' }}</td>
                         <td><span class="badge-emergencia">{{ $s->claveSalida->codigo ?? '—' }}</span></td>
                         <td>{{ $s->direccion }}</td>
+                        <td style="font-size:8px">{{ $s->descripcion_emergencia ?? '—' }}</td>
                         <td>{{ \Carbon\Carbon::parse($s->salida_at)->format('H:i') }}</td>
                         <td>{{ $s->llegada_at ? \Carbon\Carbon::parse($s->llegada_at)->format('H:i') : '—' }}</td>
                     </tr>

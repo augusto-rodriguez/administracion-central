@@ -104,13 +104,14 @@
                 <h6 class="fw-bold text-danger"><i class="bi bi-exclamation-octagon me-1"></i>Salidas de emergencia</h6>
                 @if($salidasEmergencia->count())
                     <table class="table table-sm table-bordered mb-0">
-                        <thead class="table-light"><tr><th>Unidad</th><th>Clave</th><th>Dirección</th><th>Salida</th><th>Llegada</th></tr></thead>
+                        <thead class="table-light"><tr><th>Unidad</th><th>Clave</th><th>Dirección</th><th>Descripción</th><th>Salida</th><th>Llegada</th></tr></thead>
                         <tbody>
                             @foreach($salidasEmergencia as $s)
                             <tr>
                                 <td>{{ $s->unidad->nombre ?? '—' }}</td>
                                 <td><span class="badge bg-danger">{{ $s->claveSalida->codigo ?? '—' }}</span></td>
                                 <td>{{ $s->direccion }}</td>
+                                <td>{{ $s->descripcion_emergencia ?? '—' }}</td>
                                 <td>{{ \Carbon\Carbon::parse($s->salida_at)->format('H:i') }}</td>
                                 <td>{{ $s->llegada_at ? \Carbon\Carbon::parse($s->llegada_at)->format('H:i') : '—' }}</td>
                             </tr>
