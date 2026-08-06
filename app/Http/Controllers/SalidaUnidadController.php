@@ -797,7 +797,7 @@ class SalidaUnidadController extends Controller
 
     public function edit(SalidaUnidad $salida)
     {
-        // abort_if(!$salida->esEditable(), 403, 'El período de edición de 12 horas ha expirado.');
+        abort_if(!$salida->esEditable(), 403, 'El período de edición de 12 horas ha expirado.');
 
         $salida->load(['unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando']);
 
