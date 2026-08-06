@@ -725,11 +725,11 @@
                         <a href="{{ route('salidas.show', $salida) }}" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-eye"></i>
                         </a>
-                     
+        
                         <a href="{{ route('salidas.edit', $salida) }}" class="btn btn-sm btn-outline-warning">
                             <i class="bi bi-pencil"></i>
                         </a>
-                      
+               
                     </td>
                 </tr>
                 @empty

@@ -11,25 +11,6 @@
     </a>
 </div>
 
-{{-- Aviso de ventana de edición --}}
-@php
-    $minutosRestantes = (int) now()->diffInMinutes($salida->salida_at->addHours(12), false);
-    $horasRestantes   = floor($minutosRestantes / 60);
-    $minsRestantes    = $minutosRestantes % 60;
-@endphp
-<div class="alert alert-warning py-2 mb-2" style="font-size:13px">
-    <i class="bi bi-clock-history me-1"></i>
-    Puedes editar esta salida durante las primeras 12 horas.
-    Tiempo restante: <strong>{{ $horasRestantes }}h {{ $minsRestantes }}m</strong>.
-</div>
-
-@if(!$kmYConductorEditables)
-<div class="alert alert-info py-2 mb-2" style="font-size:13px">
-    <i class="bi bi-info-circle me-1"></i>
-    Salida con <strong>sobresalidas encadenadas</strong>. Puedes editar clave, dirección,
-    al mando, hora y observaciones. El km de llegada se propagará a todos los tramos.
-</div>
-@endif
 
 {{-- Datos no editables — compacto --}}
 <div class="card mb-2">
