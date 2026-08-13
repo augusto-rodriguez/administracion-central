@@ -84,7 +84,8 @@ class DashboardController extends Controller
             ->keyBy('voluntario_id');
 
         // Toda la oficialidad activa (generales + de compañía)
-        $todosOficiales = VoluntarioCargo::whereHas('cargo')
+        $todosOficiales = VoluntarioCargo::where('activo', true)
+            ->whereHas('cargo')
             ->with(['voluntario', 'cargo', 'compania'])
             ->orderBy('compania_id')
             ->orderBy('cargo_id')
