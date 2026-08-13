@@ -88,7 +88,8 @@ class DashboardController extends Controller
             ->with(['voluntario', 'cargo', 'compania'])
             ->orderBy('compania_id')
             ->orderBy('cargo_id')
-            ->get();
+            ->get()
+            ->unique(fn($vc) => $vc->voluntario_id . '-' . $vc->compania_id);
 
         return view('dashboard', compact(
             'totalCompanias', 'totalUnidades',
