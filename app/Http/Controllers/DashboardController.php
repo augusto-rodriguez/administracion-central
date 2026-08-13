@@ -83,6 +83,13 @@ class DashboardController extends Controller
             ->get()
             ->keyBy('voluntario_id');
 
+        // Toda la oficialidad activa (generales + de compañía)
+        $todosOficiales = VoluntarioCargo::whereHas('cargo')
+            ->with(['voluntario', 'cargo', 'compania'])
+            ->orderBy('compania_id')
+            ->orderBy('cargo_id')
+            ->get();
+
         return view('dashboard', compact(
             'totalCompanias', 'totalUnidades',
             'totalVoluntarios', 'totalCuarteleros',
@@ -90,7 +97,8 @@ class DashboardController extends Controller
             'turnosActivos', 'turnosActivosCuarteleros',
             'salidasActivas', 'guardiaActual',
             'comandantes', 'libroActivo',
-            'oficiales', 'fueraServicio' // ← nuevos
+            'oficiales', 'fueraServicio',
+            'todosOficiales' // ← nuevo
         ));
     }
 

@@ -44,10 +44,15 @@
                         title="Cambiar comandante de guardia">
                     <i class="bi bi-shield-lock me-1"></i>Guardia
                 </button>
-                <button class="btn btn-sm btn-outline-warning"
+                <button class="btn btn-sm btn-outline-dark"
                         data-bs-toggle="modal" data-bs-target="#modalFueraServicio"
                         title="Registrar oficial fuera de servicio">
                     <i class="bi bi-person-slash me-1"></i>Fuera de servicio
+                </button>
+                <button class="btn btn-sm btn-outline-dark"
+                        data-bs-toggle="modal" data-bs-target="#modalOficialidad"
+                        title="Ver oficialidad actual">
+                    <i class="bi bi-people-fill me-1"></i>Oficialidad
                 </button>
             </div>
         @endif
@@ -182,6 +187,111 @@
                     </button>
                 </form>
 
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalOficialidad" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-people-fill me-2"></i>Oficialidad Actual
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+
+                @php
+                    $generales   = $todosOficiales->whereNull('compania_id');
+                    $porCompania = $todosOficiales->whereNotNull('compania_id')->groupBy(fn($c) => $c->compania->nombre ?? 'Sin compañía');
+                @endphp
+
+                {{-- Oficiales generales --}}
+                @if($generales->isNotEmpty())
+                    <div class="px-3 pt-3 pb-1">
+                        <h6 class="fw-bold text-danger small mb-2">
+                            <i class="bi bi-shield-fill me-1"></i>Cuerpo de Bomberos — Oficialidad General
+                        </h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Cargo</th>
+                                    <th>Nombre</th>
+                                    <th>Clave</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($generales as $vc)
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge bg-danger">{{ $vc->cargo->nombre }}</span>
+                                    </td>
+                                    <td>{{ $vc->voluntario->nombre }}</td>
+                                    <td>
+                                        @if($vc->voluntario->clave_actual)
+                                            <span class="badge bg-secondary">{{ $vc->voluntario->clave_actual }}</span>
+                                        @else
+                                            <span class="text-muted small">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+
+                {{-- Oficiales por compañía --}}
+                @foreach($porCompania as $nombreCia => $cargos)
+                    <div class="px-3 pt-3 pb-1">
+                        <h6 class="fw-bold text-primary small mb-2">
+                            <i class="bi bi-building me-1"></i>{{ $nombreCia }}
+                        </h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Cargo</th>
+                                    <th>Nombre</th>
+                                    <th>Clave</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($cargos as $vc)
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge bg-primary">{{ $vc->cargo->nombre }}</span>
+                                    </td>
+                                    <td>{{ $vc->voluntario->nombre }}</td>
+                                    <td>
+                                        @if($vc->voluntario->clave_actual)
+                                            <span class="badge bg-secondary">{{ $vc->voluntario->clave_actual }}</span>
+                                        @else
+                                            <span class="text-muted small">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endforeach
+
+                @if($todosOficiales->isEmpty())
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-people fs-3"></i>
+                        <p class="mt-2 mb-0">No hay oficiales registrados actualmente.</p>
+                    </div>
+                @endif
+
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
