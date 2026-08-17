@@ -399,6 +399,9 @@
         </div>
     </div>
 
+    {{-- Indicadores de emergencia (datos generales del cuerpo) --}}
+    @include('partials._emergency_charts')
+
     {{-- Maquinistas en servicio --}}
     <div class="mt-4">
         <div class="card">
@@ -585,9 +588,6 @@
             </div>
         </div>
     </div>
-
-    {{-- Indicadores de emergencia (datos generales del cuerpo) --}}
-    @include('partials._emergency_charts')
 
 {{-- ══════════════════════════════════════════════════════════════════════
      VISTA OPERADOR — accesos directos
