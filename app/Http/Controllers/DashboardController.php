@@ -139,7 +139,7 @@ class DashboardController extends Controller
             ->map(fn($mes) => [
                 'valor'  => $mes,
                 'nombre' => Carbon::createFromFormat('Y-m', $mes, 'America/Santiago')
-                                  ->translatedFormat('F Y'),
+                                  ->locale('es')->translatedFormat('F Y'),
             ])
             ->values();
 
@@ -228,7 +228,7 @@ class DashboardController extends Controller
                 'emergencias'  => $emergenciasMes,
                 'total'        => $totalSalidasMes,
                 'porcentaje'   => $porcentajeMes,
-                'nombreMes'    => $fechaMes->translatedFormat('F Y'),
+                'nombreMes'    => $fechaMes->copy()->locale('es')->translatedFormat('F Y'),
             ],
             'semanas'          => $emergenciasPorSemana,
             'claves'           => $distribucionClaves->toArray(),
