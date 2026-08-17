@@ -57,8 +57,9 @@
     <div class="row g-3 g-md-4 mt-1">
         <div class="col-12 col-md-5">
             <div class="card h-100">
-                <div class="card-header bg-white fw-bold small py-2">
-                    <i class="bi bi-pie-chart text-warning me-1"></i>Distribución por clave
+                <div class="card-header bg-white fw-bold small py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-pie-chart text-warning me-1"></i>Distribución por clave</span>
+                    <span class="badge bg-light text-muted fw-normal">{{ $chartData['mesActual']['nombreMes'] }}</span>
                 </div>
                 <div class="card-body d-flex align-items-center justify-content-center">
                     @if(count($chartData['claves']) > 0)
@@ -75,8 +76,9 @@
 
         <div class="col-12 col-md-7">
             <div class="card h-100">
-                <div class="card-header bg-white fw-bold small py-2">
-                    <i class="bi bi-list-ol text-secondary me-1"></i>Detalle por clave de emergencia
+                <div class="card-header bg-white fw-bold small py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ol text-secondary me-1"></i>Detalle por clave de emergencia</span>
+                    <span class="badge bg-light text-muted fw-normal">{{ $chartData['mesActual']['nombreMes'] }}</span>
                 </div>
                 <div class="card-body p-0">
                     @if(count($chartData['claves']) > 0)
