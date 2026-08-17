@@ -304,33 +304,26 @@
         $compania   = $voluntario?->compania;
     @endphp
 
-    <div class="row justify-content-center mt-4 mt-md-5">
-        <div class="col-12 col-md-6">
-            <div class="card text-center shadow-sm">
-                <div class="card-body py-4 py-md-5">
-                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center
-                                justify-content-center mb-3 mb-md-4"
-                         style="width:70px;height:70px;">
-                        <i class="bi bi-patch-check-fill text-warning" style="font-size:2rem;"></i>
-                    </div>
-
-                    <h3 class="fw-bold mb-1 fs-4 fs-md-3">
-                        Bienvenido, Capitán
-                    </h3>
-
+    <div class="mt-2">
+        <div class="card shadow-sm">
+            <div class="card-body d-flex flex-wrap align-items-center gap-3 py-3 px-3 px-md-4">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center
+                            justify-content-center flex-shrink-0"
+                     style="width:46px;height:46px;">
+                    <i class="bi bi-patch-check-fill text-warning" style="font-size:1.3rem;"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0">Bienvenido, Capitán</h5>
                     @if($compania)
-                        <p class="text-muted fs-6 fs-md-5 mb-3">
-                            {{ $compania->nombre }}
-                        </p>
-                    @endif
-
-                    @if($voluntario)
-                        <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-3 px-md-4 py-2">
-                            <i class="bi bi-person-fill text-secondary"></i>
-                            <span class="fw-bold small">{{ $voluntario->nombre }}</span>
-                        </div>
+                        <span class="text-muted small">{{ $compania->nombre }}</span>
                     @endif
                 </div>
+                @if($voluntario)
+                    <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-3 py-1 ms-md-auto">
+                        <i class="bi bi-person-fill text-secondary"></i>
+                        <span class="fw-bold small">{{ $voluntario->nombre }}</span>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
