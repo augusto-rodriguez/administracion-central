@@ -3,11 +3,23 @@
      (Para Admin, Comandante y Capitán de Compañía)
 ═══════════════════════════════════════════════════════════════ --}}
 <div class="mt-4">
-    <div class="d-flex align-items-center gap-2 mb-3">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
         <h5 class="mb-0 fw-bold">
             <i class="bi bi-graph-up text-danger me-2"></i>Indicadores de Emergencias
         </h5>
-        <span class="text-muted small">— {{ $chartData['mesActual']['nombreMes'] }}</span>
+        <div class="d-flex align-items-center gap-2">
+            <label for="mesEmergencias" class="text-muted small mb-0 text-nowrap">
+                <i class="bi bi-calendar3 me-1"></i>Período:
+            </label>
+            <select id="mesEmergencias" class="form-select form-select-sm" style="width: auto; min-width: 170px;">
+                @foreach($chartData['mesesDisponibles'] as $mes)
+                    <option value="{{ $mes['valor'] }}"
+                        {{ $mes['valor'] === $chartData['mesSeleccionado'] ? 'selected' : '' }}>
+                        {{ $mes['nombre'] }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
     </div>
 
     {{-- Fila 1: Indicador mensual + Evolución semanal --}}
@@ -44,7 +56,7 @@
         <div class="col-12 col-md-8">
             <div class="card h-100">
                 <div class="card-header bg-white fw-bold small py-2">
-                    <i class="bi bi-bar-chart text-primary me-1"></i>Emergencias por semana (últimas 8 semanas)
+                    <i class="bi bi-bar-chart text-primary me-1"></i>Emergencias por semana — {{ $chartData['mesActual']['nombreMes'] }}
                 </div>
                 <div class="card-body">
                     <canvas id="chartSemanal" style="max-height: 260px;"></canvas>
@@ -295,5 +307,12 @@
         });
     }
 })();
+
+// ── Selector de mes ──
+document.getElementById('mesEmergencias')?.addEventListener('change', function () {
+    const url = new URL(window.location.href);
+    url.searchParams.set('mes_emergencias', this.value);
+    window.location.href = url.toString();
+});
 </script>
 @endpush

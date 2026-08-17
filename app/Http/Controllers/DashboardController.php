@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $totalCompanias   = Compania::where('activa', true)->count();
         $totalUnidades    = Unidad::where('activa', true)->count();
@@ -121,50 +121,91 @@ class DashboardController extends Controller
             return $query;
         };
 
-        $ahora = Carbon::now('America/Santiago');
-        $inicioMes = $ahora->copy()->startOfMonth();
-        $finMes = $ahora->copy()->endOfMonth();
+        // Base query para todas las salidas (respetando filtro de compañía)
+        $salidasBaseQuery = function () use ($companiaId) {
+            $query = SalidaUnidad::query();
+            if ($companiaId) {
+                $query->whereHas('unidad', fn($q) => $q->where('compania_id', $companiaId));
+            }
+            return $query;
+        };
 
-        // 1) Emergencias del mes actual
+        // ── Meses disponibles con datos de emergencia ──
+        $mesesDisponibles = $emergenciasBaseQuery()
+            ->selectRaw("DATE_FORMAT(salida_at, '%Y-%m') as mes")
+            ->groupBy('mes')
+            ->orderByDesc('mes')
+            ->pluck('mes')
+            ->map(fn($mes) => [
+                'valor'  => $mes,
+                'nombre' => Carbon::createFromFormat('Y-m', $mes, 'America/Santiago')
+                                  ->translatedFormat('F Y'),
+            ])
+            ->values();
+
+        // ── Mes seleccionado (por defecto el actual) ──
+        $ahora = Carbon::now('America/Santiago');
+        $mesSeleccionado = $request->input('mes_emergencias', $ahora->format('Y-m'));
+
+        // Validar que el mes sea un formato válido
+        try {
+            $fechaMes = Carbon::createFromFormat('Y-m', $mesSeleccionado, 'America/Santiago');
+        } catch (\Exception $e) {
+            $fechaMes = $ahora->copy();
+            $mesSeleccionado = $ahora->format('Y-m');
+        }
+
+        $inicioMes = $fechaMes->copy()->startOfMonth();
+        $finMes = $fechaMes->copy()->endOfMonth();
+        $esMesActual = $mesSeleccionado === $ahora->format('Y-m');
+
+        // 1) Emergencias del mes seleccionado
         $emergenciasMes = $emergenciasBaseQuery()
             ->whereBetween('salida_at', [$inicioMes, $finMes])
             ->count();
 
-        $totalSalidasMes = SalidaUnidad::whereBetween('salida_at', [$inicioMes, $finMes])
-            ->when($companiaId, fn($q) => $q->whereHas('unidad', fn($q2) => $q2->where('compania_id', $companiaId)))
+        $totalSalidasMes = $salidasBaseQuery()
+            ->whereBetween('salida_at', [$inicioMes, $finMes])
             ->count();
 
         $porcentajeMes = $totalSalidasMes > 0
             ? round(($emergenciasMes / $totalSalidasMes) * 100, 1)
             : 0;
 
-        // 2) Emergencias por semana (últimas 8 semanas)
-        $semanasAtras = 8;
+        // 2) Emergencias por semana del mes seleccionado
         $emergenciasPorSemana = [];
+        $semanaInicio = $inicioMes->copy()->startOfWeek(Carbon::MONDAY);
+        $semanaFin = $finMes->copy()->endOfWeek(Carbon::SUNDAY);
+        $semanaActual = $semanaInicio->copy();
 
-        for ($i = $semanasAtras - 1; $i >= 0; $i--) {
-            $inicioSemana = $ahora->copy()->subWeeks($i)->startOfWeek(Carbon::MONDAY);
-            $finSemana = $inicioSemana->copy()->endOfWeek(Carbon::SUNDAY);
+        while ($semanaActual->lte($semanaFin)) {
+            $finSemana = $semanaActual->copy()->endOfWeek(Carbon::SUNDAY);
+
+            // Solo incluir semanas que se crucen con el mes seleccionado
+            $rangoInicio = $semanaActual->copy()->max($inicioMes);
+            $rangoFin = $finSemana->copy()->min($finMes);
 
             $countEmergencias = $emergenciasBaseQuery()
-                ->whereBetween('salida_at', [$inicioSemana, $finSemana])
+                ->whereBetween('salida_at', [$semanaActual, $finSemana])
                 ->count();
 
-            $totalSemana = SalidaUnidad::whereBetween('salida_at', [$inicioSemana, $finSemana])
-                ->when($companiaId, fn($q) => $q->whereHas('unidad', fn($q2) => $q2->where('compania_id', $companiaId)))
+            $totalSemana = $salidasBaseQuery()
+                ->whereBetween('salida_at', [$semanaActual, $finSemana])
                 ->count();
 
             $emergenciasPorSemana[] = [
-                'label'       => $inicioSemana->format('d/m'),
+                'label'       => $semanaActual->format('d/m') . '-' . $finSemana->format('d/m'),
                 'emergencias' => $countEmergencias,
                 'total'       => $totalSemana,
                 'porcentaje'  => $totalSemana > 0
                     ? round(($countEmergencias / $totalSemana) * 100, 1)
                     : 0,
             ];
+
+            $semanaActual->addWeek();
         }
 
-        // 3) Distribución por clave de emergencia (mes actual)
+        // 3) Distribución por clave de emergencia (mes seleccionado)
         $distribucionClaves = $emergenciasBaseQuery()
             ->whereBetween('salida_at', [$inicioMes, $finMes])
             ->select('clave_salida_id', DB::raw('COUNT(*) as total'))
@@ -187,10 +228,12 @@ class DashboardController extends Controller
                 'emergencias'  => $emergenciasMes,
                 'total'        => $totalSalidasMes,
                 'porcentaje'   => $porcentajeMes,
-                'nombreMes'    => $ahora->translatedFormat('F Y'),
+                'nombreMes'    => $fechaMes->translatedFormat('F Y'),
             ],
-            'semanas' => $emergenciasPorSemana,
-            'claves'  => $distribucionClaves->toArray(),
+            'semanas'          => $emergenciasPorSemana,
+            'claves'           => $distribucionClaves->toArray(),
+            'mesSeleccionado'  => $mesSeleccionado,
+            'mesesDisponibles' => $mesesDisponibles->toArray(),
         ];
 
         return view('dashboard', compact(
