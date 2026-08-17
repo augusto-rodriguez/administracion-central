@@ -4,10 +4,6 @@
 
 {{-- ── Encabezado ─────────────────────────────────────────────────── --}}
 <div class="mb-4">
-    <!-- <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-        <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
-        <span class="text-muted small">{{ now()->format('d/m/Y H:i') }}</span>
-    </div> -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
         <h4 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
         <div class="d-flex align-items-center gap-2 text-muted small">
@@ -339,6 +335,9 @@
         </div>
     </div>
 
+    {{-- Indicadores de emergencia (filtrados por compañía del capitán) --}}
+    @include('partials._emergency_charts')
+
 {{-- ══════════════════════════════════════════════════════════════════════
      VISTA ADMIN / COMANDANTE
 ═══════════════════════════════════════════════════════════════════════ --}}
@@ -586,6 +585,9 @@
             </div>
         </div>
     </div>
+
+    {{-- Indicadores de emergencia (datos generales del cuerpo) --}}
+    @include('partials._emergency_charts')
 
 {{-- ══════════════════════════════════════════════════════════════════════
      VISTA OPERADOR — accesos directos

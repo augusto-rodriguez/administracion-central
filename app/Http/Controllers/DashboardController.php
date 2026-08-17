@@ -13,8 +13,11 @@ use App\Models\Cargo;
 use App\Models\VoluntarioCargo;
 use App\Models\LibroNovedades;
 use App\Models\OficialFueraServicio;
+use App\Models\SalidaUnidad;
+use App\Models\ClaveSalida;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -38,7 +41,7 @@ class DashboardController extends Controller
             ->orderBy('entrada_at', 'desc')
             ->get();
 
-        $salidasActivas = \App\Models\SalidaUnidad::with(['unidad.compania', 'claveSalida', 'voluntario'])
+        $salidasActivas = SalidaUnidad::with(['unidad.compania', 'claveSalida', 'voluntario'])
             ->whereNull('llegada_at')
             ->orderBy('salida_at', 'desc')
             ->get();
@@ -92,6 +95,104 @@ class DashboardController extends Controller
             ->get()
             ->unique(fn($vc) => $vc->voluntario_id . '-' . $vc->compania_id);
 
+        // ═══════════════════════════════════════════════════════════════
+        // ESTADÍSTICAS DE EMERGENCIAS
+        // ═══════════════════════════════════════════════════════════════
+
+        $user = auth()->user();
+        $esCapitan = $user->esCapitanCia();
+        $companiaId = null;
+
+        if ($esCapitan) {
+            $companiaId = $user->voluntario?->compania_id;
+        }
+
+        // IDs de claves de emergencia
+        $clavesEmergenciaIds = ClaveSalida::where('tipo', 'emergencia')
+            ->where('activa', true)
+            ->pluck('id');
+
+        // Base query para emergencias
+        $emergenciasBaseQuery = function () use ($clavesEmergenciaIds, $companiaId) {
+            $query = SalidaUnidad::whereIn('clave_salida_id', $clavesEmergenciaIds);
+            if ($companiaId) {
+                $query->whereHas('unidad', fn($q) => $q->where('compania_id', $companiaId));
+            }
+            return $query;
+        };
+
+        $ahora = Carbon::now('America/Santiago');
+        $inicioMes = $ahora->copy()->startOfMonth();
+        $finMes = $ahora->copy()->endOfMonth();
+
+        // 1) Emergencias del mes actual
+        $emergenciasMes = $emergenciasBaseQuery()
+            ->whereBetween('salida_at', [$inicioMes, $finMes])
+            ->count();
+
+        $totalSalidasMes = SalidaUnidad::whereBetween('salida_at', [$inicioMes, $finMes])
+            ->when($companiaId, fn($q) => $q->whereHas('unidad', fn($q2) => $q2->where('compania_id', $companiaId)))
+            ->count();
+
+        $porcentajeMes = $totalSalidasMes > 0
+            ? round(($emergenciasMes / $totalSalidasMes) * 100, 1)
+            : 0;
+
+        // 2) Emergencias por semana (últimas 8 semanas)
+        $semanasAtras = 8;
+        $emergenciasPorSemana = [];
+
+        for ($i = $semanasAtras - 1; $i >= 0; $i--) {
+            $inicioSemana = $ahora->copy()->subWeeks($i)->startOfWeek(Carbon::MONDAY);
+            $finSemana = $inicioSemana->copy()->endOfWeek(Carbon::SUNDAY);
+
+            $countEmergencias = $emergenciasBaseQuery()
+                ->whereBetween('salida_at', [$inicioSemana, $finSemana])
+                ->count();
+
+            $totalSemana = SalidaUnidad::whereBetween('salida_at', [$inicioSemana, $finSemana])
+                ->when($companiaId, fn($q) => $q->whereHas('unidad', fn($q2) => $q2->where('compania_id', $companiaId)))
+                ->count();
+
+            $emergenciasPorSemana[] = [
+                'label'       => $inicioSemana->format('d/m'),
+                'emergencias' => $countEmergencias,
+                'total'       => $totalSemana,
+                'porcentaje'  => $totalSemana > 0
+                    ? round(($countEmergencias / $totalSemana) * 100, 1)
+                    : 0,
+            ];
+        }
+
+        // 3) Distribución por clave de emergencia (mes actual)
+        $distribucionClaves = $emergenciasBaseQuery()
+            ->whereBetween('salida_at', [$inicioMes, $finMes])
+            ->select('clave_salida_id', DB::raw('COUNT(*) as total'))
+            ->groupBy('clave_salida_id')
+            ->with('claveSalida')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn($item) => [
+                'codigo'      => $item->claveSalida->codigo,
+                'descripcion' => $item->claveSalida->descripcion,
+                'total'       => $item->total,
+                'porcentaje'  => $emergenciasMes > 0
+                    ? round(($item->total / $emergenciasMes) * 100, 1)
+                    : 0,
+            ]);
+
+        // Datos para los gráficos (JSON)
+        $chartData = [
+            'mesActual' => [
+                'emergencias'  => $emergenciasMes,
+                'total'        => $totalSalidasMes,
+                'porcentaje'   => $porcentajeMes,
+                'nombreMes'    => $ahora->translatedFormat('F Y'),
+            ],
+            'semanas' => $emergenciasPorSemana,
+            'claves'  => $distribucionClaves->toArray(),
+        ];
+
         return view('dashboard', compact(
             'totalCompanias', 'totalUnidades',
             'totalVoluntarios', 'totalCuarteleros',
@@ -100,7 +201,8 @@ class DashboardController extends Controller
             'salidasActivas', 'guardiaActual',
             'comandantes', 'libroActivo',
             'oficiales', 'fueraServicio',
-            'todosOficiales' // ← nuevo
+            'todosOficiales',
+            'chartData', 'emergenciasMes', 'porcentajeMes'
         ));
     }
 
