@@ -6,19 +6,34 @@
     <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Puestas en Servicio</h4>
 </div>
 
-{{-- Advertencia unidades en uso --}}
-@if(session('unidades_en_uso'))
+{{-- Advertencia unidades en uso y/o en salida activa --}}
+@if(session('unidades_en_uso') || session('unidades_en_salida'))
 <div class="alert alert-warning border-warning mb-4">
-    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>¡Atención! Las siguientes unidades ya están en servicio:</h6>
-    <ul class="mb-3">
-        @foreach(session('unidades_en_uso') as $item)
-        <li>
-            Unidad <strong>{{ $item['unidad_nombre'] }}</strong> está siendo manejada por
-            <strong>{{ $item['voluntario_nombre'] }}</strong>
-        </li>
-        @endforeach
-    </ul>
-    <p class="mb-2">¿Desea registrar la salida del conductor actual y registrar la entrada del nuevo?</p>
+    @if(!empty(session('unidades_en_salida')))
+        <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>¡Precaución! Las siguientes unidades están actualmente en una salida:</h6>
+        <ul class="mb-3">
+            @foreach(session('unidades_en_salida') as $nombreUnidad)
+            <li>
+                La unidad <strong>{{ $nombreUnidad }}</strong> se encuentra en una salida activa y no ha regresado al cuartel.
+            </li>
+            @endforeach
+        </ul>
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>Puede continuar si se trata de un cambio de conductor durante la salida.
+        </p>
+    @endif
+    @if(!empty(session('unidades_en_uso')))
+        <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>¡Atención! Las siguientes unidades ya están en servicio:</h6>
+        <ul class="mb-3">
+            @foreach(session('unidades_en_uso') as $item)
+            <li>
+                Unidad <strong>{{ $item['unidad_nombre'] }}</strong> está siendo manejada por
+                <strong>{{ $item['voluntario_nombre'] }}</strong>
+            </li>
+            @endforeach
+        </ul>
+    @endif
+    <p class="mb-2">¿Desea continuar con el registro de entrada?</p>
     <form action="{{ route('turnos.confirmar') }}" method="POST">
         @csrf
         <input type="hidden" name="voluntario_id" value="{{ session('form_data.voluntario_id') }}">
@@ -29,7 +44,7 @@
         @endforeach
         <div class="d-flex flex-column flex-sm-row gap-2">
             <button type="submit" class="btn btn-warning btn-sm">
-                <i class="bi bi-arrow-left-right me-1"></i>Sí, registrar cambio
+                <i class="bi bi-arrow-left-right me-1"></i>Sí, continuar
             </button>
             <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
         </div>
@@ -37,18 +52,33 @@
 </div>
 @endif
 
-@if(session('unidades_en_uso_cuartelero'))
+@if(session('unidades_en_uso_cuartelero') || session('unidades_en_salida_cuartelero'))
 <div class="alert alert-warning border-warning mb-4">
-    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>¡Atención! Las siguientes unidades ya están en servicio:</h6>
-    <ul class="mb-3">
-        @foreach(session('unidades_en_uso_cuartelero') as $item)
-        <li>
-            Unidad <strong>{{ $item['unidad_nombre'] }}</strong> está siendo manejada por
-            <strong>{{ $item['voluntario_nombre'] }}</strong>
-        </li>
-        @endforeach
-    </ul>
-    <p class="mb-2">¿Desea registrar la salida del conductor actual y registrar la entrada del cuartelero?</p>
+    @if(!empty(session('unidades_en_salida_cuartelero')))
+        <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>¡Precaución! Las siguientes unidades están actualmente en una salida:</h6>
+        <ul class="mb-3">
+            @foreach(session('unidades_en_salida_cuartelero') as $nombreUnidad)
+            <li>
+                La unidad <strong>{{ $nombreUnidad }}</strong> se encuentra en una salida activa y no ha regresado al cuartel.
+            </li>
+            @endforeach
+        </ul>
+        <p class="text-muted small mb-3">
+            <i class="bi bi-info-circle me-1"></i>Puede continuar si se trata de un cambio de conductor durante la salida.
+        </p>
+    @endif
+    @if(!empty(session('unidades_en_uso_cuartelero')))
+        <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>¡Atención! Las siguientes unidades ya están en servicio:</h6>
+        <ul class="mb-3">
+            @foreach(session('unidades_en_uso_cuartelero') as $item)
+            <li>
+                Unidad <strong>{{ $item['unidad_nombre'] }}</strong> está siendo manejada por
+                <strong>{{ $item['voluntario_nombre'] }}</strong>
+            </li>
+            @endforeach
+        </ul>
+    @endif
+    <p class="mb-2">¿Desea continuar con el registro de entrada del cuartelero?</p>
     <form action="{{ route('cuarteleros.turnos.confirmar') }}" method="POST">
         @csrf
         <input type="hidden" name="cuartelero_id" value="{{ session('form_data_cuartelero.cuartelero_id') }}">
@@ -59,7 +89,7 @@
         @endforeach
         <div class="d-flex flex-column flex-sm-row gap-2">
             <button type="submit" class="btn btn-warning btn-sm">
-                <i class="bi bi-arrow-left-right me-1"></i>Sí, registrar cambio
+                <i class="bi bi-arrow-left-right me-1"></i>Sí, continuar
             </button>
             <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
         </div>

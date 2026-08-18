@@ -37,15 +37,16 @@ class TurnoCuarteleroController extends Controller
         $cuartelero = Cuartelero::findOrFail($request->cuartelero_id);
 
         $unidadesEnUso = [];
+        $unidadesEnSalida = [];
         foreach ($request->unidades as $unidadId) {
 
+            // Verificar si la unidad está en una salida activa (advertencia, no bloqueo)
             $salidaActiva = SalidaUnidad::where('unidad_id', $unidadId)
                 ->whereNull('llegada_at')->first();
 
             if ($salidaActiva) {
                 $unidad = Unidad::find($unidadId);
-                return redirect()->back()
-                    ->with('error', "La unidad {$unidad->nombre} está actualmente en una salida. No se puede asignar hasta que regrese al cuartel.");
+                $unidadesEnSalida[] = $unidad->nombre;
             }
 
             $turnoMaquinista = \App\Models\RegistroTurno::whereNull('salida_at')
@@ -76,9 +77,11 @@ class TurnoCuarteleroController extends Controller
             }
         }
 
-        if (!empty($unidadesEnUso)) {
+        // Si hay unidades en uso por otros O unidades en salida activa, mostrar confirmación
+        if (!empty($unidadesEnUso) || !empty($unidadesEnSalida)) {
             session([
                 'unidades_en_uso_cuartelero' => $unidadesEnUso,
+                'unidades_en_salida_cuartelero' => $unidadesEnSalida,
                 'form_data_cuartelero' => [
                     'cuartelero_id' => $request->cuartelero_id,
                     'unidades'      => $request->unidades,
@@ -92,14 +95,29 @@ class TurnoCuarteleroController extends Controller
         if ($cuartelero->turnoActivo) {
             $turnoExistente = $cuartelero->turnoActivo;
 
+            // Verificar salidas activas de unidades existentes (advertencia, no bloqueo)
+            $unidadesExistentesEnSalida = [];
             foreach ($turnoExistente->unidades as $unidad) {
                 $salidaActiva = SalidaUnidad::where('unidad_id', $unidad->id)
                     ->whereNull('llegada_at')->first();
 
                 if ($salidaActiva) {
-                    return redirect()->back()
-                        ->with('error', "No se pueden agregar unidades al turno. La unidad {$unidad->nombre} tiene una salida activa sin llegada registrada.");
+                    $unidadesExistentesEnSalida[] = $unidad->nombre;
                 }
+            }
+
+            if (!empty($unidadesExistentesEnSalida)) {
+                session([
+                    'unidades_en_uso_cuartelero' => [],
+                    'unidades_en_salida_cuartelero' => $unidadesExistentesEnSalida,
+                    'form_data_cuartelero' => [
+                        'cuartelero_id' => $request->cuartelero_id,
+                        'unidades'      => $request->unidades,
+                        'observaciones' => $request->observaciones,
+                        'entrada_at'    => $request->entrada_at,
+                    ],
+                ]);
+                return redirect()->route('turnos.index');
             }
 
             $unidadesActuales = $turnoExistente->unidades->pluck('id')->toArray();
@@ -212,7 +230,7 @@ class TurnoCuarteleroController extends Controller
             $turno->unidades()->attach($unidadesNuevas);
         }
 
-        session()->forget(['unidades_en_uso_cuartelero', 'form_data_cuartelero']);
+        session()->forget(['unidades_en_uso_cuartelero', 'unidades_en_salida_cuartelero', 'form_data_cuartelero']);
 
         return redirect()->route('turnos.index')->with('success', 'Cambio de turno registrado.');
     }
