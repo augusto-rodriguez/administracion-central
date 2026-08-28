@@ -268,7 +268,7 @@
                                     <tr>
                                         <th style="width:180px">Unidad <span class="text-danger">*</span></th>
                                         <th style="width:200px">Conductor</th>
-                                        <th style="width:190px">Al Mando <span class="text-danger">*</span></th>
+                                        <th style="width:190px">Al Mando</th>
                                         <th style="width:100px">Km Salida</th>
                                         <th style="width:90px">Personal</th>
                                         <th style="width:160px">Observaciones</th>
@@ -1126,9 +1126,8 @@ function agregarFilaUnidad() {
     });
     selectUnidadHtml += '</select>';
     selectUnidadHtml += '<div class="text-muted small mt-1 cj-km-ref" style="font-size:11px"></div>';
-
-    let selectMandoHtml = `<select name="unidades[${idx}][al_mando_id]" class="form-select form-select-sm cj-mando" required>`;
-    selectMandoHtml += '<option value="">Seleccionar...</option>';
+    let selectMandoHtml = `<select name="unidades[${idx}][al_mando_id]" class="form-select form-select-sm cj-mando">`;
+    selectMandoHtml += '<option value="">— Sin voluntario al mando —</option>';
     opcionesVoluntarios.forEach(v => {
         selectMandoHtml += `<option value="${v.id}">${v.nombre}</option>`;
     });
@@ -1139,7 +1138,7 @@ function agregarFilaUnidad() {
         <td class="cj-conductor-cell"><span class="text-muted small">Selecciona unidad primero</span></td>
         <td>${selectMandoHtml}</td>
         <td><input type="number" name="unidades[${idx}][km_salida]" class="form-control form-control-sm cj-km" step="1" placeholder="Automático"></td>
-        <td><input type="number" name="unidades[${idx}][cantidad_personal]" class="form-control form-control-sm" min="1" placeholder="—"></td>
+        <td><input type="number" name="unidades[${idx}][cantidad_personal]" class="form-control form-control-sm" min="0" placeholder="—"></td>
         <td><input type="text" name="unidades[${idx}][observaciones]" class="form-control form-control-sm" placeholder="Opcional"></td>
         <td class="text-center">
             <button type="button" class="btn btn-outline-danger btn-sm cj-quitar" title="Quitar fila">
