@@ -3,7 +3,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-arrow-up-right-circle me-2"></i>Detalle de Salida</h4>
-    <a href="{{ route('salidas.index') }}" class="btn btn-outline-secondary">
+    <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Volver
     </a>
 </div>
