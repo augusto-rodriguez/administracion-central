@@ -25,6 +25,8 @@ Route::middleware(['rol'])->group(function () {
     Route::get('guardias-nocturnas',           [App\Http\Controllers\GuardiaNocturnaController::class, 'index'])->name('guardias-nocturnas.index');
     Route::get('guardias-nocturnas/{guardia}', [App\Http\Controllers\GuardiaNocturnaController::class, 'show']) ->name('guardias-nocturnas.show');
 
+    Route::get('salidas/{salida}', [App\Http\Controllers\SalidaUnidadController::class, 'show'])
+    ->name('salidas.show');
     Route::get('reportes/exportar-cuartelero',  [App\Http\Controllers\ReporteController::class, 'exportarCuartelero'])->name('reportes.exportar-cuartelero');
     Route::get('reportes/salidas/exportar',     [App\Http\Controllers\ReporteSalidaController::class, 'exportar'])   ->name('reportes.salidas.exportar');
     Route::get('reportes/salidas',              [App\Http\Controllers\ReporteSalidaController::class, 'index'])       ->name('reportes.salidas');
@@ -104,7 +106,7 @@ Route::middleware(['rol'])->group(function () {
 
         // Rutas CRUD existentes
         Route::resource('salidas', App\Http\Controllers\SalidaUnidadController::class)
-            ->only(['index', 'store', 'show', 'edit', 'update']);
+            ->only(['index', 'store', 'edit', 'update']);
 
         Route::post('salidas/{salida}/llegada',
             [App\Http\Controllers\SalidaUnidadController::class, 'registrarLlegada'])
