@@ -49,6 +49,7 @@
                     <tr><th>Personal</th><td>{{ $salida->cantidad_personal ?? '—' }}</td></tr>
                     <tr><th>Observaciones</th><td>{{ $salida->observaciones ?? '—' }}</td></tr>
                     <tr><th>Descripción emergencia</th><td>{{ $salida->descripcion_emergencia ?? '—' }}</td></tr>
+                    <tr><th>Registrado por</th><td>{{ $salida->usuario?->nombre ?? '—' }}</td></tr>
                 </table>
             </div>
         </div>
@@ -130,6 +131,7 @@
                     <th>Salida</th>
                     <th>Llegada</th>
                     <th>Km recorridos</th>
+                    <th>Registrado por</th>
                     <th></th>
                 </tr>
             </thead>
@@ -147,6 +149,7 @@
                     <td>{{ $salida->salida_at->format('d/m H:i') }}</td>
                     <td>{{ $salida->llegada_at ? $salida->llegada_at->format('d/m H:i') : '—' }}</td>
                     <td>{{ $salida->km_recorrido ? formatKm($salida->km_recorrido, 0) . ' km' : '—' }}</td>
+                    <td>{{ $salida->usuario?->nombre ?? '—' }}</td>
                     <td class="text-nowrap">
                         @if($salida->esEditable())
                         <a href="{{ route('salidas.edit', $salida) }}"
@@ -177,6 +180,7 @@
                         @endif
                     </td>
                     <td>{{ $sub->km_recorrido ? formatKm($sub->km_recorrido, 0) . ' km' : '—' }}</td>
+                    <td>{{ $sub->usuario?->nombre ?? '—' }}</td>
                     <td class="text-nowrap">
                         <a href="{{ route('salidas.show', $sub) }}"
                            class="btn btn-xs btn-outline-secondary"

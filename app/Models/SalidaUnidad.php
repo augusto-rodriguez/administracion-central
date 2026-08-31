@@ -15,7 +15,7 @@ class SalidaUnidad extends Model
         'conductor_libre', 'direccion', 'cantidad_personal',
         'km_salida', 'km_llegada', 'km_recorrido',
         'salida_at', 'llegada_at', 'observaciones',
-        'salida_padre_id', 'descripcion_emergencia',
+        'salida_padre_id', 'descripcion_emergencia','user_id',
     ];
 
     protected $casts = [
@@ -166,5 +166,10 @@ class SalidaUnidad extends Model
             return false;
         }
         return true;
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

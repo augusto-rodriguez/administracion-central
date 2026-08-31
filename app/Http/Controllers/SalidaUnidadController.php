@@ -302,6 +302,7 @@ class SalidaUnidadController extends Controller
             'observaciones'     => $request->observaciones,
             'descripcion_emergencia' => $request->descripcion_emergencia,
             'salida_padre_id'   => null,
+            'user_id'           => auth()->id(),  
         ]);
 
         return redirect()->back()->with('success', 'Salida registrada exitosamente.');
@@ -452,6 +453,7 @@ class SalidaUnidadController extends Controller
             'salida_at'         => $salidaAt,
             'observaciones'     => $request->observaciones,
             'descripcion_emergencia' => $request->descripcion_emergencia,
+            'user_id' => auth()->id(),
             // llegada_at intencionalmente null: este es el tramo activo
         ]);
 
@@ -623,6 +625,7 @@ class SalidaUnidadController extends Controller
                 'salida_at'         => $salidaAt,
                 'observaciones'     => $u['observaciones'] ?? null,
                 'salida_padre_id'   => null,
+                'user_id' => auth()->id(),
             ]);
 
             $creadas++;
@@ -641,7 +644,7 @@ class SalidaUnidadController extends Controller
         $salida->load([
             'unidad.compania', 'claveSalida', 'oficial', 'voluntario', 'alMando',
             'salidaPadre.claveSalida',
-            'sobresalidas.claveSalida', 'sobresalidas.alMando',
+            'sobresalidas.claveSalida', 'sobresalidas.alMando', 'sobresalidas.usuario', 'usuario',
         ]);
         return view('salidas.show', compact('salida'));
     }
