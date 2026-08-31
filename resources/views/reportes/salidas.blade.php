@@ -210,6 +210,7 @@
                         <th>Llegada</th>
                         <th>Tiempo</th>
                         <th>Km</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -236,12 +237,17 @@
                         <td class="text-nowrap">{{ $salida->llegada_at->format('d/m H:i') }}</td>
                         <td><span class="badge bg-secondary">{{ $salida->tiempo_formateado }}</span></td>
                         <td class="text-nowrap">{{ formatKm($salida->km_recorrido) }}</td>
+                        <td class="text-nowrap">
+                            <a href="{{ route('salidas.show', $salida) }}" class="btn btn-xs btn-outline-secondary" title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot class="table-dark">
                     <tr>
-                        <td colspan="8" class="fw-bold text-end">Totales:</td>
+                        <td colspan="9" class="fw-bold text-end">Totales:</td>
                         <td class="fw-bold">{{ $totalHoras }}h {{ $totalMins }}min</td>
                         <td class="fw-bold">{{ number_format($totalKm, 0, ',', '.') }} km</td>
                     </tr>
@@ -261,6 +267,9 @@
                             @else
                                 <span class="badge bg-primary ms-1">{{ $salida->claveSalida->codigo }}</span>
                             @endif
+                            <a href="{{ route('salidas.show', $salida) }}" class="ms-1 text-muted" title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </a>
                             @if(!$esCapitan)
                                 <div class="text-muted small">{{ $salida->unidad->compania->nombre }}</div>
                             @endif
