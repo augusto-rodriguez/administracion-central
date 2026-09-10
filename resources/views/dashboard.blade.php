@@ -618,6 +618,13 @@
         </div>
     @endif
 
+        <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-purple btn-sm shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalInstructivos">
+                <i class="bi bi-book me-1"></i>Instructivos
+            </button>
+        </div>
+
     <p class="text-muted mb-4">Selecciona una operación para comenzar.</p>
 
     @php
@@ -700,6 +707,8 @@
         </div>
         @endforeach
     </div>
+
+    @include('partials._modal_instructivos')
 
 @endif
 
