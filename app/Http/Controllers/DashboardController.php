@@ -23,6 +23,11 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+
+        if (auth()->user()->esCuartelero()) {
+            return redirect()->route('checklist.index');
+        }
+        
         $totalCompanias   = Compania::where('activa', true)->count();
         $totalUnidades    = Unidad::where('activa', true)->count();
         $totalVoluntarios = Voluntario::where('activo', true)->count();
