@@ -10,6 +10,7 @@ use App\Mail\HallazgoAsignadoMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use App\Services\BrevoMailService;
 
 class ChecklistHallazgoController extends Controller
 {
@@ -198,11 +199,25 @@ class ChecklistHallazgoController extends Controller
         $hallazgo->load(['item.seccion', 'inspeccion.unidad', 'inspeccion.cuartelero']);
 
         try {
-            Mail::to($email)
-                ->send(new HallazgoAsignadoMail($hallazgo, Auth::user()));
-            return $email;
+            $html = view('emails.hallazgo-asignado-html', [
+                'hallazgo'    => $hallazgo,
+                'asignadoPor' => Auth::user(),
+            ])->render();
+
+            $unidad = $hallazgo->inspeccion->unidad->nombre;
+            $item = $hallazgo->item->nombre;
+            $severidad = strtoupper($hallazgo->severidad);
+
+            $enviado = BrevoMailService::enviar(
+                $email,
+                "📋 Hallazgo asignado: {$item} — {$unidad} [{$severidad}]",
+                $html
+            );
+
+            return $enviado ? $email : null;
+
         } catch (\Exception $e) {
-            \Log::error("Error enviando correo de asignación de hallazgo: " . $e->getMessage());
+            \Log::error("Error enviando correo de asignación: " . $e->getMessage());
             return null;
         }
     }

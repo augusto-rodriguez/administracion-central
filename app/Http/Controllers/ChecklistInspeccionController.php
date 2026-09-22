@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use App\Services\BrevoMailService;
 
 class ChecklistInspeccionController extends Controller
 {
@@ -401,7 +402,6 @@ class ChecklistInspeccionController extends Controller
         $soloCriticos = ChecklistConfiguracion::obtener('notificar_solo_criticos', 'no') === 'si';
 
         if ($soloCriticos && $criticos->isEmpty()) {
-            // No hay críticos y está configurado para solo notificar esos, marcar y salir
             $hallazgos->each(fn($h) => $h->update(['notificado' => true, 'notificado_at' => now()]));
             return;
         }
@@ -414,9 +414,24 @@ class ChecklistInspeccionController extends Controller
             $inspeccion->load(['unidad', 'cuartelero']);
 
             try {
-                Mail::to($emails[0])
-                    ->cc(array_slice($emails, 1))
-                    ->send(new ChecklistHallazgosMail($inspeccion, $criticos, $atencion, $info));
+                $html = view('emails.checklist-hallazgos-html', [
+                    'inspeccion'     => $inspeccion,
+                    'criticos'       => $criticos,
+                    'atencion'       => $atencion,
+                    'info'           => $info,
+                    'totalHallazgos' => $criticos->count() + $atencion->count() + $info->count(),
+                ])->render();
+
+                $unidad = $inspeccion->unidad->nombre;
+                $critCount = $criticos->count();
+                $total = $criticos->count() + $atencion->count() + $info->count();
+
+                $subject = $critCount > 0
+                    ? "⚠️ ALERTA: {$critCount} hallazgo(s) crítico(s) en {$unidad}"
+                    : "Checklist {$unidad} — {$total} hallazgo(s) detectado(s)";
+
+                BrevoMailService::enviar($emails, $subject, $html);
+
             } catch (\Exception $e) {
                 \Log::error("Error enviando correo de hallazgos: " . $e->getMessage());
             }
