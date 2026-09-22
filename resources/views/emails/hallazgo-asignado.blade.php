@@ -4,7 +4,9 @@
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
 
     <div style="text-align: center; margin-bottom: 20px;">
-        <h2 style="color: #1a1a2e;">Central de Alarmas CBSPP</h2>
+        <img src="{{ config('app.url') }}/images/logo_SanPedroDeLaPaz.png"
+             alt="CBSPP" style="width: 70px; height: 70px; object-fit: contain; margin-bottom: 8px;">
+        <h2 style="color: #1a1a2e; margin-top: 5px;">Central de Alarmas CBSPP</h2>
     </div>
 
     <h3>Se te ha asignado un hallazgo</h3>
