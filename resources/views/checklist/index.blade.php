@@ -10,6 +10,7 @@
     </a>
 </div>
 
+@if(!auth()->user()->esCuartelero())
 {{-- Filtros --}}
 <div class="card mb-3">
     <div class="card-body py-2">
@@ -41,6 +42,7 @@
         </form>
     </div>
 </div>
+@endif
 
 {{-- Listado --}}
 <div class="card">
