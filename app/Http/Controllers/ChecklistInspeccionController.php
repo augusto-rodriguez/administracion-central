@@ -414,7 +414,7 @@ class ChecklistInspeccionController extends Controller
             $inspeccion->load(['unidad', 'cuartelero']);
 
             try {
-                $html = view('emails.checklist-hallazgos-html', [
+                $html = view('emails.checklist-hallazgos', [
                     'inspeccion'     => $inspeccion,
                     'criticos'       => $criticos,
                     'atencion'       => $atencion,

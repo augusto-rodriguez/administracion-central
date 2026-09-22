@@ -199,7 +199,7 @@ class ChecklistHallazgoController extends Controller
         $hallazgo->load(['item.seccion', 'inspeccion.unidad', 'inspeccion.cuartelero']);
 
         try {
-            $html = view('emails.hallazgo-asignado-html', [
+            $html = view('emails.hallazgo-asignado', [
                 'hallazgo'    => $hallazgo,
                 'asignadoPor' => Auth::user(),
             ])->render();
