@@ -210,7 +210,7 @@ class ChecklistHallazgoController extends Controller
 
             $enviado = BrevoMailService::enviar(
                 $email,
-                "📋 Hallazgo asignado: {$item} — {$unidad} [{$severidad}]",
+                "Hallazgo asignado: {$item} — {$unidad} [{$severidad}]",
                 $html
             );
 
