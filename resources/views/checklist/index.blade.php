@@ -5,9 +5,11 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Inspecciones de Material Mayor</h4>
-    <a href="{{ route('checklist.create') }}" class="btn btn-danger">
-        <i class="bi bi-plus-lg me-1"></i>Nueva Inspección
-    </a>
+    @if(auth()->user()->esCuartelero())
+        <a href="{{ route('checklist.create') }}" class="btn btn-danger">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Inspección
+        </a>
+    @endif
 </div>
 
 @if(!auth()->user()->esCuartelero())
