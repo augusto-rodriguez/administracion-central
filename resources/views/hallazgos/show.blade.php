@@ -17,10 +17,85 @@
             · Reportado {{ $hallazgo->created_at->format('d/m/Y H:i') }}
         </small>
     </div>
-    <a href="{{ route('hallazgos.index') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Volver
-    </a>
+    @if(auth()->user()->esCuartelero())
+        <a href="{{ route('checklist.show', $hallazgo->inspeccion) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    @else
+        <a href="{{ route('hallazgos.index') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    @endif
 </div>
+
+{{-- ═══════════════════════════════════════════════════════════ --}}
+{{-- VISTA CUARTELERO: solo resumen y fotos                     --}}
+{{-- ═══════════════════════════════════════════════════════════ --}}
+@if(auth()->user()->esCuartelero())
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-2 small">
+                <div class="col-6">
+                    <span class="text-muted d-block">Unidad</span>
+                    <strong>{{ $hallazgo->inspeccion->unidad->nombre }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted d-block">Fecha inspección</span>
+                    <strong>{{ $hallazgo->inspeccion->fecha->format('d/m/Y') }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted d-block">Sección</span>
+                    <strong>{{ $hallazgo->item->seccion->nombre }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted d-block">Estado</span>
+                    @php
+                        $estadoBadge = match($hallazgo->estado) {
+                            'abierto'        => 'bg-danger',
+                            'en_revision'    => 'bg-info',
+                            'en_reparacion'  => 'bg-primary',
+                            'resuelto'       => 'bg-success',
+                            'verificado'     => 'bg-secondary',
+                            default          => 'bg-secondary',
+                        };
+                        $estadoLabel = match($hallazgo->estado) {
+                            'abierto'        => 'Abierto',
+                            'en_revision'    => 'En revisión',
+                            'en_reparacion'  => 'En reparación',
+                            'resuelto'       => 'Resuelto',
+                            'verificado'     => 'Verificado',
+                            default          => $hallazgo->estado,
+                        };
+                    @endphp
+                    <span class="badge {{ $estadoBadge }}">{{ $estadoLabel }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if($hallazgo->fotos->isNotEmpty())
+        <div class="card mb-3">
+            <div class="card-header py-2"><strong><i class="bi bi-camera me-1"></i>Fotos adjuntas</strong></div>
+            <div class="card-body">
+                <div class="row g-2">
+                    @foreach($hallazgo->fotos as $foto)
+                        <div class="col-4 col-md-3">
+                            <a href="{{ $foto->url }}" target="_blank">
+                                <img src="{{ $foto->url }}" alt="{{ $foto->nombre_original }}"
+                                     class="img-fluid rounded border" style="height: 120px; width: 100%; object-fit: cover;">
+                            </a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
+{{-- ═══════════════════════════════════════════════════════════ --}}
+{{-- VISTA COMPLETA: oficiales y admin                          --}}
+{{-- ═══════════════════════════════════════════════════════════ --}}
+@else
 
 <div class="row g-4">
     {{-- Columna principal --}}
@@ -290,11 +365,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Disparar al cargar si ya hay alguien seleccionado
     if (selectAsignado.value) {
         selectAsignado.dispatchEvent(new Event('change'));
     }
 });
 </script>
 @endpush
+
+@endif
 @endsection
