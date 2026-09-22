@@ -55,6 +55,17 @@
         </tr>
     </table>
 
+    @if($hallazgo->fotos->isNotEmpty())
+        <h4 style="margin-top: 20px;">📷 Fotos adjuntas</h4>
+        <div style="margin: 10px 0;">
+            @foreach($hallazgo->fotos as $foto)
+                <img src="{{ config('app.url') }}/storage/{{ $foto->ruta }}"
+                     alt="{{ $foto->nombre_original }}"
+                     style="width: 150px; height: 150px; object-fit: cover; border-radius: 5px; border: 1px solid #ddd; margin: 4px;">
+            @endforeach
+        </div>
+    @endif
+
     <p>Ingresa al sistema para revisar el hallazgo, cambiar su estado o agregar comentarios.</p>
 
     <div style="text-align: center; margin: 25px 0;">

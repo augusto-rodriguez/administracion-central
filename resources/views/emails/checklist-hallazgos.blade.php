@@ -82,6 +82,24 @@
         </table>
     @endif
 
+    @php
+        $hallazgosConFotos = $criticos->merge($atencion)->merge($info)->filter(fn($h) => $h->fotos->isNotEmpty());
+    @endphp
+
+    @if($hallazgosConFotos->isNotEmpty())
+        <h4>📷 Fotos adjuntas</h4>
+        @foreach($hallazgosConFotos as $h)
+            <p style="margin-bottom: 5px; font-weight: bold;">{{ $h->item->nombre }}:</p>
+            <div style="margin-bottom: 15px;">
+                @foreach($h->fotos as $foto)
+                    <img src="{{ config('app.url') }}/storage/{{ $foto->ruta }}"
+                         alt="{{ $foto->nombre_original }}"
+                         style="width: 150px; height: 150px; object-fit: cover; border-radius: 5px; border: 1px solid #ddd; margin: 4px;">
+                @endforeach
+            </div>
+        @endforeach
+    @endif
+
     @if($inspeccion->observaciones)
         <h4>Observaciones del cuartelero:</h4>
         <p style="background: #f8f9fa; padding: 12px; border-radius: 5px;">{{ $inspeccion->observaciones }}</p>

@@ -384,9 +384,9 @@ class ChecklistInspeccionController extends Controller
     {
         $hallazgos = $inspeccion->hallazgos()
             ->pendientesNotificacion()
-            ->with('item.seccion')
+            ->with(['item.seccion', 'fotos'])
             ->get();
-
+            
         if ($hallazgos->isEmpty()) return;
 
         // Obtener emails configurados

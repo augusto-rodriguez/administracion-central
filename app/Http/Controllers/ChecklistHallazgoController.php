@@ -196,7 +196,7 @@ class ChecklistHallazgoController extends Controller
 
         if (empty($email)) return null;
 
-        $hallazgo->load(['item.seccion', 'inspeccion.unidad', 'inspeccion.cuartelero']);
+        $hallazgo->load(['item.seccion', 'inspeccion.unidad', 'inspeccion.cuartelero', 'fotos']);
 
         try {
             $html = view('emails.hallazgo-asignado', [
