@@ -157,9 +157,9 @@
                                                 <td colspan="7" class="bg-light">
                                                     <div class="d-flex align-items-center gap-2 py-1">
                                                         <input type="file" class="form-control form-control-sm foto-input"
-                                                               data-item-id="{{ $item->id }}"
-                                                               accept="image/*" multiple
-                                                               style="max-width: 250px;">
+                                                            data-item-id="{{ $item->id }}"
+                                                            accept="image/*" capture="environment"
+                                                            style="max-width: 250px;">
                                                         <div class="foto-preview d-flex gap-1 flex-wrap" id="preview-{{ $item->id }}"></div>
                                                         <div class="foto-status small text-muted" id="status-{{ $item->id }}"></div>
                                                     </div>
@@ -214,10 +214,10 @@
                                             <tr class="foto-row d-none" id="foto-row-{{ $item->id }}">
                                                 <td colspan="6" class="bg-light">
                                                     <div class="d-flex align-items-center gap-2 py-1">
-                                                        <input type="file" class="form-control form-control-sm foto-input"
-                                                               data-item-id="{{ $item->id }}"
-                                                               accept="image/*" multiple
-                                                               style="max-width: 250px;">
+                                                       <input type="file" class="form-control form-control-sm foto-input"
+                                                            data-item-id="{{ $item->id }}"
+                                                            accept="image/*" capture="environment"
+                                                            style="max-width: 250px;">
                                                         <div class="foto-preview d-flex gap-1 flex-wrap" id="preview-{{ $item->id }}"></div>
                                                         <div class="foto-status small text-muted" id="status-{{ $item->id }}"></div>
                                                     </div>
