@@ -12,6 +12,70 @@ Route::post('logout', [App\Http\Controllers\AuthController::class, 'logout'])->n
 Route::middleware(['rol'])->group(function () {
 
     // ─────────────────────────────────────────────────────────────────
+    // CHECKLIST DE MATERIAL MAYOR
+    // ─────────────────────────────────────────────────────────────────
+
+    // Checklist - acceso principal
+    Route::middleware('rol:cuartelero,admin,comandante,capitan_cia')->prefix('checklist')->name('checklist.')->group(function () {
+
+        // Listado de inspecciones del cuartelero
+        Route::get('/',                      [App\Http\Controllers\ChecklistInspeccionController::class, 'index'])  ->name('index');
+
+        // Crear nueva inspección (selección de unidad)
+        Route::get('/crear',                 [App\Http\Controllers\ChecklistInspeccionController::class, 'create']) ->name('create');
+
+        // Guardar nueva inspección (crea borrador)
+        Route::post('/',                     [App\Http\Controllers\ChecklistInspeccionController::class, 'store'])  ->name('store');
+
+        // Ver/editar inspección en borrador (formulario con secciones)
+        Route::get('/{inspeccion}/editar',   [App\Http\Controllers\ChecklistInspeccionController::class, 'edit'])   ->name('edit');
+
+        // Guardar respuestas (autoguardado por sección)
+        Route::put('/{inspeccion}',          [App\Http\Controllers\ChecklistInspeccionController::class, 'update']) ->name('update');
+
+        // Completar y enviar inspección
+        Route::post('/{inspeccion}/completar', [App\Http\Controllers\ChecklistInspeccionController::class, 'completar'])->name('completar');
+
+        // Ver inspección completada (solo lectura)
+        Route::get('/{inspeccion}',          [App\Http\Controllers\ChecklistInspeccionController::class, 'show'])   ->name('show');
+
+        // Subir foto de hallazgo
+        Route::post('/{inspeccion}/foto',    [App\Http\Controllers\ChecklistInspeccionController::class, 'subirFoto'])->name('subir-foto');
+    });
+
+    // Reabrir y eliminar inspección (admin y comandante)
+    Route::middleware('rol:admin,comandante')->group(function () {
+        Route::post('checklist/{inspeccion}/reabrir', [App\Http\Controllers\ChecklistInspeccionController::class, 'reabrir'])->name('checklist.reabrir');
+        Route::delete('checklist/{inspeccion}', [App\Http\Controllers\ChecklistInspeccionController::class, 'destroy'])->name('checklist.destroy');
+    });
+
+    // Gestión de hallazgos (roles configurables)
+    Route::middleware('rol:admin,comandante,capitan_cia,cuartelero')->prefix('hallazgos')->name('hallazgos.')->group(function () {
+
+        Route::get('/',                          [App\Http\Controllers\ChecklistHallazgoController::class, 'index'])        ->name('index');
+        Route::get('/{hallazgo}',                [App\Http\Controllers\ChecklistHallazgoController::class, 'show'])         ->name('show');
+        Route::put('/{hallazgo}/estado',         [App\Http\Controllers\ChecklistHallazgoController::class, 'cambiarEstado'])->name('cambiar-estado');
+        Route::put('/{hallazgo}/asignar',        [App\Http\Controllers\ChecklistHallazgoController::class, 'asignar'])      ->name('asignar');
+        Route::post('/{hallazgo}/comentario',    [App\Http\Controllers\ChecklistHallazgoController::class, 'comentar'])     ->name('comentar');
+        Route::post('/{hallazgo}/foto',          [App\Http\Controllers\ChecklistHallazgoController::class, 'subirFoto'])    ->name('subir-foto');
+    });
+
+    // Administración de plantillas y configuración (solo admin, comandante)
+    Route::middleware('rol:admin,comandante')->prefix('checklist-plantillas')->name('checklist-plantillas.')->group(function () {
+        Route::get('/',                          [App\Http\Controllers\ChecklistPlantillaController::class, 'index'])   ->name('index');
+        Route::get('/crear',                     [App\Http\Controllers\ChecklistPlantillaController::class, 'create'])  ->name('create');
+        Route::post('/',                         [App\Http\Controllers\ChecklistPlantillaController::class, 'store'])   ->name('store');
+        Route::get('/{plantilla}/editar',        [App\Http\Controllers\ChecklistPlantillaController::class, 'edit'])    ->name('edit');
+        Route::put('/{plantilla}',               [App\Http\Controllers\ChecklistPlantillaController::class, 'update'])  ->name('update');
+    });
+
+    // Configuración del módulo checklist (solo admin, comandante)
+    Route::middleware('rol:admin,comandante')->group(function () {
+        Route::get('checklist-config',  [App\Http\Controllers\ChecklistConfigController::class, 'index']) ->name('checklist-config.index');
+        Route::put('checklist-config',  [App\Http\Controllers\ChecklistConfigController::class, 'update'])->name('checklist-config.update');
+    });
+
+    // ─────────────────────────────────────────────────────────────────
     // DASHBOARD Y RUTAS COMUNES (todos los roles)
     // ─────────────────────────────────────────────────────────────────
     Route::get('/', fn() => redirect()->route('dashboard'));
@@ -90,7 +154,6 @@ Route::middleware(['rol'])->group(function () {
             [App\Http\Controllers\SalidaUnidadController::class, 'ultimoKm'])
             ->name('salidas.ultimo-km');
 
-        // ── NUEVA: conductores autorizados para una unidad (AJAX, sin turno requerido)
         Route::get('salidas/conductores-autorizados/{unidad}',
             [App\Http\Controllers\SalidaUnidadController::class, 'conductoresAutorizados'])
             ->name('salidas.conductores-autorizados');
@@ -104,7 +167,6 @@ Route::middleware(['rol'])->group(function () {
             [App\Http\Controllers\SalidaUnidadController::class, 'retornarTurnoCuartelero'])
             ->name('salidas.retornar-turno-cuartelero');
 
-        // Rutas CRUD existentes
         Route::resource('salidas', App\Http\Controllers\SalidaUnidadController::class)
             ->only(['index', 'store', 'edit', 'update']);
 
@@ -120,7 +182,6 @@ Route::middleware(['rol'])->group(function () {
         Route::post('salidas/{salida}/sobresalida',
             [App\Http\Controllers\SalidaUnidadController::class, 'storeSobresalida'])
             ->name('salidas.sobresalida.store');
-        // ─────────────────────────────────────────────────────────────────
 
         // Turnos cuarteleros
         Route::post('cuarteleros-turnos/confirmar',                    [App\Http\Controllers\TurnoCuarteleroController::class, 'storeConfirmado'])->name('cuarteleros.turnos.confirmar');
@@ -163,7 +224,6 @@ Route::middleware(['rol'])->group(function () {
     Route::middleware('rol:admin,comandante')->group(function () {
 
         Route::get('reportes/combustible',        [App\Http\Controllers\ReporteController::class, 'combustible'])        ->name('reportes.combustible');
-       
 
         Route::resource('claves-salida', App\Http\Controllers\ClaveSalidaController::class)
             ->only(['index', 'create', 'store', 'edit', 'update']);

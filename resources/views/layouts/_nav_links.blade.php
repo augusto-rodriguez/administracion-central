@@ -87,6 +87,37 @@
     </a>
 @endif
 
+{{-- ── CHECKLIST MATERIAL MAYOR ───────────────────────────── --}}
+@if(auth()->user()->esCuartelero() || auth()->user()->esAdmin() || auth()->user()->esComandante() || auth()->user()->esCapitanCia())
+    <hr class="nav-divider" style="border-color:#2d2d44;margin:8px 16px;">
+    <div class="nav-section-label" style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">
+        Checklist Material Mayor
+    </div>
+
+    <a href="{{ route('checklist.index') }}"
+       class="nav-link {{ request()->routeIs('checklist.*') ? 'active' : '' }}">
+        <i class="bi bi-clipboard-check me-2"></i> Checklist
+    </a>
+
+    @if(!auth()->user()->esCuartelero())
+        <a href="{{ route('hallazgos.index') }}"
+           class="nav-link {{ request()->routeIs('hallazgos.*') ? 'active' : '' }}">
+            <i class="bi bi-exclamation-diamond me-2"></i> Hallazgos
+        </a>
+    @endif
+
+    @if(auth()->user()->esAdmin() || auth()->user()->esComandante())
+        <a href="{{ route('checklist-plantillas.index') }}"
+           class="nav-link {{ request()->routeIs('checklist-plantillas.*') ? 'active' : '' }}">
+            <i class="bi bi-gear me-2"></i> Plantillas Checklist
+        </a>
+        <a href="{{ route('checklist-config.index') }}"
+           class="nav-link {{ request()->routeIs('checklist-config.*') ? 'active' : '' }}">
+            <i class="bi bi-sliders me-2"></i> Config. Checklist
+        </a>
+    @endif
+@endif
+
 {{-- ── REPORTES ───────────────────────────────────────────── --}}
 <hr class="nav-divider" style="border-color:#2d2d44;margin:8px 16px;">
 <div class="nav-section-label" style="padding:4px 20px;font-size:0.7rem;color:#6c757d;text-transform:uppercase;letter-spacing:1px;">

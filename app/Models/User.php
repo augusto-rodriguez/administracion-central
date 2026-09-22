@@ -10,7 +10,7 @@ class User extends Authenticatable
     use Notifiable;
 
     protected $fillable = [
-        'voluntario_id', 'nombre', 'email', 'password', 'rol', 'activo'
+        'voluntario_id', 'cuartelero_id', 'nombre', 'email', 'password', 'rol', 'activo'
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -40,5 +40,9 @@ class User extends Authenticatable
     public function esOperador(): bool
     {
         return in_array($this->rol, ['admin', 'comandante', 'capitan_cia', 'operador']);
+    }
+    public function esCuartelero(): bool
+    {
+        return $this->rol === 'cuartelero';
     }
 }

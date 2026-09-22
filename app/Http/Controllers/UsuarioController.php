@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Voluntario;
+use App\Models\Cuartelero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -26,7 +27,9 @@ class UsuarioController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        return view('usuarios.create', compact('voluntarios'));
+        $cuarteleros = Cuartelero::orderBy('nombre')->get();
+
+        return view('usuarios.create', compact('voluntarios', 'cuarteleros'));
     }
 
     public function store(Request $request)
@@ -35,8 +38,9 @@ class UsuarioController extends Controller
             'nombre'        => 'required|string|max:255',
             'email'         => 'required|email|unique:users,email',
             'password'      => 'required|min:6|confirmed',
-            'rol'           => 'required|in:admin,comandante,capitan_cia,operador',
+            'rol'           => 'required|in:admin,comandante,capitan_cia,operador,cuartelero',
             'voluntario_id' => 'nullable|exists:voluntarios,id',
+            'cuartelero_id' => 'required_if:rol,cuartelero|nullable|exists:cuarteleros,id',
         ]);
 
         // Validar unicidad de capitan_cia por compañía
@@ -53,6 +57,7 @@ class UsuarioController extends Controller
             'password'      => Hash::make($request->password),
             'rol'           => $request->rol,
             'voluntario_id' => $request->voluntario_id,
+            'cuartelero_id' => $request->rol === 'cuartelero' ? $request->cuartelero_id : null,
             'activo'        => true,
         ]);
 
@@ -71,7 +76,9 @@ class UsuarioController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        return view('usuarios.edit', compact('usuario', 'voluntarios'));
+        $cuarteleros = Cuartelero::orderBy('nombre')->get();
+
+        return view('usuarios.edit', compact('usuario', 'voluntarios', 'cuarteleros'));
     }
 
     public function update(Request $request, User $usuario)
@@ -80,8 +87,9 @@ class UsuarioController extends Controller
             'nombre'        => 'required|string|max:255',
             'email'         => 'required|email|unique:users,email,' . $usuario->id,
             'password'      => 'nullable|min:6|confirmed',
-            'rol'           => 'required|in:admin,comandante,capitan_cia,operador',
+            'rol'           => 'required|in:admin,comandante,capitan_cia,operador,cuartelero',
             'voluntario_id' => 'nullable|exists:voluntarios,id',
+            'cuartelero_id' => 'required_if:rol,cuartelero|nullable|exists:cuarteleros,id',
             'activo'        => 'boolean',
         ]);
 
@@ -97,6 +105,8 @@ class UsuarioController extends Controller
         $voluntarioAnterior = $usuario->voluntario_id;
 
         $data = $request->only('nombre', 'email', 'rol', 'voluntario_id', 'activo');
+        $data['cuartelero_id'] = $request->rol === 'cuartelero' ? $request->cuartelero_id : null;
+
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
         }
@@ -126,14 +136,13 @@ class UsuarioController extends Controller
 
     /**
      * Verifica que no exista otro usuario con rol capitan_cia en la misma compañía.
-     * Retorna el mensaje de error o null si todo está OK.
      */
     private function validarCapitanUnico(int $voluntarioId, ?int $excluirUserId = null): ?string
     {
         $voluntario = Voluntario::with('compania')->find($voluntarioId);
 
         if (!$voluntario || !$voluntario->compania_id) {
-            return null; // Sin compañía, no aplica la restricción
+            return null;
         }
 
         $query = User::where('rol', 'capitan_cia')
@@ -185,21 +194,17 @@ class UsuarioController extends Controller
 
     public function destroy(User $usuario)
     {
-        // No permitir eliminar al propio usuario logueado
         if ($usuario->id === auth()->id()) {
             return redirect()->route('usuarios.index')
                              ->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
-        // No permitir eliminar al admin principal (rol admin)
         if ($usuario->rol === 'admin') {
             return redirect()->route('usuarios.index')
                              ->with('error', 'No se puede eliminar un usuario Administrador.');
         }
 
         $nombre = $usuario->nombre;
-
-        // Solo se elimina el usuario — el voluntario vinculado NO se toca
         $usuario->delete();
 
         return redirect()->route('usuarios.index')

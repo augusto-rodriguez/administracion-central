@@ -9,7 +9,7 @@ class Unidad extends Model
     protected $table = 'unidades';
 
     protected $fillable = [
-        'compania_id', 'nombre', 'patente', 'tipo', 'descripcion', 'activa'
+        'compania_id', 'nombre', 'patente', 'tipo', 'descripcion', 'activa', 'checklist_plantilla_id'
     ];
 
     public function compania()
@@ -34,5 +34,15 @@ class Unidad extends Model
     public function salidas()
     {
         return $this->hasMany(SalidaUnidad::class);
+    }
+
+    public function cuarteleros()
+    {
+        return $this->belongsToMany(Cuartelero::class, 'cuartelero_unidad');
+    }
+
+    public function checklistPlantilla()
+    {
+        return $this->belongsTo(\App\Models\ChecklistPlantilla::class, 'checklist_plantilla_id');
     }
 }

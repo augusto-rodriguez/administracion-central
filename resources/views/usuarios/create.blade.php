@@ -105,8 +105,30 @@
                         <option value="operador"    {{ old('rol') == 'operador'    ? 'selected' : '' }}>Operador</option>
                         <option value="capitan_cia" {{ old('rol') == 'capitan_cia' ? 'selected' : '' }}>Capitán Cía</option>
                         <option value="comandante"  {{ old('rol') == 'comandante'  ? 'selected' : '' }}>Comandante</option>
+                        <option value="cuartelero"  {{ old('rol') == 'cuartelero'  ? 'selected' : '' }}>Cuartelero</option>
                     </select>
                     @error('rol') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
+            {{-- Selector de cuartelero (solo visible si rol = cuartelero) --}}
+            <div class="row g-3 mt-1" id="cuarteleroGroup" style="display: none;">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-person-gear me-1"></i>
+                        Vincular a cuartelero <span class="text-danger">*</span>
+                    </label>
+                    <select name="cuartelero_id" id="selectCuartelero"
+                            class="form-select @error('cuartelero_id') is-invalid @enderror">
+                        <option value="">Seleccionar cuartelero...</option>
+                        @foreach($cuarteleros as $cuartelero)
+                            <option value="{{ $cuartelero->id }}" {{ old('cuartelero_id') == $cuartelero->id ? 'selected' : '' }}>
+                                {{ $cuartelero->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">El usuario podrá realizar inspecciones de las unidades asignadas a este cuartelero.</div>
+                    @error('cuartelero_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             </div>
 
@@ -121,9 +143,34 @@
 
 @push('scripts')
 <script>
+// ── Mostrar/ocultar selector de cuartelero según rol ──
+document.getElementById('selectRol').addEventListener('change', function() {
+    const cuarteleroGroup = document.getElementById('cuarteleroGroup');
+    const voluntarioGroup = document.getElementById('selectVoluntario').closest('.row');
+
+    if (this.value === 'cuartelero') {
+        cuarteleroGroup.style.display = '';
+        document.getElementById('selectCuartelero').setAttribute('required', true);
+        // Ocultar vinculación a voluntario (cuarteleros no son voluntarios)
+        voluntarioGroup.style.display = 'none';
+        document.getElementById('selectVoluntario').value = '';
+    } else {
+        cuarteleroGroup.style.display = 'none';
+        document.getElementById('selectCuartelero').removeAttribute('required');
+        voluntarioGroup.style.display = '';
+    }
+});
+
+// Al cargar, si ya estaba seleccionado cuartelero (por old())
+if (document.getElementById('selectRol').value === 'cuartelero') {
+    document.getElementById('cuarteleroGroup').style.display = '';
+    document.getElementById('selectCuartelero').setAttribute('required', true);
+    document.getElementById('selectVoluntario').closest('.row').style.display = 'none';
+}
+
+// ── Lógica existente de voluntarios y comandantes ──
 const ordinal = { '1': '1er', '2': '2do', '3': '3er' };
 
-// Mapa compania_id → nombre del capitán actual (viene del servidor)
 const capitanesPorCompania = @json(
     \App\Models\User::where('rol', 'capitan_cia')
         ->whereNotNull('voluntario_id')
@@ -207,12 +254,9 @@ document.getElementById('selectVoluntario').addEventListener('change', function 
         alerta.classList.remove('d-flex');
     }
 
-    // Verificar conflicto de capitán con el nuevo voluntario seleccionado
     verificarCapitanDuplicado(companiaId);
 });
 
-// Al cargar la página, si hay un voluntario preseleccionado (old() tras error de validación)
-// disparar la lógica manualmente para que las alertas muestren contenido correcto
 document.addEventListener('DOMContentLoaded', function () {
     const selectVoluntario = document.getElementById('selectVoluntario');
     if (selectVoluntario.value) {
