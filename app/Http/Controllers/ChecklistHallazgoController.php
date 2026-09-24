@@ -82,7 +82,7 @@ class ChecklistHallazgoController extends Controller
     public function cambiarEstado(Request $request, ChecklistHallazgo $hallazgo)
     {
         $request->validate([
-            'estado'     => 'required|in:abierto,en_revision,en_reparacion,resuelto,verificado',
+            'estado'     => 'required|in:abierto,en_revision,en_reparacion,resuelto_verificado',
             'comentario' => 'nullable|string|max:2000',
         ]);
 

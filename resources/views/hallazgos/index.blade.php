@@ -20,8 +20,7 @@
                     <option value="abierto" {{ request('estado') === 'abierto' ? 'selected' : '' }}>Abierto</option>
                     <option value="en_revision" {{ request('estado') === 'en_revision' ? 'selected' : '' }}>En revisión</option>
                     <option value="en_reparacion" {{ request('estado') === 'en_reparacion' ? 'selected' : '' }}>En reparación</option>
-                    <option value="resuelto" {{ request('estado') === 'resuelto' ? 'selected' : '' }}>Resuelto</option>
-                    <option value="verificado" {{ request('estado') === 'verificado' ? 'selected' : '' }}>Verificado</option>
+                    <option value="resuelto_verificado" {{ request('estado') === 'resuelto_verificado' ? 'selected' : '' }}>Resuelto y Verificado</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -67,20 +66,18 @@
                     <div class="text-end flex-shrink-0">
                         @php
                             $estadoBadge = match($hallazgo->estado) {
-                                'abierto'        => 'bg-danger',
-                                'en_revision'    => 'bg-info',
-                                'en_reparacion'  => 'bg-primary',
-                                'resuelto'       => 'bg-success',
-                                'verificado'     => 'bg-secondary',
-                                default          => 'bg-secondary',
+                                'abierto'               => 'bg-danger',
+                                'en_revision'           => 'bg-info',
+                                'en_reparacion'         => 'bg-primary',
+                                'resuelto_verificado'   => 'bg-success',
+                                default                 => 'bg-secondary',
                             };
                             $estadoLabel = match($hallazgo->estado) {
-                                'abierto'        => 'Abierto',
-                                'en_revision'    => 'En revisión',
-                                'en_reparacion'  => 'En reparación',
-                                'resuelto'       => 'Resuelto',
-                                'verificado'     => 'Verificado',
-                                default          => $hallazgo->estado,
+                                'abierto'               => 'Abierto',
+                                'en_revision'           => 'En revisión',
+                                'en_reparacion'         => 'En reparación',
+                                'resuelto_verificado'   => 'Resuelto y Verificado',
+                                default                 => $hallazgo->estado,
                             };
                         @endphp
                         <span class="badge {{ $estadoBadge }}">{{ $estadoLabel }}</span>

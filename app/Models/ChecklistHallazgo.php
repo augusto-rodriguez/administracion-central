@@ -76,7 +76,7 @@ class ChecklistHallazgo extends Model
 
     public function scopeAbiertos($query)
     {
-        return $query->whereNotIn('estado', ['resuelto', 'verificado']);
+        return $query->where('estado', '!=', 'resuelto_verificado');
     }
 
     public function scopeCriticos($query)
@@ -105,15 +105,13 @@ class ChecklistHallazgo extends Model
 
         $this->update(['estado' => $nuevoEstado]);
 
-        // Si se resuelve, registrar quién y cuándo
-        if ($nuevoEstado === 'resuelto') {
+        if ($nuevoEstado === 'resuelto_verificado') {
             $this->update([
                 'resuelto_at'  => now(),
                 'resuelto_por' => $usuario->id,
             ]);
         }
 
-        // Registrar el cambio en el historial de comentarios
         $this->comentarios()->create([
             'user_id'         => $usuario->id,
             'comentario'      => $comentario ?? "Estado cambiado de {$estadoAnterior} a {$nuevoEstado}.",
@@ -122,14 +120,15 @@ class ChecklistHallazgo extends Model
         ]);
     }
 
+    public function estaAbierto(): bool
+    {
+        return $this->estado !== 'resuelto_verificado';
+    }
+
+
     public function esCritico(): bool
     {
         return $this->severidad === 'critico';
-    }
-
-    public function estaAbierto(): bool
-    {
-        return !in_array($this->estado, ['resuelto', 'verificado']);
     }
 
     /**
