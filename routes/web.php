@@ -41,7 +41,9 @@ Route::middleware(['rol'])->group(function () {
 
         // Subir foto de hallazgo
         Route::post('/{inspeccion}/foto',    [App\Http\Controllers\ChecklistInspeccionController::class, 'subirFoto'])->name('subir-foto');
-    });
+        Route::get('/{inspeccion}/pdf', [App\Http\Controllers\ChecklistInspeccionController::class, 'exportarPdf'])->name('pdf');
+    
+        });
 
     // Reabrir y eliminar inspección (admin y comandante)
     Route::middleware('rol:admin,comandante')->group(function () {

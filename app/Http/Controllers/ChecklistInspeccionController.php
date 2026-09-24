@@ -378,6 +378,32 @@ class ChecklistInspeccionController extends Controller
     }
 
     /**
+     * Exportar inspección a PDF.
+     */
+    public function exportarPdf(ChecklistInspeccion $inspeccion)
+    {
+        $this->autorizarAcceso($inspeccion);
+
+        $inspeccion->load([
+            'unidad.compania',
+            'cuartelero',
+            'plantilla.secciones' => fn($q) => $q->orderBy('orden'),
+            'plantilla.secciones.items' => fn($q) => $q->orderBy('orden'),
+            'respuestas',
+            'hallazgos.item.seccion',
+            'hallazgos.fotos',
+        ]);
+
+        $respuestasMap = $inspeccion->respuestas->keyBy('item_id');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('checklist.pdf', compact('inspeccion', 'respuestasMap'));
+
+        $nombre = 'Inspeccion_' . $inspeccion->unidad->nombre . '_' . $inspeccion->fecha->format('d-m-Y') . '.pdf';
+
+        return $pdf->download($nombre);
+    }
+
+    /**
      * Envía correos de notificación según la severidad de los hallazgos.
      */
     private function notificarHallazgos(ChecklistInspeccion $inspeccion): void

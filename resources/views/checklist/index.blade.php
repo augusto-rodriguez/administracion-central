@@ -92,6 +92,14 @@
                                 <a href="{{ route('checklist.show', $inspeccion) }}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-eye me-1"></i>Ver
                                 </a>
+                                @if($inspeccion->estado === 'completado')
+                                    <a href="{{ route('checklist.pdf', $inspeccion) }}"
+                                    class="btn btn-sm btn-outline-danger"
+                                    target="_blank"
+                                    title="Descargar reporte PDF">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                                    </a>
+                                @endif
                             @endif
 
                             @if(auth()->user()->esAdmin() || auth()->user()->esComandante())
