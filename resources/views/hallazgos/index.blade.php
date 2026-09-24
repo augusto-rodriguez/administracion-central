@@ -16,7 +16,7 @@
             <div class="col-md-3">
                 <label class="form-label small fw-bold mb-1">Estado</label>
                 <select name="estado" class="form-select form-select-sm">
-                    <option value="">Abiertos</option>
+                    <!-- <option value="">Abiertos</option> -->
                     <option value="abierto" {{ request('estado') === 'abierto' ? 'selected' : '' }}>Abierto</option>
                     <option value="en_revision" {{ request('estado') === 'en_revision' ? 'selected' : '' }}>En revisión</option>
                     <option value="en_reparacion" {{ request('estado') === 'en_reparacion' ? 'selected' : '' }}>En reparación</option>
