@@ -18,14 +18,23 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'login'    => 'required|string|max:255',
             'password' => 'required',
+        ], [], [
+            'login' => 'email o RUT',
         ]);
 
-        $credentials = $request->only('email', 'password');
-        $remember    = $request->boolean('remember');
+        $identificador = trim($request->input('login'));
+        $remember      = $request->boolean('remember');
 
-        if (Auth::attempt(array_merge($credentials, ['activo' => true]), $remember)) {
+        // ✅ Buscar usuario por email o por RUT (voluntarios / cuarteleros)
+        $user = $this->buscarUsuario($identificador);
+
+        if ($user && Auth::attempt([
+            'email'    => $user->email,
+            'password' => $request->input('password'),
+            'activo'   => true,
+        ], $remember)) {
             $request->session()->regenerate();
 
             // ✅ Registrar login exitoso
@@ -35,18 +44,15 @@ class AuthController extends Controller
         }
 
         // ✅ Registrar intento fallido con motivo
-        $motivo = User::where('email', $request->email)
-            ->where('activo', false)
-            ->exists()
-                ? 'cuenta_inactiva'
-                : 'credenciales_invalidas';
+        $motivo = ($user && ! $user->activo)
+            ? 'cuenta_inactiva'
+            : 'credenciales_invalidas';
 
-        $user = User::where('email', $request->email)->first();
         $this->registrarLog($request, 'failed', false, $user, $motivo);
 
         return back()->withErrors([
-            'email' => 'Credenciales incorrectas o cuenta desactivada.',
-        ])->onlyInput('email');
+            'login' => 'Credenciales incorrectas o cuenta desactivada.',
+        ])->onlyInput('login');
     }
 
     public function logout(Request $request)
@@ -64,6 +70,40 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
+    // ─── Búsqueda de usuario por email o RUT ─────────────────────────
+
+    private function buscarUsuario(string $identificador): ?User
+    {
+        // Si trae @ se trata como email
+        if (str_contains($identificador, '@')) {
+            return User::where('email', $identificador)->first();
+        }
+
+        // Si no, se trata como RUT
+        $rut = $this->limpiarRut($identificador);
+        if (strlen($rut) < 2) return null;
+
+        // Se compara el RUT limpio contra el RUT guardado sin puntos ni guion,
+        // así funciona sin importar si en la BD está como 12.345.678-9 o 12345678-9
+        $rutSql = "UPPER(REPLACE(REPLACE(REPLACE(rut, '.', ''), '-', ''), ' ', '')) = ?";
+
+        return User::where(function ($q) use ($rut, $rutSql) {
+            $q->whereIn('voluntario_id', function ($sub) use ($rut, $rutSql) {
+                $sub->select('id')->from('voluntarios')->whereRaw($rutSql, [$rut]);
+            })->orWhereIn('cuartelero_id', function ($sub) use ($rut, $rutSql) {
+                $sub->select('id')->from('cuarteleros')->whereRaw($rutSql, [$rut]);
+            });
+        })->first();
+    }
+
+    /**
+     * Deja el RUT solo con números y K: "12.345.678-k" → "12345678K"
+     */
+    private function limpiarRut(string $rut): string
+    {
+        return strtoupper(preg_replace('/[^0-9kK]/', '', $rut));
+    }
+
     // ─── Método privado para registrar el log ────────────────────────
 
     private function registrarLog(
@@ -78,7 +118,8 @@ class AuthController extends Controller
         LoginLog::create([
             'user_id'      => $user?->id,
             'evento'       => $evento,
-            'email' => $request->input('email') ?? $user?->email,
+            // Si se encontró el usuario se guarda su email; si no, lo que escribió (email o RUT)
+            'email'        => $user?->email ?? $request->input('login'),
             'ip'           => $request->ip(),
             'user_agent'   => mb_substr($ua, 0, 512),
             'navegador'    => $this->parsearNavegador($ua),
