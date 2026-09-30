@@ -16,7 +16,11 @@
     body { background-color: #f8f9fa; }
 
     /* ── Sidebar desktop ──────────────────────────── */
-    .sidebar { min-height:100vh; background:#1a1a2e; color:white; }
+    .sidebar {
+        background:#1a1a2e; color:white;
+        position:sticky; top:0; height:100vh; overflow-y:auto;
+        scrollbar-width:thin; scrollbar-color:#2d2d44 transparent;
+    }
     .sidebar .nav-link { color:#adb5bd; padding:10px 20px; border-radius:6px; margin:2px 8px; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active { background:#e63946; color:white; }
     .sidebar .brand { padding:20px; border-bottom:1px solid #2d2d44; font-size:1.1rem; font-weight:bold; }
@@ -24,6 +28,20 @@
     .card { border:none; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
     .pagination { font-size:0.85rem; }
     .pagination .page-link { padding:0.25rem 0.6rem; }
+
+    /* ── Secciones colapsables del menú ───────────── */
+    .nav-section-toggle {
+        display:flex; align-items:center; justify-content:space-between;
+        width:calc(100% - 16px); margin:6px 8px 2px; padding:8px 12px;
+        background:none; border:0; border-radius:6px;
+        color:#8a8fa3; font-size:0.72rem; font-weight:600;
+        text-transform:uppercase; letter-spacing:1px; text-align:left;
+    }
+    .nav-section-toggle:hover { color:#fff; background:rgba(255,255,255,0.04); }
+    .nav-section-toggle.has-active { color:#e9ecef; }
+    .nav-section-toggle .chevron { font-size:0.75rem; transition:transform .2s ease; }
+    .nav-section-toggle.collapsed .chevron { transform:rotate(-90deg); }
+    .nav-section .nav-link { padding-left:32px !important; font-size:0.9rem; }
 
     /* ── Navbar móvil ─────────────────────────────── */
     .mobile-navbar {
@@ -103,8 +121,8 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body p-0 d-flex flex-column">
-        <nav class="nav flex-column flex-grow-1 pt-2">
-            @include('layouts._nav_links')
+        <nav class="nav flex-column flex-grow-1 pt-2" id="oc-menu">
+            @include('layouts._nav_links', ['prefix' => 'oc'])
         </nav>
 
         <hr class="nav-divider">
@@ -142,8 +160,8 @@
         </div>
     </div>
 
-    <nav class="nav flex-column mt-3">
-        @include('layouts._nav_links')
+    <nav class="nav flex-column mt-3" id="sb-menu">
+        @include('layouts._nav_links', ['prefix' => 'sb'])
     </nav>
 
     <hr style="border-color:#2d2d44;margin:8px 16px;">
