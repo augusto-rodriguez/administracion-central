@@ -49,7 +49,7 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold">Email o RUT</label>
                     <input type="text" name="login" class="form-control @error('login') is-invalid @enderror"
-                           value="{{ old('login') }}" placeholder="correo@ejemplo.cl o 12.345.678-9"
+                           value="{{ old('login') }}" placeholder=""
                            autocomplete="username" autofocus required>
                     @error('login')
                         <div class="invalid-feedback">{{ $message }}</div>
