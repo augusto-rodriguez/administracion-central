@@ -159,11 +159,14 @@ class TurnoCuarteleroController extends Controller
 
         $unidadesNuevas = array_map('intval', $formData['unidades']);
 
+        // Conductor secundario: se suma al servicio SIN reemplazar al conductor actual
+        $esSecundario = $request->input('modo') === 'secundario';
+
         // Recopilar turnos afectados con unidades cargadas ANTES de modificar nada
         $turnosMaquinistasAfectados = collect();
         $turnosCuarterosAfectados   = collect();
 
-        foreach ($unidadesNuevas as $unidadId) {
+        foreach ($esSecundario ? [] : $unidadesNuevas as $unidadId) {
 
             $turnoMaquinista = \App\Models\RegistroTurno::whereNull('salida_at')
                 ->whereHas('unidades', fn($q) => $q->where('unidades.id', $unidadId))
@@ -226,13 +229,15 @@ class TurnoCuarteleroController extends Controller
                 'cuartelero_id' => $formData['cuartelero_id'],
                 'entrada_at'    => $entradaAt,
                 'observaciones' => $formData['observaciones'] ?? null,
+                'es_secundario' => $esSecundario,
             ]);
             $turno->unidades()->attach($unidadesNuevas);
         }
 
         session()->forget(['unidades_en_uso_cuartelero', 'unidades_en_salida_cuartelero', 'form_data_cuartelero']);
 
-        return redirect()->route('turnos.index')->with('success', 'Cambio de turno registrado.');
+        return redirect()->route('turnos.index')->with('success',
+            $esSecundario ? 'Conductor secundario registrado.' : 'Cambio de turno registrado.');
     }
 
     public function registrarSalida(RegistroTurnoCuartelero $turno)

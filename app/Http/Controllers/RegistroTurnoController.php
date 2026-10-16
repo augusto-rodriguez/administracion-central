@@ -227,11 +227,14 @@ class RegistroTurnoController extends Controller
 
         $unidadesNuevas = array_map('intval', $formData['unidades']);
 
+        // Conductor secundario: se suma al servicio SIN reemplazar al conductor actual
+        $esSecundario = $request->input('modo') === 'secundario';
+
         // Recopilar turnos afectados con unidades cargadas ANTES de modificar nada
         $turnosMaquinistasAfectados = collect();
         $turnosCuarterosAfectados   = collect();
 
-        foreach ($unidadesNuevas as $unidadId) {
+        foreach ($esSecundario ? [] : $unidadesNuevas as $unidadId) {
 
             $turnoMaquinista = RegistroTurno::whereNull('salida_at')
                 ->where('voluntario_id', '!=', $formData['voluntario_id'])
@@ -292,12 +295,14 @@ class RegistroTurnoController extends Controller
                 $unidadesNuevas,
                 $formData['observaciones'] ?? null,
                 $formData['entrada_at'] ?? null,
+                $esSecundario,
             );
         }
 
         session()->forget(['unidades_en_uso', 'unidades_en_salida', 'form_data']);
 
-        return redirect()->route('turnos.index')->with('success', 'Cambio de turno registrado.');
+        return redirect()->route('turnos.index')->with('success',
+            $esSecundario ? 'Conductor secundario registrado.' : 'Cambio de turno registrado.');
     }
 
     public function registrarSalida(RegistroTurno $turno)
@@ -418,12 +423,13 @@ class RegistroTurnoController extends Controller
             ->with('success', "Unidad {$unidad->nombre} removida del turno.");
     }
 
-    private function crearTurno($voluntarioId, $unidades, $observaciones = null, $entradaAt = null)
+    private function crearTurno($voluntarioId, $unidades, $observaciones = null, $entradaAt = null, $esSecundario = false)
     {
         $turno = RegistroTurno::create([
             'voluntario_id' => $voluntarioId,
             'entrada_at'    => $entradaAt ? Carbon::parse($entradaAt) : now(),
             'observaciones' => $observaciones,
+            'es_secundario' => $esSecundario,
         ]);
 
         $turno->unidades()->attach($unidades);

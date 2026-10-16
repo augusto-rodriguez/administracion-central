@@ -43,9 +43,14 @@
             <input type="hidden" name="unidades[]" value="{{ $uid }}">
         @endforeach
         <div class="d-flex flex-column flex-sm-row gap-2">
-            <button type="submit" class="btn btn-warning btn-sm">
-                <i class="bi bi-arrow-left-right me-1"></i>Sí, continuar
+            <button type="submit" name="modo" value="reemplazo" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Sí, continuar (reemplazar)
             </button>
+            @if(!empty(session('unidades_en_uso')))
+            <button type="submit" name="modo" value="secundario" class="btn btn-dark btn-sm">
+                <i class="bi bi-person-plus me-1"></i>Agregar como conductor secundario
+            </button>
+            @endif
             <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
         </div>
     </form>
@@ -88,9 +93,14 @@
             <input type="hidden" name="unidades[]" value="{{ $uid }}">
         @endforeach
         <div class="d-flex flex-column flex-sm-row gap-2">
-            <button type="submit" class="btn btn-warning btn-sm">
-                <i class="bi bi-arrow-left-right me-1"></i>Sí, continuar
+            <button type="submit" name="modo" value="reemplazo" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-left-right me-1"></i>Sí, continuar (reemplazar)
             </button>
+            @if(!empty(session('unidades_en_uso_cuartelero')))
+            <button type="submit" name="modo" value="secundario" class="btn btn-dark btn-sm">
+                <i class="bi bi-person-plus me-1"></i>Agregar como conductor secundario
+            </button>
+            @endif
             <a href="{{ route('turnos.index') }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
         </div>
     </form>
@@ -292,6 +302,21 @@
     $enServicioCuarteleros = \App\Models\RegistroTurnoCuartelero::with(['cuartelero.compania', 'unidades'])
         ->whereNull('salida_at')->orderBy('entrada_at', 'desc')->get();
     $totalEnServicio = $enServicioMaquinistas->count() + $enServicioCuarteleros->count();
+
+    // Conductores secundarios: a quién acompañan (principales activos que comparten unidades).
+    // Si el principal ya se retiró, la lista queda vacía y el secundario se muestra como principal.
+    $principalesActivos = $enServicioMaquinistas->where('es_secundario', false)
+        ->map(fn($t) => ['nombre' => $t->voluntario->nombre, 'unidades' => $t->unidades->pluck('id')])
+        ->concat($enServicioCuarteleros->where('es_secundario', false)
+            ->map(fn($t) => ['nombre' => $t->cuartelero->nombre, 'unidades' => $t->unidades->pluck('id')]));
+
+    $acompanaA = function ($turno) use ($principalesActivos) {
+        if (!$turno->es_secundario) return [];
+        $ids = $turno->unidades->pluck('id');
+        return $principalesActivos
+            ->filter(fn($p) => $p['unidades']->intersect($ids)->isNotEmpty())
+            ->pluck('nombre')->unique()->values()->all();
+    };
 @endphp
 
 @if($totalEnServicio)
@@ -326,7 +351,13 @@
                     @foreach($enServicioMaquinistas as $turno)
                     <tr class="table-danger bg-opacity-25">
                         <td><span class="badge bg-danger"><i class="bi bi-person-badge me-1"></i>Maq.</span></td>
-                        <td class="fw-bold text-nowrap">{{ $turno->voluntario->nombre }}</td>
+                        <td class="fw-bold text-nowrap">{{ $turno->voluntario->nombre }}
+                            @php $conQuien = $acompanaA($turno); @endphp
+                            @if($conQuien)
+                                <span class="badge bg-warning text-dark ms-1"><i class="bi bi-person-plus me-1"></i>2° conductor</span>
+                                <div class="small text-muted fw-normal">con {{ implode(', ', $conQuien) }}</div>
+                            @endif
+                        </td>
                         <td class="text-nowrap">{{ $turno->voluntario->compania->nombre }}</td>
                         <td>
                             @foreach($turno->unidades as $unidad)
@@ -354,7 +385,13 @@
                     @foreach($enServicioCuarteleros as $turno)
                     <tr class="table-primary bg-opacity-25">
                         <td><span class="badge bg-primary"><i class="bi bi-person-gear me-1"></i>Cuart.</span></td>
-                        <td class="fw-bold text-nowrap">{{ $turno->cuartelero->nombre }}</td>
+                        <td class="fw-bold text-nowrap">{{ $turno->cuartelero->nombre }}
+                            @php $conQuien = $acompanaA($turno); @endphp
+                            @if($conQuien)
+                                <span class="badge bg-warning text-dark ms-1"><i class="bi bi-person-plus me-1"></i>2° conductor</span>
+                                <div class="small text-muted fw-normal">con {{ implode(', ', $conQuien) }}</div>
+                            @endif
+                        </td>
                         <td class="text-nowrap">{{ $turno->cuartelero->compania->nombre }}</td>
                         <td>
                             @foreach($turno->unidades as $unidad)
@@ -390,6 +427,11 @@
                         <div>
                             <span class="badge bg-danger me-1"><i class="bi bi-person-badge me-1"></i>Maq.</span>
                             <span class="fw-bold">{{ $turno->voluntario->nombre }}</span>
+                            @php $conQuien = $acompanaA($turno); @endphp
+                            @if($conQuien)
+                                <span class="badge bg-warning text-dark ms-1"><i class="bi bi-person-plus me-1"></i>2° conductor</span>
+                                <div class="small text-muted fw-normal">con {{ implode(', ', $conQuien) }}</div>
+                            @endif
                             <div class="text-muted small">{{ $turno->voluntario->compania->nombre }}</div>
                         </div>
                         <button type="button" class="btn btn-sm btn-danger btn-salida-turno flex-shrink-0"
@@ -424,6 +466,11 @@
                         <div>
                             <span class="badge bg-primary me-1"><i class="bi bi-person-gear me-1"></i>Cuart.</span>
                             <span class="fw-bold">{{ $turno->cuartelero->nombre }}</span>
+                            @php $conQuien = $acompanaA($turno); @endphp
+                            @if($conQuien)
+                                <span class="badge bg-warning text-dark ms-1"><i class="bi bi-person-plus me-1"></i>2° conductor</span>
+                                <div class="small text-muted fw-normal">con {{ implode(', ', $conQuien) }}</div>
+                            @endif
                             <div class="text-muted small">{{ $turno->cuartelero->compania->nombre }}</div>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary btn-salida-turno flex-shrink-0"
@@ -576,6 +623,9 @@
                         </td>
                         <td class="fw-bold text-nowrap">
                             {{ $item->tipo === 'maquinista' ? $item->voluntario->nombre : $item->cuartelero->nombre }}
+                            @if($item->es_secundario)
+                                <span class="badge bg-warning text-dark ms-1" title="Registrado como conductor secundario">2°</span>
+                            @endif
                         </td>
                         <td class="text-nowrap">
                             {{ $item->tipo === 'maquinista' ? $item->voluntario->compania->nombre : $item->cuartelero->compania->nombre }}
@@ -627,6 +677,9 @@
                             <span class="fw-bold">
                                 {{ $item->tipo === 'maquinista' ? $item->voluntario->nombre : $item->cuartelero->nombre }}
                             </span>
+                            @if($item->es_secundario)
+                                <span class="badge bg-warning text-dark" title="Registrado como conductor secundario">2°</span>
+                            @endif
                             <div class="text-muted small">
                                 {{ $item->tipo === 'maquinista' ? $item->voluntario->compania->nombre : $item->cuartelero->compania->nombre }}
                             </div>

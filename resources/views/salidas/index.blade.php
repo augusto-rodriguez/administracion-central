@@ -189,7 +189,12 @@
 
                             {{-- Conductor en turno (modo normal) --}}
                             <div class="col-md-5" id="bloqueConductorTurno">
-                                <label class="form-label fw-bold">Conductor</label>
+                                <label class="form-label fw-bold d-flex justify-content-between align-items-center">
+                                    <span>Conductor</span>
+                                    <button type="button" class="btn btn-link btn-sm p-0 d-none" id="btnCambiarConductor">
+                                        <i class="bi bi-people me-1"></i>Hay 2 conductores — cambiar
+                                    </button>
+                                </label>
                                 <select name="conductor_id" id="selectConductor" class="form-select">
                                     <option value="">Sin asignar...</option>
                                     @foreach($conductores as $conductor)
@@ -302,6 +307,20 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{{-- Modal pequeño: elegir conductor cuando la unidad tiene más de uno en servicio --}}
+<div class="modal fade" id="modalElegirConductor" tabindex="-1" data-bs-backdrop="static" style="z-index:1065">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0"><i class="bi bi-people me-2"></i>¿Quién conduce <span id="elegirUnidadNombre"></span>?</h6>
+            </div>
+            <div class="modal-body p-2">
+                <div class="d-grid gap-2" id="elegirConductorOpciones"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -753,6 +772,49 @@ const conductorPorUnidad = @json($conductorPorUnidad);
 const opcionesUnidades    = @json($unidades->map(fn($u) => ['id' => $u->id, 'nombre' => $u->nombre . ' — ' . $u->compania->nombre]));
 const opcionesVoluntarios = @json($voluntariosAlMando->map(fn($v) => ['id' => $v->id, 'nombre' => $v->nombre . ' — ' . $v->compania->nombre]));
 const opcionesConductores = @json($conductores);
+const conductorOld        = @json(old('conductor_id'));
+
+// conductorPorUnidad[unidad] puede ser un conductor o una lista (principal + secundarios)
+function conductoresDeUnidad(unidadId) {
+    const c = conductorPorUnidad[unidadId];
+    if (!c) return [];
+    return Array.isArray(c) ? c : [c];
+}
+function valorConductor(c) {
+    return (c.tipo === 'maquinista' ? 'v_' : 'c_') + c.id;
+}
+
+// ── Modal pequeño para elegir entre varios conductores en servicio ──
+const modalElegirEl = document.getElementById('modalElegirConductor');
+const modalElegir   = new bootstrap.Modal(modalElegirEl);
+
+modalElegirEl.addEventListener('shown.bs.modal', () => {
+    // Que el fondo de este modal quede sobre el modal de salida
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops[backdrops.length - 1].style.zIndex = 1062;
+});
+
+function elegirConductor(lista, unidadNombre, onElegido) {
+    document.getElementById('elegirUnidadNombre').textContent = unidadNombre || '';
+    const cont = document.getElementById('elegirConductorOpciones');
+    cont.innerHTML = '';
+    lista.forEach(c => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn text-start ' + (c.es_secundario ? 'btn-outline-secondary' : 'btn-outline-danger');
+        btn.innerHTML = `
+            <div class="fw-bold">${c.nombre}</div>
+            <div class="small">
+                ${c.tipo === 'cuartelero' ? 'Cuartelero' : 'Maquinista'}
+                ${c.es_secundario
+                    ? '<span class="badge bg-warning text-dark ms-1">2° conductor</span>'
+                    : '<span class="badge bg-danger ms-1">Principal</span>'}
+            </div>`;
+        btn.addEventListener('click', () => { onElegido(c); modalElegir.hide(); });
+        cont.appendChild(btn);
+    });
+    modalElegir.show();
+}
 
 // ── Toggle modo individual / conjunta ──
 const modoIndividualRadio = document.getElementById('modoIndividual');
@@ -818,14 +880,33 @@ document.getElementById('selectUnidad').addEventListener('change', function() {
     // Reset estado
     conductorAutorizadoId.name = '';  // desvincular del form hasta que aplique
 
-    if (unidadId && conductorPorUnidad[unidadId]) {
-        // ── Hay conductor en turno: autocarga y bloquea el selector ──
-        const conductor = conductorPorUnidad[unidadId];
-        const optionId  = conductor.tipo === 'maquinista'
-            ? 'v_' + conductor.id
-            : 'c_' + conductor.id;
+    const btnCambiar  = document.getElementById('btnCambiarConductor');
+    const enServicio  = conductoresDeUnidad(unidadId);
+    btnCambiar.classList.add('d-none');
 
-        selectConductor.value               = optionId;
+    if (unidadId && enServicio.length) {
+        // ── Hay conductor en turno: autocarga y bloquea el selector ──
+        // Por defecto el principal; si hay más de uno, se pregunta con el modal pequeño
+        const conductor = enServicio.find(c => !c.es_secundario) || enServicio[0];
+        selectConductor.value = valorConductor(conductor);
+
+        if (enServicio.length > 1) {
+            const unidadNombre = this.options[this.selectedIndex]?.text.split(' — ')[0];
+            const abrir = () => elegirConductor(enServicio, unidadNombre, c => {
+                selectConductor.value = valorConductor(c);
+            });
+            btnCambiar.classList.remove('d-none');
+            btnCambiar.onclick = abrir;
+
+            // Tras un aviso de validación se respeta lo que ya se había elegido
+            const yaElegido = enServicio.find(c => valorConductor(c) === conductorOld);
+            if (yaElegido) {
+                selectConductor.value = conductorOld;
+            } else {
+                abrir();
+            }
+        }
+
         selectConductor.style.pointerEvents = 'none';
         selectConductor.style.opacity       = '0.7';
         selectConductor.removeAttribute('disabled');
@@ -1077,14 +1158,13 @@ function buildSelect(name, opts, placeholder, required = false) {
 
 function buildConductorSelect(idx, unidadId) {
     let opts = [];
-    if (unidadId && conductorPorUnidad[unidadId]) {
-        const c = conductorPorUnidad[unidadId];
-        const val = (c.tipo === 'maquinista' ? 'v_' : 'c_') + c.id;
-        opts = [{ id: val, nombre: c.nombre }];
-    }
+    // Todos los conductores en servicio de la unidad; el principal queda seleccionado
+    conductoresDeUnidad(unidadId)
+        .slice().sort((a, b) => (a.es_secundario ? 1 : 0) - (b.es_secundario ? 1 : 0))
+        .forEach(c => opts.push({ id: valorConductor(c), nombre: c.nombre + (c.es_secundario ? ' (2°)' : '') }));
     let html = `<select name="unidades[${idx}][conductor_id]" class="form-select form-select-sm cj-conductor">`;
     html += `<option value="">— sin conductor —</option>`;
-    opts.forEach(o => { html += `<option value="${o.id}" selected>${o.nombre}</option>`; });
+    opts.forEach((o, i) => { html += `<option value="${o.id}" ${i === 0 ? 'selected' : ''}>${o.nombre}</option>`; });
     html += '</select>';
     return html;
 }
@@ -1156,7 +1236,16 @@ function agregarFilaUnidad() {
 
         cell.innerHTML = buildConductorSelect(idx, unidadId);
 
-        if (unidadId && !conductorPorUnidad[unidadId]) {
+        // Más de un conductor en servicio: preguntar con el modal pequeño
+        const enServicioCJ = conductoresDeUnidad(unidadId);
+        if (enServicioCJ.length > 1) {
+            const unidadNombre = this.options[this.selectedIndex]?.text.split(' — ')[0];
+            elegirConductor(enServicioCJ, unidadNombre, c => {
+                cell.querySelector('.cj-conductor').value = valorConductor(c);
+            });
+        }
+
+        if (unidadId && !conductoresDeUnidad(unidadId).length) {
             cell.insertAdjacentHTML('afterbegin',
                 '<div class="text-warning small mb-1"><i class="bi bi-exclamation-triangle me-1"></i>Sin turno — elige de los autorizados</div>');
             // Cargar autorizados asincrónicamente en el select de esta fila

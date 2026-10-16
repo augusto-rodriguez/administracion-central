@@ -9,12 +9,13 @@ class RegistroTurnoCuartelero extends Model
     protected $table = 'registros_turno_cuartelero';
 
     protected $fillable = [
-        'cuartelero_id', 'entrada_at', 'salida_at', 'total_minutos', 'observaciones'
+        'cuartelero_id', 'entrada_at', 'salida_at', 'total_minutos', 'observaciones', 'es_secundario'
     ];
 
     protected $casts = [
-        'entrada_at' => 'datetime',
-        'salida_at'  => 'datetime',
+        'entrada_at'    => 'datetime',
+        'salida_at'     => 'datetime',
+        'es_secundario' => 'boolean',
     ];
 
     public function cuartelero()

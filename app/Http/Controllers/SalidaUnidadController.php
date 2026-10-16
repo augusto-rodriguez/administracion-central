@@ -58,26 +58,38 @@ class SalidaUnidadController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        // Conductores en servicio por unidad. Puede haber más de uno
+        // (principal + conductor secundario): la vista pregunta cuál conduce.
+        // Orden: principales primero y, entre ellos, el que entró antes.
         $conductorPorUnidad = [];
 
         foreach ($turnosCuarteleros as $turno) {
             foreach ($turno->unidades as $unidad) {
-                $conductorPorUnidad[$unidad->id] = [
-                    'tipo'   => 'cuartelero',
-                    'id'     => $turno->cuartelero->id,
-                    'nombre' => $turno->cuartelero->nombre . ' — ' . $turno->cuartelero->compania->nombre,
+                $conductorPorUnidad[$unidad->id][] = [
+                    'tipo'          => 'cuartelero',
+                    'id'            => $turno->cuartelero->id,
+                    'nombre'        => $turno->cuartelero->nombre . ' — ' . $turno->cuartelero->compania->nombre,
+                    'es_secundario' => (bool) $turno->es_secundario,
+                    'entrada'       => $turno->entrada_at->timestamp,
                 ];
             }
         }
 
         foreach ($turnosMaquinistas as $turno) {
             foreach ($turno->unidades as $unidad) {
-                $conductorPorUnidad[$unidad->id] = [
-                    'tipo'   => 'maquinista',
-                    'id'     => $turno->voluntario->id,
-                    'nombre' => $turno->voluntario->nombre . ' — ' . $turno->voluntario->compania->nombre,
+                $conductorPorUnidad[$unidad->id][] = [
+                    'tipo'          => 'maquinista',
+                    'id'            => $turno->voluntario->id,
+                    'nombre'        => $turno->voluntario->nombre . ' — ' . $turno->voluntario->compania->nombre,
+                    'es_secundario' => (bool) $turno->es_secundario,
+                    'entrada'       => $turno->entrada_at->timestamp,
                 ];
             }
+        }
+
+        foreach ($conductorPorUnidad as $unidadId => $lista) {
+            usort($lista, fn($a, $b) => [$a['es_secundario'], $a['entrada']] <=> [$b['es_secundario'], $b['entrada']]);
+            $conductorPorUnidad[$unidadId] = $lista;
         }
 
         $conductores = collect();
