@@ -196,6 +196,8 @@
         .badge-maquinista { background: #e74c3c; color: white; }
         .badge-cuartelero { background: #17a2b8; color: white; }
         .badge-sin        { background: #aaa;    color: white; }
+        .badge-secundario { background: #f1c40f; color: #1a1a1a; }
+        .tabla-unidades tr.fila-secundario td { background: #fff8e1; }
 
         /* ── Especialidades ── */
         .especialidades-grid {
@@ -359,7 +361,7 @@
                         {{-- Unidades --}}
                         <td>
                             <div class="seccion-titulo">
-                                Unidades en servicio ({{ $gnCompania->unidades->count() }})
+                                Unidades en servicio ({{ $gnCompania->unidades->unique('unidad_id')->count() }})
                             </div>
                             @if($gnCompania->unidades->isNotEmpty())
                                 <table class="tabla-unidades">
@@ -371,13 +373,22 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($gnCompania->unidades as $u)
-                                        <tr>
+                                        @php $unidadesVistas = []; @endphp
+                                        @foreach($gnCompania->unidades->sortBy('id')->values() as $u)
+                                        @php
+                                            // 2ª fila de la misma unidad = conductor secundario
+                                            $esSec = in_array($u->unidad_id, $unidadesVistas);
+                                            $unidadesVistas[] = $u->unidad_id;
+                                        @endphp
+                                        <tr class="{{ $esSec ? 'fila-secundario' : '' }}">
                                             <td>
                                                 <span class="badge-unidad">{{ $u->unidad->nombre }}</span>
                                             </td>
                                             <td>
                                                 {{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}
+                                                @if($esSec)
+                                                    <span class="badge-tipo badge-secundario">2° conductor</span>
+                                                @endif
                                             </td>
                                             <td>
                                                 @if($u->maquinista_id)

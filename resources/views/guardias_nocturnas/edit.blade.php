@@ -269,8 +269,17 @@
                                 </thead>
                                 <tbody id="tbody-unidades-{{ $compania->id }}">
                                     @if($gnCompania && $gnCompania->unidades->isNotEmpty())
-                                        @foreach($gnCompania->unidades as $u)
-                                        <tr data-idx="{{ $loop->index }}">
+                                        @php $unidadesVistas = []; @endphp
+                                        @foreach($gnCompania->unidades->sortBy('id')->values() as $u)
+                                        @php
+                                            // 2ª fila de la misma unidad = conductor secundario
+                                            $esSec = in_array($u->unidad_id, $unidadesVistas);
+                                            $unidadesVistas[] = $u->unidad_id;
+                                        @endphp
+                                        <tr data-idx="{{ $loop->index }}"
+                                            data-cuartelero-id="{{ $u->cuartelero_id }}"
+                                            data-maquinista-id="{{ $u->maquinista_id }}"
+                                            class="{{ $esSec ? 'table-warning' : '' }}">
                                             <td>
                                                 <span class="badge bg-primary">{{ $u->unidad->nombre }}</span>
                                                 <input type="hidden" name="unidades[{{ $loop->index }}][unidad_id]"
@@ -289,7 +298,14 @@
                                                     <span class="badge bg-secondary">Sin conductor</span>
                                                 @endif
                                             </td>
-                                            <td>{{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}</td>
+                                            <td>
+                                                {{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}
+                                                @if($esSec)
+                                                    <span class="badge bg-warning text-dark ms-1" title="También en servicio con esta unidad">
+                                                        <i class="bi bi-person-plus me-1"></i>2° conductor
+                                                    </span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-outline-danger"
                                                         onclick="this.closest('tr').remove(); renumerarFilas({{ $compania->id }})">
@@ -463,27 +479,38 @@ function heredarSituacion(companiaId, guardiaId) {
                     </div>`;
             }
 
+            // Se pinta dentro del tbody existente para que "Agregar manualmente"
+            // y la verificación del cuartelero sigan funcionando después de heredar
+            const tbody = document.getElementById('tbody-unidades-' + companiaId);
+
             if (data.unidades.length === 0) {
-                container.innerHTML = '<p class="text-muted small text-center py-3 mb-0">No hay unidades activas para esta compañía.</p>';
+                tbody.innerHTML = `<tr id="fila-vacia-${companiaId}"><td colspan="4" class="text-muted small text-center py-3">No hay unidades activas para esta compañía.</td></tr>`;
                 return;
             }
 
-            let html = `
-                <table class="table table-sm mb-0">
-                    <thead class="table-light">
-                        <tr><th>Unidad</th><th>Conductor</th><th>Tipo</th></tr>
-                    </thead>
-                    <tbody>`;
+            const secundarios = data.unidades.filter(u => u.es_secundario);
+            if (secundarios.length) {
+                warning.innerHTML += `
+                    <div class="alert alert-info mx-3 mt-2 py-2 mb-0 small">
+                        <i class="bi bi-person-plus me-1"></i>
+                        También quedan en servicio como <strong>conductor secundario</strong>:
+                        ${secundarios.map(u => `<strong>${u.responsable_nombre}</strong> (${u.unidad_nombre})`).join(', ')}.
+                    </div>`;
+            }
 
+            let html = '';
             data.unidades.forEach((u, i) => {
                 const responsable = u.responsable_nombre ?? '—';
                 let tipoBadge = '<span class="badge bg-secondary">Sin conductor</span>';
                 if (u.tipo === 'maquinista') tipoBadge = '<span class="badge bg-danger">Maquinista</span>';
                 if (u.tipo === 'cuartelero') tipoBadge = '<span class="badge bg-info text-dark">Cuartelero</span>';
+                const secBadge = u.es_secundario
+                    ? '<span class="badge bg-warning text-dark ms-1"><i class="bi bi-person-plus me-1"></i>2° conductor</span>'
+                    : '';
 
-                // ✅ AGREGADO: data-cuartelero y data-maquinista para búsqueda confiable
                 html += `
-                    <tr data-cuartelero-id="${u.tipo === 'cuartelero' ? u.responsable_id : ''}"
+                    <tr data-idx="${i}" class="${u.es_secundario ? 'table-warning' : ''}"
+                        data-cuartelero-id="${u.tipo === 'cuartelero' ? u.responsable_id : ''}"
                         data-maquinista-id="${u.tipo === 'maquinista' ? u.responsable_id : ''}">
                         <td>
                             <span class="badge bg-primary">${u.unidad_nombre}</span>
@@ -493,13 +520,18 @@ function heredarSituacion(companiaId, guardiaId) {
                             <input type="hidden" name="unidades[${i}][cuartelero_id]"
                                    value="${u.tipo === 'cuartelero' ? u.responsable_id : ''}">
                         </td>
-                        <td>${responsable}</td>
                         <td>${tipoBadge}</td>
+                        <td>${responsable} ${secBadge}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="this.closest('tr').remove(); renumerarFilas(${companiaId})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
                     </tr>`;
             });
 
-            html += '</tbody></table>';
-            container.innerHTML = html;
+            tbody.innerHTML = html;
 
             // ✅ VERIFICAR cuartelero DESPUÉS de heredar la situación actual
             const cuarteleroSelect = document.querySelector(

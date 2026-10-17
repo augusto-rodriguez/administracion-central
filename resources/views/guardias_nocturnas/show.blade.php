@@ -172,7 +172,7 @@
                     <h6 class="fw-bold mb-2">
                         <i class="bi bi-truck-front me-1 text-danger"></i>
                         Unidades en servicio
-                        <span class="badge bg-danger ms-1">{{ $gnCompania->unidades->count() }}</span>
+                        <span class="badge bg-danger ms-1">{{ $gnCompania->unidades->unique('unidad_id')->count() }}</span>
                     </h6>
                     @if($gnCompania->unidades->isNotEmpty())
                         <table class="table table-sm mb-0">
@@ -184,12 +184,25 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($gnCompania->unidades as $u)
-                                <tr>
+                                @php $unidadesVistas = []; @endphp
+                                @foreach($gnCompania->unidades->sortBy('id')->values() as $u)
+                                @php
+                                            // 2ª fila de la misma unidad = conductor secundario
+                                            $esSec = in_array($u->unidad_id, $unidadesVistas);
+                                            $unidadesVistas[] = $u->unidad_id;
+                                        @endphp
+                                <tr class="{{ $esSec ? 'table-warning' : '' }}">
                                     <td>
                                         <span class="badge bg-primary">{{ $u->unidad->nombre }}</span>
                                     </td>
-                                    <td>{{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}</td>
+                                    <td>
+                                        {{ $u->maquinista?->nombre ?? $u->cuartelero?->nombre ?? '—' }}
+                                        @if($esSec)
+                                                    <span class="badge bg-warning text-dark ms-1" title="También en servicio con esta unidad">
+                                                        <i class="bi bi-person-plus me-1"></i>2° conductor
+                                                    </span>
+                                                @endif
+                                    </td>
                                     <td>
                                         @if($u->maquinista_id)
                                             <span class="badge bg-danger">Maquinista</span>

@@ -139,29 +139,33 @@ class GuardiaNocturnaController extends Controller
             ->where('activa', true)
             ->get();
 
-        // Construir mapa unidad → responsable
+        // Construir mapa unidad → conductores (puede haber principal + secundario)
         $mapaUnidades = [];
 
         foreach ($turnos as $turno) {
             foreach ($turno->unidades as $unidad) {
-                $mapaUnidades[$unidad->id] = [
-                    'unidad_id'     => $unidad->id,
-                    'unidad_nombre' => $unidad->nombre,
-                    'tipo'          => 'maquinista',
+                $mapaUnidades[$unidad->id][] = [
+                    'unidad_id'          => $unidad->id,
+                    'unidad_nombre'      => $unidad->nombre,
+                    'tipo'               => 'maquinista',
                     'responsable_id'     => $turno->voluntario->id,
                     'responsable_nombre' => $turno->voluntario->nombre,
+                    '_secundario'        => (bool) $turno->es_secundario,
+                    '_entrada'           => $turno->entrada_at->timestamp,
                 ];
             }
         }
 
         foreach ($turnosCuarteleros as $turno) {
             foreach ($turno->unidades as $unidad) {
-                $mapaUnidades[$unidad->id] = [
+                $mapaUnidades[$unidad->id][] = [
                     'unidad_id'          => $unidad->id,
                     'unidad_nombre'      => $unidad->nombre,
                     'tipo'               => 'cuartelero',
                     'responsable_id'     => $turno->cuartelero->id,
                     'responsable_nombre' => $turno->cuartelero->nombre,
+                    '_secundario'        => (bool) $turno->es_secundario,
+                    '_entrada'           => $turno->entrada_at->timestamp,
                 ];
             }
         }
@@ -169,22 +173,36 @@ class GuardiaNocturnaController extends Controller
         // Agregar unidades sin conductor
         foreach ($unidadesCompania as $unidad) {
             if (!isset($mapaUnidades[$unidad->id])) {
-                $mapaUnidades[$unidad->id] = [
+                $mapaUnidades[$unidad->id][] = [
                     'unidad_id'          => $unidad->id,
                     'unidad_nombre'      => $unidad->nombre,
                     'tipo'               => null,
                     'responsable_id'     => null,
                     'responsable_nombre' => null,
+                    '_secundario'        => false,
+                    '_entrada'           => 0,
                 ];
             }
         }
 
+        // Una fila por conductor. En cada unidad va primero el principal y luego
+        // el/los secundarios: así se guardan en ese orden y la guardia puede
+        // reconocer al 2° conductor sin columnas nuevas (2ª fila de la misma unidad).
+        $filas = [];
+        foreach ($mapaUnidades as $lista) {
+            usort($lista, fn($a, $b) => [$a['_secundario'], $a['_entrada']] <=> [$b['_secundario'], $b['_entrada']]);
+            foreach ($lista as $i => $fila) {
+                unset($fila['_secundario'], $fila['_entrada']);
+                $fila['es_secundario'] = $i > 0;
+                $filas[] = $fila;
+            }
+        }
+
         return response()->json([
-            'unidades'   => array_values($mapaUnidades),
-            'sin_conductor' => collect($mapaUnidades)->whereNull('tipo')->count(),
+            'unidades'      => $filas,
+            'sin_conductor' => collect($filas)->whereNull('tipo')->count(),
         ]);
     }
-
     // ─────────────────────────────────────────────────────────────────
     // GUARDAR COMPAÑÍA
     // ─────────────────────────────────────────────────────────────────
@@ -212,41 +230,46 @@ class GuardiaNocturnaController extends Controller
             'tecnicos_hazmat'    => 'nullable|integer|min:0|max:99',
         ]);
 
-        $gnCompania = GuardiaNocturnaCompania::updateOrCreate(
-            [
-                'guardia_nocturna_id' => $guardia->id,
-                'compania_id'         => $request->compania_id,
-            ],
-            [
-                'oficial_a_cargo_id' => $request->oficial_a_cargo_id,
-                'cuartelero_id'      => $request->cuartelero_id,
-                'sin_reporte'        => $request->boolean('sin_reporte'),
-                'observaciones'      => $request->observaciones,
-                // ← nuevos campos
-                'operadores_rescate' => $request->operadores_rescate,
-                'operadores_hazmat'  => $request->operadores_hazmat,
-                'tecnicos_hazmat'    => $request->tecnicos_hazmat,
-            ]
-        );
+        // Todo o nada: si falla un insert, no se pierden las unidades que ya estaban guardadas
+        $gnCompania = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $guardia) {
+            $gnCompania = GuardiaNocturnaCompania::updateOrCreate(
+                [
+                    'guardia_nocturna_id' => $guardia->id,
+                    'compania_id'         => $request->compania_id,
+                ],
+                [
+                    'oficial_a_cargo_id' => $request->oficial_a_cargo_id,
+                    'cuartelero_id'      => $request->cuartelero_id,
+                    'sin_reporte'        => $request->boolean('sin_reporte'),
+                    'observaciones'      => $request->observaciones,
+                    // ← nuevos campos
+                    'operadores_rescate' => $request->operadores_rescate,
+                    'operadores_hazmat'  => $request->operadores_hazmat,
+                    'tecnicos_hazmat'    => $request->tecnicos_hazmat,
+                ]
+            );
 
-        $gnCompania->voluntarios()->delete();
-        foreach ($request->voluntarios ?? [] as $voluntarioId) {
-            GuardiaNocturnaVoluntario::create([
-                'guardia_nocturna_compania_id' => $gnCompania->id,
-                'voluntario_id'                => $voluntarioId,
-                'hora_ingreso'                 => null,
-            ]);
-        }
+            $gnCompania->voluntarios()->delete();
+            foreach ($request->voluntarios ?? [] as $voluntarioId) {
+                GuardiaNocturnaVoluntario::create([
+                    'guardia_nocturna_compania_id' => $gnCompania->id,
+                    'voluntario_id'                => $voluntarioId,
+                    'hora_ingreso'                 => null,
+                ]);
+            }
 
-        $gnCompania->unidades()->delete();
-        foreach ($request->unidades ?? [] as $u) {
-            GuardiaNocturnaUnidad::create([
-                'guardia_nocturna_compania_id' => $gnCompania->id,
-                'unidad_id'                    => $u['unidad_id'],
-                'maquinista_id'                => $u['maquinista_id'] ?? null,
-                'cuartelero_id'                => $u['cuartelero_id'] ?? null,
-            ]);
-        }
+            $gnCompania->unidades()->delete();
+            foreach ($request->unidades ?? [] as $u) {
+                GuardiaNocturnaUnidad::create([
+                    'guardia_nocturna_compania_id' => $gnCompania->id,
+                    'unidad_id'                    => $u['unidad_id'],
+                    'maquinista_id'                => $u['maquinista_id'] ?? null,
+                    'cuartelero_id'                => $u['cuartelero_id'] ?? null,
+                ]);
+            }
+
+            return $gnCompania;
+        });
 
         return back()->with('success', 'Compañía ' . $gnCompania->compania->nombre . ' guardada correctamente.');
     }
