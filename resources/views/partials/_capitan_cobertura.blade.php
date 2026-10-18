@@ -16,6 +16,12 @@
         };
     };
     $fmtHoras = fn($h) => number_format($h, $h < 10 ? 1 : 0, ',', '.') . ' h';
+    $iconoNivel = [
+        'sin'      => 'bi-x-circle-fill',
+        'parcial'  => 'bi-dash-circle-fill',
+        'cubierto' => 'bi-check-circle-fill',
+        'na'       => 'bi-dot',
+    ];
 @endphp
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
@@ -34,6 +40,17 @@
         Tu compañía no tiene unidades activas registradas, por lo que no hay cobertura que calcular.
     </div>
 @else
+
+{{-- ── Resumen en palabras ───────────────────────────────────────── --}}
+<div class="alert alert-light border d-flex gap-3 align-items-start mb-4">
+    <i class="bi bi-lightbulb text-warning fs-4 flex-shrink-0"></i>
+    <div>
+        <div class="fw-bold mb-1">Resumen de los últimos {{ $cobertura['dias'] }} días</div>
+        @foreach($cobertura['resumen'] as $frase)
+            <div class="{{ !$loop->last ? 'mb-1' : '' }}">{!! $frase !!}</div>
+        @endforeach
+    </div>
+</div>
 
 {{-- ── KPIs ─────────────────────────────────────────────────────── --}}
 <div class="row g-3 mb-4">
@@ -94,44 +111,107 @@
     {{-- ── Mapa de calor ─────────────────────────────────────────── --}}
     <div class="col-12 col-xl-7">
         <div class="card h-100">
-            <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
+            <div class="card-header bg-white fw-bold d-flex flex-wrap align-items-center gap-2">
                 <i class="bi bi-grid-3x3-gap text-danger"></i>
-                Cobertura por día y hora
-                @include('partials._ayuda', ['texto' => 'Se calcula con los registros de puesta en servicio de maquinistas y cuarteleros (hora de entrada, hora de salida y unidades asignadas). Para cada día de la semana y cada hora se suma el tiempo en que cada unidad de tu compañía tuvo conductor, y se divide por el tiempo total de esa franja en el período. Ej.: 25% el lunes a las 04:00 significa que, en promedio, las unidades tuvieron conductor solo un cuarto de ese tiempo. Solo se consideran las unidades activas hoy; un turno sin salida registrada se cuenta como en servicio.'])
+                Cobertura por día y horario
+                @include('partials._ayuda', ['texto' => 'Se calcula con los registros de puesta en servicio de maquinistas y cuarteleros (hora de entrada, hora de salida y unidades asignadas). Para cada día y horario se suma el tiempo en que cada unidad de tu compañía tuvo conductor y se compara con el tiempo total de esa franja en el período. Ej.: 25% el lunes en la madrugada significa que, en promedio, las unidades tuvieron conductor solo un cuarto de ese tiempo. Solo se consideran las unidades activas hoy; un turno sin salida registrada se cuenta como en servicio.'])
+
+                <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Tipo de vista">
+                    <button type="button" class="btn btn-outline-secondary active" data-vista-cobertura="simple">
+                        <i class="bi bi-grid me-1"></i>Simple
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-vista-cobertura="detalle">
+                        <i class="bi bi-grid-3x3 me-1"></i>Hora por hora
+                    </button>
+                </div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm mb-2 mapa-cobertura">
-                        <thead>
-                            <tr>
-                                <th class="text-muted small fw-normal">Hora</th>
-                                @foreach($diasCortos as $d => $nombre)
-                                    <th class="text-center small">{{ $nombre }}</th>
-                                @endforeach
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($cobertura['mapa'] as $hora => $fila)
+
+                {{-- ── VISTA SIMPLE: bloques del día ─────────────────── --}}
+                <div id="vista-cobertura-simple">
+                    <div class="table-responsive">
+                        <table class="table mb-2 mapa-bloques">
+                            <thead>
                                 <tr>
-                                    <td class="text-muted small text-nowrap pe-2">{{ sprintf('%02d:00', $hora) }}</td>
-                                    @foreach($fila as $d => $celda)
-                                        <td class="text-center {{ $claseCelda($celda['pct']) }}"
-                                            title="{{ $diasLargos[$d] }} {{ sprintf('%02d:00–%02d:00', $hora, ($hora + 1) % 24) }} · Unidades con conductor: {{ $celda['pct'] ?? '—' }}% · Al menos una unidad: {{ $celda['pctAlguna'] ?? '—' }}%">
-                                            {{ $celda['pct'] !== null ? $celda['pct'] . '%' : '·' }}
-                                        </td>
+                                    <th></th>
+                                    @foreach($diasCortos as $d => $nombre)
+                                        <th class="text-center small">{{ $nombre }}</th>
                                     @endforeach
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach(\App\Services\CoberturaConductoresService::BLOQUES as $clave => $bloque)
+                                    @php [$nombreBloque, $hIni, $hFin] = $bloque; @endphp
+                                    <tr>
+                                        <td class="text-nowrap pe-2">
+                                            <div class="fw-bold small">{{ $nombreBloque }}</div>
+                                            <div class="text-muted" style="font-size:.7rem">{{ sprintf('%02d:00 – %02d:00', $hIni, $hFin) }}</div>
+                                        </td>
+                                        @foreach($cobertura['bloques'][$clave] as $d => $celda)
+                                            <td class="text-center nivel-{{ $celda['nivel'] }}"
+                                                title="{{ $diasLargos[$d] }}, {{ mb_strtolower($nombreBloque) }} ({{ sprintf('%02d:00–%02d:00', $hIni, $hFin) }}): {{ $celda['pct'] !== null ? 'con conductor el ' . $celda['pct'] . '% del tiempo' : 'sin datos' }}">
+                                                <i class="bi {{ $iconoNivel[$celda['nivel']] }}"></i>
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-3 small">
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="leyenda nivel-sin"><i class="bi {{ $iconoNivel['sin'] }}"></i></span>
+                            Sin conductor <span class="text-muted">(menos de {{ $cobertura['umbral'] }}%)</span>
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="leyenda nivel-parcial"><i class="bi {{ $iconoNivel['parcial'] }}"></i></span>
+                            Cobertura parcial
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <span class="leyenda nivel-cubierto"><i class="bi {{ $iconoNivel['cubierto'] }}"></i></span>
+                            Cubierto <span class="text-muted">({{ \App\Services\CoberturaConductoresService::UMBRAL_CUBIERTO }}% o más)</span>
+                        </span>
+                    </div>
+                    <p class="text-muted mt-2 mb-0" style="font-size:.75rem">
+                        <i class="bi bi-hand-index me-1"></i>Pasa el mouse sobre un cuadro para ver el porcentaje exacto.
+                    </p>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
-                    <span>% del tiempo con conductor:</span>
-                    <span class="leyenda cob-0">0–19%</span>
-                    <span class="leyenda cob-1">20–39%</span>
-                    <span class="leyenda cob-2">40–59%</span>
-                    <span class="leyenda cob-3">60–79%</span>
-                    <span class="leyenda cob-4">80–100%</span>
+
+                {{-- ── VISTA DETALLADA: hora por hora ─────────────────── --}}
+                <div id="vista-cobertura-detalle" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-2 mapa-cobertura">
+                            <thead>
+                                <tr>
+                                    <th class="text-muted small fw-normal">Hora</th>
+                                    @foreach($diasCortos as $d => $nombre)
+                                        <th class="text-center small">{{ $nombre }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($cobertura['mapa'] as $hora => $fila)
+                                    <tr>
+                                        <td class="text-muted small text-nowrap pe-2">{{ sprintf('%02d:00', $hora) }}</td>
+                                        @foreach($fila as $d => $celda)
+                                            <td class="text-center {{ $claseCelda($celda['pct']) }}"
+                                                title="{{ $diasLargos[$d] }} {{ sprintf('%02d:00–%02d:00', $hora, ($hora + 1) % 24) }} · Unidades con conductor: {{ $celda['pct'] ?? '—' }}% · Al menos una unidad: {{ $celda['pctAlguna'] ?? '—' }}%">
+                                                {{ $celda['pct'] !== null ? $celda['pct'] . '%' : '·' }}
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
+                        <span>% del tiempo con conductor:</span>
+                        <span class="leyenda cob-0">0–19%</span>
+                        <span class="leyenda cob-1">20–39%</span>
+                        <span class="leyenda cob-2">40–59%</span>
+                        <span class="leyenda cob-3">60–79%</span>
+                        <span class="leyenda cob-4">80–100%</span>
+                    </div>
                 </div>
             </div>
         </div>

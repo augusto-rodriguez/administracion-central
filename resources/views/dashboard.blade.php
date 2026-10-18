@@ -364,6 +364,16 @@
         .cob-na { background: #f1f1f1 !important; color: #aaa; }
         .leyenda { padding: 1px 8px; border-radius: 3px; font-size: .7rem; }
 
+        /* ── Vista simple por bloques ── */
+        .mapa-bloques { border-collapse: separate; border-spacing: 4px; }
+        .mapa-bloques td, .mapa-bloques th { border: 0; vertical-align: middle; }
+        .mapa-bloques td:not(:first-child) { font-size: 1.15rem; min-width: 46px; height: 46px;
+                                             border-radius: 6px; cursor: default; }
+        .nivel-sin      { background: #f8d7da !important; color: #c0392b; }
+        .nivel-parcial  { background: #fff3cd !important; color: #d4a106; }
+        .nivel-cubierto { background: #d4edda !important; color: #27ae60; }
+        .nivel-na       { background: #f1f1f1 !important; color: #bbb; }
+
         #tabsCapitan .nav-link { color: #495057; }
         #tabsCapitan .nav-link.active { font-weight: 600; color: #000; }
     </style>
@@ -843,6 +853,25 @@ function actualizarCronometros() {
 }
 actualizarCronometros();
 setInterval(actualizarCronometros, 1000);
+
+// ── Cobertura: alternar vista simple / hora por hora ──
+(function () {
+    const botones = document.querySelectorAll('[data-vista-cobertura]');
+    if (!botones.length) return;
+
+    function mostrar(vista) {
+        document.getElementById('vista-cobertura-simple')?.classList.toggle('d-none', vista !== 'simple');
+        document.getElementById('vista-cobertura-detalle')?.classList.toggle('d-none', vista !== 'detalle');
+        botones.forEach(b => b.classList.toggle('active', b.dataset.vistaCobertura === vista));
+        try { localStorage.setItem('vistaCobertura', vista); } catch (e) {}
+    }
+
+    botones.forEach(b => b.addEventListener('click', () => mostrar(b.dataset.vistaCobertura)));
+
+    let guardada = 'simple';
+    try { guardada = localStorage.getItem('vistaCobertura') || 'simple'; } catch (e) {}
+    mostrar(guardada === 'detalle' ? 'detalle' : 'simple');
+})();
 
 // ── Pestañas del capitán: recordar la pestaña activa en la URL ──
 document.querySelectorAll('#tabsCapitan [data-tab]').forEach(btn => {

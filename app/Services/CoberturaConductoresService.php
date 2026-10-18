@@ -22,6 +22,23 @@ class CoberturaConductoresService
     /** % bajo el cual una franja horaria se considera crítica */
     public const UMBRAL_CRITICO = 30;
 
+    /** % desde el cual una franja se considera "cubierta" en la vista simple */
+    public const UMBRAL_CUBIERTO = 70;
+
+    /** Bloques del día para la vista simple: clave => [nombre, hora inicio, hora fin] */
+    public const BLOQUES = [
+        'madrugada' => ['Madrugada', 0, 6],
+        'manana'    => ['Mañana',    6, 12],
+        'tarde'     => ['Tarde',     12, 18],
+        'noche'     => ['Noche',     18, 24],
+    ];
+
+    /** Días en plural / minúscula para las frases de resumen */
+    private const DIAS_PLURAL = [
+        1 => 'lunes', 2 => 'martes', 3 => 'miércoles', 4 => 'jueves',
+        5 => 'viernes', 6 => 'sábados', 7 => 'domingos',
+    ];
+
     public const DIAS_SEMANA = [
         1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves',
         5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo',
@@ -171,6 +188,7 @@ class CoberturaConductoresService
                     $desde = $h - count($run);
                     $franjas[] = [
                         'dia'   => self::DIAS_SEMANA[$d],
+                        'diaNum'=> $d,
                         'desde' => sprintf('%02d:00', $desde),
                         'hasta' => sprintf('%02d:00', $h),
                         'horas' => count($run),
@@ -189,14 +207,36 @@ class CoberturaConductoresService
         $minUnidadCubiertos = array_sum(array_map(fn($du) => $du['horasCubiertas'] * 60, $detalleUnidades));
         $minSinNinguna = max(0, $minutosPeriodo - $this->minutos($unionTodas));
 
+        // ── Vista simple: bloques del día × día de semana ──
+        $bloques = [];
+        $promedioBloque = [];
+        foreach (self::BLOQUES as $clave => [$nombre, $hIni, $hFin]) {
+            $cubTotal = 0; $denTotal = 0;
+            foreach (array_keys(self::DIAS_SEMANA) as $d) {
+                $cub = 0; $den = 0;
+                for ($h = $hIni; $h < $hFin; $h++) {
+                    $cub += $grillaUnidades[$d][$h];
+                    $den += $base[$d][$h] * $nUnidades;
+                }
+                $pct = $den > 0 ? round($cub / $den * 100) : null;
+                $bloques[$clave][$d] = ['pct' => $pct, 'nivel' => $this->nivel($pct)];
+                $cubTotal += $cub; $denTotal += $den;
+            }
+            $promedioBloque[$clave] = $denTotal > 0 ? $cubTotal / $denTotal * 100 : null;
+        }
+
+        $kpiCobertura = $minutosPeriodo > 0
+            ? round($minUnidadCubiertos / ($minutosPeriodo * $nUnidades) * 100, 1) : 0;
+
         return $resultado + [
             'nUnidades'        => $nUnidades,
             'mapa'             => $mapa,
             'franjas'          => array_slice($franjas, 0, 6),
+            'bloques'          => $bloques,
+            'resumen'          => $this->resumen($franjas, $promedioBloque, $kpiCobertura),
             'unidades'         => $detalleUnidades,
             'kpi' => [
-                'coberturaPromedio' => $minutosPeriodo > 0
-                    ? round($minUnidadCubiertos / ($minutosPeriodo * $nUnidades) * 100, 1) : 0,
+                'coberturaPromedio' => $kpiCobertura,
                 'horasSinNinguna'   => $minSinNinguna / 60,
                 'pctSinNinguna'     => $minutosPeriodo > 0 ? round($minSinNinguna / $minutosPeriodo * 100, 1) : 0,
                 'peorFranja'        => $peor ? [
@@ -209,6 +249,78 @@ class CoberturaConductoresService
     }
 
     // ─────────────────────────────────────────────────────────────────────
+
+    /** Nivel de la vista simple según el % de cobertura */
+    private function nivel(?float $pct): string
+    {
+        if ($pct === null) return 'na';
+        if ($pct < self::UMBRAL_CRITICO) return 'sin';
+        if ($pct < self::UMBRAL_CUBIERTO) return 'parcial';
+        return 'cubierto';
+    }
+
+    /**
+     * Frases de resumen en lenguaje simple.
+     * Devuelve una lista de frases (pueden contener <strong>, ya escapadas).
+     */
+    private function resumen(array $franjas, array $promedioBloque, float $cobertura): array
+    {
+        $e = fn($t) => e($t);
+        $frases = [];
+
+        $frases[] = 'En promedio, tus unidades tuvieron conductor el <strong>'
+            . $e(number_format($cobertura, 0, ',', '.')) . '% del tiempo</strong>.';
+
+        // Peores horarios: agrupar franjas con el mismo horario en distintos días
+        if ($franjas) {
+            $grupos = [];
+            foreach ($franjas as $f) {
+                $k = $f['desde'] . '-' . $f['hasta'];
+                $grupos[$k] ??= ['desde' => $f['desde'], 'hasta' => $f['hasta'], 'dias' => [], 'pcts' => []];
+                $grupos[$k]['dias'][$f['diaNum']] = self::DIAS_PLURAL[$f['diaNum']];
+                $grupos[$k]['pcts'][] = $f['pct'];
+            }
+            foreach ($grupos as &$g) {
+                ksort($g['dias']);
+                $g['pct'] = array_sum($g['pcts']) / count($g['pcts']);
+                $g['peso'] = count($g['dias']);
+            }
+            unset($g);
+            // Primero los que se repiten en más días, luego los de menor cobertura
+            usort($grupos, fn($x, $y) => [-$x['peso'], $x['pct']] <=> [-$y['peso'], $y['pct']]);
+
+            $partes = [];
+            foreach (array_slice($grupos, 0, 2) as $g) {
+                $partes[] = '<strong>los ' . $e($this->unirLista(array_values($g['dias'])))
+                    . ' de ' . $e($g['desde']) . ' a ' . $e($g['hasta']) . '</strong>';
+            }
+            $frases[] = 'Tus carros suelen quedar sin conductor ' . $this->unirLista($partes) . '.';
+        } else {
+            $frases[] = 'No hay horarios críticos: en todas las franjas la cobertura se mantiene sobre el '
+                . self::UMBRAL_CRITICO . '%.';
+        }
+
+        // Mejor bloque del día
+        $validos = array_filter($promedioBloque, fn($p) => $p !== null);
+        if ($validos) {
+            arsort($validos);
+            $mejor = array_key_first($validos);
+            [$nombre, $hIni, $hFin] = self::BLOQUES[$mejor];
+            $frases[] = 'El momento con mejor cobertura es la <strong>' . $e(mb_strtolower($nombre))
+                . ' (' . sprintf('%02d:00 a %02d:00', $hIni, $hFin) . ')</strong>, con un '
+                . round($validos[$mejor]) . '% en promedio.';
+        }
+
+        return $frases;
+    }
+
+    /** ["a","b","c"] → "a, b y c" */
+    private function unirLista(array $items): string
+    {
+        if (count($items) <= 1) return implode('', $items);
+        $ultimo = array_pop($items);
+        return implode(', ', $items) . ' y ' . $ultimo;
+    }
 
     /** Fecha guardada en la BD (hora local Chile) → timestamp */
     private function ts(string $valor): int
