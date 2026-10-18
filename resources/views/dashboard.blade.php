@@ -304,7 +304,16 @@
         $compania   = $voluntario?->compania;
     @endphp
 
-    <div class="mt-2">
+    @php
+        $tabsCapitan = [
+            'emergencias' => ['icono' => 'bi-exclamation-octagon', 'texto' => 'Emergencias'],
+            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores'],
+        ];
+        $tabActiva = array_key_exists(request('tab'), $tabsCapitan) ? request('tab') : 'emergencias';
+    @endphp
+
+    {{-- Tarjeta de bienvenida: se oculta en la pestaña de cobertura para ganar espacio --}}
+    <div class="mt-2 {{ $tabActiva === 'cobertura' ? 'd-none' : '' }}" id="bienvenidaCapitan">
         <div class="card shadow-sm">
             <div class="card-body d-flex flex-wrap align-items-center gap-3 py-3 px-3 px-md-4">
                 <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center
@@ -328,13 +337,6 @@
         </div>
     </div>
 
-    @php
-        $tabsCapitan = [
-            'emergencias' => ['icono' => 'bi-exclamation-octagon', 'texto' => 'Emergencias'],
-            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores'],
-        ];
-        $tabActiva = array_key_exists(request('tab'), $tabsCapitan) ? request('tab') : 'emergencias';
-    @endphp
 
     <style>
         /* ── Ayuda (?) ── */
@@ -879,6 +881,9 @@ document.querySelectorAll('#tabsCapitan [data-tab]').forEach(btn => {
         const url = new URL(window.location.href);
         url.searchParams.set('tab', btn.dataset.tab);
         window.history.replaceState({}, '', url);
+        // Ocultar la bienvenida en la pestaña de cobertura
+        document.getElementById('bienvenidaCapitan')
+            ?.classList.toggle('d-none', btn.dataset.tab === 'cobertura');
         // Re-dibuja gráficos que estaban ocultos
         window.dispatchEvent(new Event('resize'));
     });
