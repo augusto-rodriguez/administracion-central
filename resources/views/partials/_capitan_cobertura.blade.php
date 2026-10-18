@@ -25,10 +25,12 @@
 @endphp
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-    <div class="text-muted small">
-        Del {{ $cobertura['desde']->format('d/m/Y') }} al {{ $cobertura['hasta']->format('d/m/Y H:i') }}
+    <div class="small">
         @unless($cobertura['sinUnidades'])
-            · {{ $cobertura['nUnidades'] }} unidad(es) activa(s)
+            <span class="text-muted">Unidades consideradas:</span>
+            @foreach($cobertura['unidades'] as $u)
+                <span class="badge bg-primary">{{ $u['nombre'] }}</span>
+            @endforeach
         @endunless
     </div>
     @include('partials._capitan_periodo', ['tab' => 'cobertura'])
