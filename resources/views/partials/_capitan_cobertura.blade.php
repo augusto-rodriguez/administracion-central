@@ -117,7 +117,7 @@
                                     @foreach($fila as $d => $celda)
                                         <td class="text-center {{ $claseCelda($celda['pct']) }}"
                                             title="{{ $diasLargos[$d] }} {{ sprintf('%02d:00–%02d:00', $hora, ($hora + 1) % 24) }} · Unidades con conductor: {{ $celda['pct'] ?? '—' }}% · Al menos una unidad: {{ $celda['pctAlguna'] ?? '—' }}%">
-                                            {{ $celda['pct'] !== null ? $celda['pct'] : '·' }}
+                                            {{ $celda['pct'] !== null ? $celda['pct'] . '%' : '·' }}
                                         </td>
                                     @endforeach
                                 </tr>
@@ -126,12 +126,12 @@
                     </table>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 small text-muted">
-                    <span>% de cobertura:</span>
-                    <span class="leyenda cob-0">0–19</span>
-                    <span class="leyenda cob-1">20–39</span>
-                    <span class="leyenda cob-2">40–59</span>
-                    <span class="leyenda cob-3">60–79</span>
-                    <span class="leyenda cob-4">80–100</span>
+                    <span>% del tiempo con conductor:</span>
+                    <span class="leyenda cob-0">0–19%</span>
+                    <span class="leyenda cob-1">20–39%</span>
+                    <span class="leyenda cob-2">40–59%</span>
+                    <span class="leyenda cob-3">60–79%</span>
+                    <span class="leyenda cob-4">80–100%</span>
                 </div>
             </div>
         </div>

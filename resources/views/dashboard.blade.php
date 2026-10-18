@@ -355,7 +355,7 @@
         /* ── Mapa de calor ── */
         .mapa-cobertura { border-collapse: separate; border-spacing: 2px; }
         .mapa-cobertura td, .mapa-cobertura th { border: 0; padding: 2px 4px; }
-        .mapa-cobertura td:not(:first-child) { font-size: .7rem; min-width: 38px; border-radius: 3px; cursor: default; }
+        .mapa-cobertura td:not(:first-child) { font-size: .7rem; min-width: 44px; border-radius: 3px; cursor: default; }
         .cob-0  { background: #c0392b !important; color: #fff; }
         .cob-1  { background: #e67e22 !important; color: #fff; }
         .cob-2  { background: #f4d03f !important; color: #1a1a1a; }
