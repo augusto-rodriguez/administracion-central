@@ -44,7 +44,7 @@ class CoberturaConductoresService
         5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo',
     ];
 
-    public function calcular(int $companiaId, int $dias = 30): array
+    public function calcular(int $companiaId, int $dias = 30, ?int $unidadId = null): array
     {
         $ahora  = Carbon::now(self::TZ);
         $fin    = $ahora->copy()->startOfHour();               // se excluye la hora en curso
@@ -58,8 +58,13 @@ class CoberturaConductoresService
             ->orderBy('nombre')
             ->get();
 
+        // Unidad elegida en el selector (solo si pertenece a la compañía)
+        $unidadSel = $unidadId ? $unidades->firstWhere('id', $unidadId) : null;
+
         $resultado = [
             'dias'       => $dias,
+            'todasUnidades'      => $unidades->map(fn($u) => ['id' => $u->id, 'nombre' => $u->nombre])->values()->all(),
+            'unidadSeleccionada' => $unidadSel ? ['id' => $unidadSel->id, 'nombre' => $unidadSel->nombre] : null,
             'desde'      => $inicio,
             'hasta'      => $fin,
             'umbral'     => self::UMBRAL_CRITICO,
@@ -135,12 +140,18 @@ class CoberturaConductoresService
             $cua  = $this->fusionar($porTipo['cuartelero'] ?? []);
             $union = $this->fusionar(array_merge($maq, $cua));
 
-            $this->distribuir($union, $grillaUnidades);
-            $todos = array_merge($todos, $union);
+            // El mapa, el resumen y los horarios críticos usan solo las unidades consideradas
+            $considerada = !$unidadSel || $u->id === $unidadSel->id;
+            if ($considerada) {
+                $this->distribuir($union, $grillaUnidades);
+                $todos = array_merge($todos, $union);
+            }
 
             $minCubiertos = $this->minutos($union);
 
             $detalleUnidades[] = [
+                'id'              => $u->id,
+                'considerada'     => $considerada,
                 'nombre'          => $u->nombre,
                 'patente'         => $u->patente ?? null,
                 'pct'             => $minutosPeriodo > 0 ? round($minCubiertos / $minutosPeriodo * 100, 1) : 0,
@@ -157,7 +168,7 @@ class CoberturaConductoresService
         $unionTodas = $this->fusionar($todos);
         $this->distribuir($unionTodas, $grillaAlguna);
 
-        $nUnidades = $unidades->count();
+        $nUnidades = $unidadSel ? 1 : $unidades->count();
 
         // ── Mapa de calor ──
         $mapa = [];
@@ -204,7 +215,10 @@ class CoberturaConductoresService
         usort($celdas, fn($x, $y) => $x['pct'] <=> $y['pct']);
         $peor = $celdas[0] ?? null;
 
-        $minUnidadCubiertos = array_sum(array_map(fn($du) => $du['horasCubiertas'] * 60, $detalleUnidades));
+        $minUnidadCubiertos = array_sum(array_map(
+            fn($du) => $du['considerada'] ? $du['horasCubiertas'] * 60 : 0,
+            $detalleUnidades
+        ));
         $minSinNinguna = max(0, $minutosPeriodo - $this->minutos($unionTodas));
 
         // ── Vista simple: bloques del día × día de semana ──
@@ -233,7 +247,7 @@ class CoberturaConductoresService
             'mapa'             => $mapa,
             'franjas'          => array_slice($franjas, 0, 6),
             'bloques'          => $bloques,
-            'resumen'          => $this->resumen($franjas, $promedioBloque, $kpiCobertura),
+            'resumen'          => $this->resumen($franjas, $promedioBloque, $kpiCobertura, $unidadSel?->nombre),
             'unidades'         => $detalleUnidades,
             'kpi' => [
                 'coberturaPromedio' => $kpiCobertura,
@@ -263,12 +277,16 @@ class CoberturaConductoresService
      * Frases de resumen en lenguaje simple.
      * Devuelve una lista de frases (pueden contener <strong>, ya escapadas).
      */
-    private function resumen(array $franjas, array $promedioBloque, float $cobertura): array
+    private function resumen(array $franjas, array $promedioBloque, float $cobertura, ?string $unidad = null): array
     {
         $e = fn($t) => e($t);
         $frases = [];
 
-        $frases[] = 'En promedio, tus unidades tuvieron conductor el <strong>'
+        // Sujeto de las frases: toda la compañía o una unidad en particular
+        $sujetoTuvo  = $unidad ? 'el <strong>' . $e($unidad) . '</strong> tuvo' : 'tus unidades tuvieron';
+        $sujetoQueda = $unidad ? 'El ' . $e($unidad) . ' suele' : 'Tus carros suelen';
+
+        $frases[] = 'En promedio, ' . $sujetoTuvo . ' conductor el <strong>'
             . $e(number_format($cobertura, 0, ',', '.')) . '% del tiempo</strong>.';
 
         // Peores horarios: agrupar franjas con el mismo horario en distintos días
@@ -294,7 +312,7 @@ class CoberturaConductoresService
                 $partes[] = '<strong>los ' . $e($this->unirLista(array_values($g['dias'])))
                     . ' de ' . $e($g['desde']) . ' a ' . $e($g['hasta']) . '</strong>';
             }
-            $frases[] = 'Tus carros suelen quedar sin conductor ' . $this->unirLista($partes) . '.';
+            $frases[] = $sujetoQueda . ' quedar sin conductor ' . $this->unirLista($partes) . '.';
         } else {
             $frases[] = 'No hay horarios críticos: en todas las franjas la cobertura se mantiene sobre el '
                 . self::UMBRAL_CRITICO . '%.';

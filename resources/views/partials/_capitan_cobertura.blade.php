@@ -27,10 +27,15 @@
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
     <div class="small">
         @unless($cobertura['sinUnidades'])
-            <span class="text-muted">Unidades consideradas:</span>
-            @foreach($cobertura['unidades'] as $u)
-                <span class="badge bg-primary">{{ $u['nombre'] }}</span>
-            @endforeach
+            @if($cobertura['unidadSeleccionada'])
+                <span class="text-muted">Unidad considerada:</span>
+                <span class="badge bg-primary">{{ $cobertura['unidadSeleccionada']['nombre'] }}</span>
+            @else
+                <span class="text-muted">Unidades consideradas:</span>
+                @foreach($cobertura['unidades'] as $u)
+                    <span class="badge bg-primary">{{ $u['nombre'] }}</span>
+                @endforeach
+            @endif
         @endunless
     </div>
     @include('partials._capitan_periodo', ['tab' => 'cobertura'])
@@ -261,7 +266,7 @@
             </div>
             <div class="card-body">
                 @foreach($cobertura['unidades'] as $u)
-                    <div class="{{ !$loop->last ? 'mb-3' : '' }}">
+                    <div class="{{ !$loop->last ? 'mb-3' : '' }} {{ $cobertura['unidadSeleccionada'] && !$u['considerada'] ? 'opacity-50' : '' }}">
                         <div class="d-flex justify-content-between align-items-baseline small mb-1">
                             <span>
                                 <span class="badge bg-primary">{{ $u['nombre'] }}</span>

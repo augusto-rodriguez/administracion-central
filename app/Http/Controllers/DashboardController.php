@@ -122,10 +122,11 @@ class DashboardController extends Controller
         $cobertura = null;
         if ($esCapitan && $companiaId) {
             $dias = (int) $request->input('periodo_cobertura', 30);
-            if (!in_array($dias, [30, 60, 90], true)) {
+            if (!in_array($dias, [7, 30, 60, 90], true)) {
                 $dias = 30;
             }
-            $cobertura = app(CoberturaConductoresService::class)->calcular($companiaId, $dias);
+            $unidadCobertura = $request->integer('unidad_cobertura') ?: null;
+            $cobertura = app(CoberturaConductoresService::class)->calcular($companiaId, $dias, $unidadCobertura);
         }
 
         // IDs de claves de emergencia
