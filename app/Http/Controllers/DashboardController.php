@@ -15,6 +15,7 @@ use App\Models\LibroNovedades;
 use App\Models\OficialFueraServicio;
 use App\Models\SalidaUnidad;
 use App\Models\ClaveSalida;
+use App\Services\CoberturaConductoresService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -115,6 +116,16 @@ class DashboardController extends Controller
 
         if ($esCapitan) {
             $companiaId = $user->voluntario?->compania_id;
+        }
+
+        // ── Cobertura de conductores (solo capitán de compañía) ──
+        $cobertura = null;
+        if ($esCapitan && $companiaId) {
+            $dias = (int) $request->input('periodo_cobertura', 30);
+            if (!in_array($dias, [30, 60, 90], true)) {
+                $dias = 30;
+            }
+            $cobertura = app(CoberturaConductoresService::class)->calcular($companiaId, $dias);
         }
 
         // IDs de claves de emergencia
@@ -255,7 +266,8 @@ class DashboardController extends Controller
             'comandantes', 'libroActivo',
             'oficiales', 'fueraServicio',
             'todosOficiales',
-            'chartData', 'emergenciasMes', 'porcentajeMes'
+            'chartData', 'emergenciasMes', 'porcentajeMes',
+            'cobertura'
         ));
     }
 

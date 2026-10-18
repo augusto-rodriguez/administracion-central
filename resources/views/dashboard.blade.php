@@ -328,8 +328,74 @@
         </div>
     </div>
 
-    {{-- Indicadores de emergencia (filtrados por compañía del capitán) --}}
-    @include('partials._emergency_charts')
+    @php
+        $tabsCapitan = [
+            'emergencias' => ['icono' => 'bi-exclamation-octagon', 'texto' => 'Emergencias'],
+            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores'],
+        ];
+        $tabActiva = array_key_exists(request('tab'), $tabsCapitan) ? request('tab') : 'emergencias';
+    @endphp
+
+    <style>
+        /* ── Ayuda (?) ── */
+        .ayuda-info { position: relative; display: inline-flex; align-items: center; cursor: help;
+                      color: #6c757d; font-weight: normal; outline: none; }
+        .ayuda-info:hover, .ayuda-info:focus { color: #0d6efd; }
+        .ayuda-info .ayuda-texto {
+            visibility: hidden; opacity: 0; position: absolute; z-index: 1080;
+            top: calc(100% + 6px); left: -10px; width: 300px; max-width: 80vw;
+            background: #212529; color: #fff; font-size: .78rem; line-height: 1.45;
+            text-align: left; white-space: normal; padding: .65rem .8rem;
+            border-radius: .45rem; box-shadow: 0 6px 20px rgba(0,0,0,.2);
+            transition: opacity .15s ease; pointer-events: none;
+        }
+        .ayuda-info:hover .ayuda-texto,
+        .ayuda-info:focus .ayuda-texto { visibility: visible; opacity: 1; }
+
+        /* ── Mapa de calor ── */
+        .mapa-cobertura { border-collapse: separate; border-spacing: 2px; }
+        .mapa-cobertura td, .mapa-cobertura th { border: 0; padding: 2px 4px; }
+        .mapa-cobertura td:not(:first-child) { font-size: .7rem; min-width: 38px; border-radius: 3px; cursor: default; }
+        .cob-0  { background: #c0392b !important; color: #fff; }
+        .cob-1  { background: #e67e22 !important; color: #fff; }
+        .cob-2  { background: #f4d03f !important; color: #1a1a1a; }
+        .cob-3  { background: #a9dfbf !important; color: #1a1a1a; }
+        .cob-4  { background: #27ae60 !important; color: #fff; }
+        .cob-na { background: #f1f1f1 !important; color: #aaa; }
+        .leyenda { padding: 1px 8px; border-radius: 3px; font-size: .7rem; }
+
+        #tabsCapitan .nav-link { color: #495057; }
+        #tabsCapitan .nav-link.active { font-weight: 600; color: #000; }
+    </style>
+
+    <ul class="nav nav-tabs mt-4 flex-nowrap overflow-auto" id="tabsCapitan" role="tablist" style="white-space:nowrap">
+        @foreach($tabsCapitan as $clave => $t)
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {{ $tabActiva === $clave ? 'active' : '' }}"
+                        id="tab-{{ $clave }}-btn" type="button" role="tab"
+                        data-bs-toggle="tab" data-bs-target="#tab-{{ $clave }}"
+                        data-tab="{{ $clave }}"
+                        aria-controls="tab-{{ $clave }}" aria-selected="{{ $tabActiva === $clave ? 'true' : 'false' }}">
+                    <i class="bi {{ $t['icono'] }} me-1"></i>{{ $t['texto'] }}
+                </button>
+            </li>
+        @endforeach
+    </ul>
+
+    <div class="tab-content pt-3">
+        <div class="tab-pane fade {{ $tabActiva === 'emergencias' ? 'show active' : '' }}" id="tab-emergencias" role="tabpanel">
+            {{-- Indicadores de emergencia (filtrados por compañía del capitán) --}}
+            @include('partials._emergency_charts')
+        </div>
+
+        <div class="tab-pane fade {{ $tabActiva === 'cobertura' ? 'show active' : '' }}" id="tab-cobertura" role="tabpanel">
+            @if($cobertura)
+                @include('partials._capitan_cobertura')
+            @else
+                <div class="alert alert-warning mb-0">Tu usuario no tiene una compañía asociada.</div>
+            @endif
+        </div>
+    </div>
 
 {{-- ══════════════════════════════════════════════════════════════════════
      VISTA ADMIN / COMANDANTE
@@ -777,5 +843,16 @@ function actualizarCronometros() {
 }
 actualizarCronometros();
 setInterval(actualizarCronometros, 1000);
+
+// ── Pestañas del capitán: recordar la pestaña activa en la URL ──
+document.querySelectorAll('#tabsCapitan [data-tab]').forEach(btn => {
+    btn.addEventListener('shown.bs.tab', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', btn.dataset.tab);
+        window.history.replaceState({}, '', url);
+        // Re-dibuja gráficos que estaban ocultos
+        window.dispatchEvent(new Event('resize'));
+    });
+});
 </script>
 @endpush
