@@ -85,8 +85,13 @@ class DashboardController extends Controller
             ->get();
 
         // Oficiales actualmente fuera de servicio
-        $fueraServicio = OficialFueraServicio::whereNull('fecha_fin')
-            ->orWhere('fecha_fin', '>=', today())
+        // fecha_fin = día en que vuelve al servicio (ese día ya está en servicio)
+        $hoy = Carbon::today('America/Santiago')->toDateString();
+
+        $fueraServicio = OficialFueraServicio::where(function ($q) use ($hoy) {
+                $q->whereNull('fecha_fin')
+                  ->orWhereDate('fecha_fin', '>', $hoy);
+            })
             ->with('voluntario')
             ->get()
             ->keyBy('voluntario_id');
@@ -301,9 +306,14 @@ class DashboardController extends Controller
 
     public function vuelveServicio($id)
     {
-        OficialFueraServicio::findOrFail($id)->update([
-            'fecha_fin' => today(),
-        ]);
+        $registro = OficialFueraServicio::findOrFail($id);
+
+        // Solo cerrar si sigue abierto (sin fecha_fin o con fecha_fin futura)
+        if (is_null($registro->fecha_fin) || $registro->fecha_fin->isFuture()) {
+            $registro->update([
+                'fecha_fin' => Carbon::today('America/Santiago')->toDateString(),
+            ]);
+        }
 
         return back()->with('success', 'Oficial vuelve a servicio activo.');
     }

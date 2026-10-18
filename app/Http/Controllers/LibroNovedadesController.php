@@ -9,6 +9,7 @@ use App\Models\RegistroTurnoCuartelero;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\OficialFueraServicio;
 
 class LibroNovedadesController extends Controller
 {
@@ -121,6 +122,9 @@ class LibroNovedadesController extends Controller
                 'tipo'      => $u->tipo,
             ])->values()->toArray();
 
+        // ── Snapshot oficiales fuera de servicio (8-1) ───────────────
+        $oficialesFueraServicio = $this->snapshotOficialesFueraServicio($ahora);
+
         // ── Operador del turno anterior ──────────────────────────────
         $operadorAnterior = LibroNovedades::where('estado', 'cerrado')
             ->orderByDesc('fecha')
@@ -139,6 +143,7 @@ class LibroNovedadesController extends Controller
             'maquinistas_al_recibir'             => $maquinistas,
             'cuarteleros_al_recibir'             => $cuarteleros,
             'unidades_fuera_servicio_al_recibir' => $fueraServicio,
+            'oficiales_fuera_servicio_al_recibir' => $oficialesFueraServicio,
             'estado'                             => 'borrador',
         ]);
 
@@ -270,6 +275,9 @@ class LibroNovedadesController extends Controller
                 'tipo'      => $u->tipo,
             ])->values()->toArray();
 
+        // ── Oficiales fuera de servicio (8-1) al entregar ────────────
+        $oficialesFueraServicio = $this->snapshotOficialesFueraServicio($ahora);
+
         // ── Salidas del turno ────────────────────────────────────────
         $salidasDelTurno = \App\Models\SalidaUnidad::whereBetween('salida_at', [$inicioTurno, $finTurno])
             ->with('claveSalida')
@@ -339,6 +347,7 @@ class LibroNovedadesController extends Controller
             'puestas_en_servicio'                 => $todasPuestas,
             'salidas_administrativas'             => $salidasAdmin,
             'salidas_emergencia'                  => $salidasEmergencia,
+            'oficiales_fuera_servicio_al_entregar' => $oficialesFueraServicio,
             'estado'                              => 'cerrado',
             'cerrado_por'                         => Auth::id(),
             'cerrado_at'                          => $ahora,
@@ -397,5 +406,29 @@ class LibroNovedadesController extends Controller
         return $pdf->download(
             'libro_novedades_' . $libro->fecha->format('Y-m-d') . '_' . $libro->turno . '.pdf'
         );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Snapshot de oficiales fuera de servicio (8-1) vigentes en una fecha
+    // ─────────────────────────────────────────────────────────────────────────
+    private function snapshotOficialesFueraServicio(Carbon $momento): array
+    {
+        // Criterio en OficialFueraServicio::scopeVigentes()
+        // (fecha_fin = día en que vuelve, ese día ya está en servicio)
+        return OficialFueraServicio::vigentes($momento)
+            ->with('voluntario.compania')
+            ->get()
+            ->map(fn($o) => [
+                'voluntario_id' => $o->voluntario_id,
+                'nombre'        => $o->voluntario->nombre ?? '—',
+                'clave'         => $o->voluntario->clave_actual ?? null,
+                'compania'      => $o->voluntario?->compania?->nombre,
+                'fecha_inicio'  => $o->fecha_inicio?->toDateString(),
+                'fecha_fin'     => $o->fecha_fin?->toDateString(),
+                'motivo'        => $o->motivo,
+            ])
+            ->sortBy('nombre')
+            ->values()
+            ->toArray();
     }
 }

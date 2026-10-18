@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class OficialFueraServicio extends Model
 {
@@ -18,5 +19,14 @@ class OficialFueraServicio extends Model
     public function voluntario()
     {
         return $this->belongsTo(Voluntario::class);
+    }
+    
+    public function scopeVigentes($query, $fecha = null)
+    {
+        $dia = Carbon::parse($fecha ?? now('America/Santiago'))->toDateString();
+
+        return $query->whereDate('fecha_inicio', '<=', $dia)
+            ->where(fn($q) => $q->whereNull('fecha_fin')
+                                ->orWhereDate('fecha_fin', '>', $dia));
     }
 }

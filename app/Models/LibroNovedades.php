@@ -30,6 +30,8 @@ class LibroNovedades extends Model
         'estado',
         'cerrado_por',
         'cerrado_at',
+        'oficiales_fuera_servicio_al_recibir',
+        'oficiales_fuera_servicio_al_entregar',
     ];
 
     protected $casts = [
@@ -44,6 +46,8 @@ class LibroNovedades extends Model
         'puestas_en_servicio'                  => 'array',
         'salidas_administrativas'              => 'array',
         'salidas_emergencia'                   => 'array',
+        'oficiales_fuera_servicio_al_recibir'  => 'array',
+        'oficiales_fuera_servicio_al_entregar' => 'array',
     ];
 
     public function operador()

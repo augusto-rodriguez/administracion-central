@@ -89,6 +89,43 @@
                     </div>
                 @else <p class="text-muted small">Ninguna unidad fuera de servicio.</p> @endif
             </div>
+
+            {{-- Oficiales fuera de servicio (8-1) al recibir --}}
+            <div class="col-12">
+                <h6 class="fw-bold text-warning-emphasis">
+                    <i class="bi bi-person-dash me-1"></i>Oficiales fuera de servicio (8-1) al recibir
+                </h6>
+                @php $ofr = $libro->oficiales_fuera_servicio_al_recibir; @endphp
+                @if(is_null($ofr))
+                    <p class="text-muted small">Sin registro (libro anterior a esta funcionalidad).</p>
+                @elseif(count($ofr))
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr><th>Clave</th><th>Nombre</th><th>Compañía</th><th>Desde</th><th>Hasta</th><th>Motivo</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach($ofr as $o)
+                            <tr>
+                                <td>
+                                    @if(filled($o['clave'] ?? null))
+                                        <span class="badge bg-warning text-dark">{{ $o['clave'] }}</span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="fw-bold">{{ $o['nombre'] }}</td>
+                                <td>{{ $o['compania'] ?? '—' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($o['fecha_inicio'])->format('d/m/Y') }}</td>
+                                <td>{{ $o['fecha_fin'] ? \Carbon\Carbon::parse($o['fecha_fin'])->format('d/m/Y') : 'Indefinido' }}</td>
+                                <td>{{ $o['motivo'] ?? '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <p class="text-muted small">Ningún oficial fuera de servicio.</p>
+                @endif
+            </div>
         </div>
     </div>
 </div>
@@ -242,6 +279,43 @@
                         @endforeach
                     </div>
                 @else <p class="text-muted small">Ninguna unidad fuera de servicio.</p> @endif
+            </div>
+
+            {{-- Oficiales fuera de servicio (8-1) al entregar --}}
+            <div class="col-12">
+                <h6 class="fw-bold text-warning-emphasis">
+                    <i class="bi bi-person-dash me-1"></i>Oficiales fuera de servicio (8-1) al entregar
+                </h6>
+                @php $ofe = $libro->oficiales_fuera_servicio_al_entregar; @endphp
+                @if(is_null($ofe))
+                    <p class="text-muted small">Sin registro (libro anterior a esta funcionalidad).</p>
+                @elseif(count($ofe))
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr><th>Clave</th><th>Nombre</th><th>Compañía</th><th>Desde</th><th>Hasta</th><th>Motivo</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach($ofe as $o)
+                            <tr>
+                                <td>
+                                    @if(filled($o['clave'] ?? null))
+                                        <span class="badge bg-warning text-dark">{{ $o['clave'] }}</span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="fw-bold">{{ $o['nombre'] }}</td>
+                                <td>{{ $o['compania'] ?? '—' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($o['fecha_inicio'])->format('d/m/Y') }}</td>
+                                <td>{{ $o['fecha_fin'] ? \Carbon\Carbon::parse($o['fecha_fin'])->format('d/m/Y') : 'Indefinido' }}</td>
+                                <td>{{ $o['motivo'] ?? '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <p class="text-muted small">Ningún oficial fuera de servicio.</p>
+                @endif
             </div>
         </div>
     </div>
