@@ -44,7 +44,11 @@ class CoberturaConductoresService
         5 => 'Viernes', 6 => 'Sábado', 7 => 'Domingo',
     ];
 
-    public function calcular(int $companiaId, int $dias = 30, ?int $unidadId = null): array
+    /**
+     * @param int|null $companiaId  null = todas las compañías (panorama general)
+     * @param bool     $esPropia    true cuando quien mira es el capitán de esa compañía ("tus unidades")
+     */
+    public function calcular(?int $companiaId, int $dias = 30, ?int $unidadId = null, bool $esPropia = true): array
     {
         $ahora  = Carbon::now(self::TZ);
         $fin    = $ahora->copy()->startOfHour();               // se excluye la hora en curso
@@ -53,8 +57,10 @@ class CoberturaConductoresService
         $inicioTs = $inicio->timestamp;
         $finTs    = $fin->timestamp;
 
-        $unidades = Unidad::where('compania_id', $companiaId)
-            ->where('activa', true)
+        $unidades = Unidad::where('activa', true)
+            ->when($companiaId, fn($q) => $q->where('compania_id', $companiaId))
+            ->with('compania')
+            ->orderBy('compania_id')
             ->orderBy('nombre')
             ->get();
 
@@ -63,7 +69,12 @@ class CoberturaConductoresService
 
         $resultado = [
             'dias'       => $dias,
-            'todasUnidades'      => $unidades->map(fn($u) => ['id' => $u->id, 'nombre' => $u->nombre])->values()->all(),
+            'panorama'           => $companiaId === null,
+            'todasUnidades'      => $unidades->map(fn($u) => [
+                                        'id'       => $u->id,
+                                        'nombre'   => $u->nombre,
+                                        'compania' => $u->compania->nombre ?? 'Sin compañía',
+                                    ])->values()->all(),
             'unidadSeleccionada' => $unidadSel ? ['id' => $unidadSel->id, 'nombre' => $unidadSel->nombre] : null,
             'desde'      => $inicio,
             'hasta'      => $fin,
@@ -151,6 +162,7 @@ class CoberturaConductoresService
 
             $detalleUnidades[] = [
                 'id'              => $u->id,
+                'compania'        => $u->compania->nombre ?? 'Sin compañía',
                 'considerada'     => $considerada,
                 'nombre'          => $u->nombre,
                 'patente'         => $u->patente ?? null,
@@ -247,7 +259,11 @@ class CoberturaConductoresService
             'mapa'             => $mapa,
             'franjas'          => array_slice($franjas, 0, 6),
             'bloques'          => $bloques,
-            'resumen'          => $this->resumen($franjas, $promedioBloque, $kpiCobertura, $unidadSel?->nombre),
+            'resumen'          => $this->resumen(
+                                      $franjas, $promedioBloque, $kpiCobertura,
+                                      $this->sujeto($unidadSel?->nombre, $companiaId === null, $esPropia, $unidades->first()?->compania?->nombre)
+                                  ),
+            'companias'        => $companiaId === null ? $this->resumenPorCompania($detalleUnidades) : [],
             'unidades'         => $detalleUnidades,
             'kpi' => [
                 'coberturaPromedio' => $kpiCobertura,
@@ -277,14 +293,47 @@ class CoberturaConductoresService
      * Frases de resumen en lenguaje simple.
      * Devuelve una lista de frases (pueden contener <strong>, ya escapadas).
      */
-    private function resumen(array $franjas, array $promedioBloque, float $cobertura, ?string $unidad = null): array
+    /**
+     * Sujeto de las frases del resumen según lo que se está mirando.
+     * Devuelve [tuvo, queda] (HTML ya escapado).
+     */
+    private function sujeto(?string $unidad, bool $panorama, bool $esPropia, ?string $compania): array
+    {
+        if ($unidad) {
+            return ['el <strong>' . e($unidad) . '</strong> tuvo', 'El ' . e($unidad) . ' suele'];
+        }
+        if ($panorama) {
+            return ['las unidades del Cuerpo tuvieron', 'Las unidades del Cuerpo suelen'];
+        }
+        if ($esPropia) {
+            return ['tus unidades tuvieron', 'Tus carros suelen'];
+        }
+        $cia = e($compania ?? 'la compañía');
+        return ['las unidades de la <strong>' . $cia . '</strong> tuvieron', 'Las unidades de la ' . $cia . ' suelen'];
+    }
+
+    /** Promedio de cobertura por compañía (panorama general), de peor a mejor */
+    private function resumenPorCompania(array $detalleUnidades): array
+    {
+        return collect($detalleUnidades)
+            ->groupBy('compania')
+            ->map(fn($us, $nombre) => [
+                'nombre'      => $nombre,
+                'unidades'    => $us->count(),
+                'pct'         => round($us->avg('pct'), 1),
+                'horasSin'    => $us->sum('horasSin'),
+            ])
+            ->sortBy('pct')
+            ->values()
+            ->all();
+    }
+
+    private function resumen(array $franjas, array $promedioBloque, float $cobertura, array $sujeto): array
     {
         $e = fn($t) => e($t);
         $frases = [];
 
-        // Sujeto de las frases: toda la compañía o una unidad en particular
-        $sujetoTuvo  = $unidad ? 'el <strong>' . $e($unidad) . '</strong> tuvo' : 'tus unidades tuvieron';
-        $sujetoQueda = $unidad ? 'El ' . $e($unidad) . ' suele' : 'Tus carros suelen';
+        [$sujetoTuvo, $sujetoQueda] = $sujeto;
 
         $frases[] = 'En promedio, ' . $sujetoTuvo . ' conductor el <strong>'
             . $e(number_format($cobertura, 0, ',', '.')) . '% del tiempo</strong>.';

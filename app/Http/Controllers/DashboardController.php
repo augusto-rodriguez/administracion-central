@@ -118,15 +118,31 @@ class DashboardController extends Controller
             $companiaId = $user->voluntario?->compania_id;
         }
 
-        // ── Cobertura de conductores (solo capitán de compañía) ──
-        $cobertura = null;
+        // ── Cobertura de conductores ─────────────────────────────────
+        //    Capitán: solo su compañía.
+        //    Comandancia / admin: panorama general o la compañía que elija.
+        $cobertura          = null;
+        $companiasCobertura = collect();
+
+        $diasCobertura = (int) $request->input('periodo_cobertura', 30);
+        if (!in_array($diasCobertura, [7, 30, 60, 90], true)) {
+            $diasCobertura = 30;
+        }
+        $unidadCobertura = $request->integer('unidad_cobertura') ?: null;
+
         if ($esCapitan && $companiaId) {
-            $dias = (int) $request->input('periodo_cobertura', 30);
-            if (!in_array($dias, [7, 30, 60, 90], true)) {
-                $dias = 30;
+            $cobertura = app(CoberturaConductoresService::class)
+                ->calcular($companiaId, $diasCobertura, $unidadCobertura, true);
+        } elseif ($user->esAdmin() || $user->esComandante()) {
+            $companiasCobertura = Compania::where('activa', true)->orderBy('numero')->get();
+
+            $companiaCobertura = $request->integer('compania_cobertura') ?: null;
+            if ($companiaCobertura && !$companiasCobertura->contains('id', $companiaCobertura)) {
+                $companiaCobertura = null;
             }
-            $unidadCobertura = $request->integer('unidad_cobertura') ?: null;
-            $cobertura = app(CoberturaConductoresService::class)->calcular($companiaId, $dias, $unidadCobertura);
+
+            $cobertura = app(CoberturaConductoresService::class)
+                ->calcular($companiaCobertura, $diasCobertura, $unidadCobertura, false);
         }
 
         // IDs de claves de emergencia
@@ -268,7 +284,7 @@ class DashboardController extends Controller
             'oficiales', 'fueraServicio',
             'todosOficiales',
             'chartData', 'emergenciasMes', 'porcentajeMes',
-            'cobertura'
+            'cobertura', 'companiasCobertura'
         ));
     }
 

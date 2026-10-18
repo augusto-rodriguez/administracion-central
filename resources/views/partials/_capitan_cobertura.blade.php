@@ -30,6 +30,10 @@
             @if($cobertura['unidadSeleccionada'])
                 <span class="text-muted">Unidad considerada:</span>
                 <span class="badge bg-primary">{{ $cobertura['unidadSeleccionada']['nombre'] }}</span>
+            @elseif($cobertura['panorama'])
+                <span class="text-muted">Unidades consideradas:</span>
+                <span class="fw-bold">todas las unidades activas del Cuerpo</span>
+                <span class="badge bg-secondary">{{ count($cobertura['todasUnidades']) }}</span>
             @else
                 <span class="text-muted">Unidades consideradas:</span>
                 @foreach($cobertura['unidades'] as $u)
@@ -44,7 +48,7 @@
 @if($cobertura['sinUnidades'])
     <div class="alert alert-info mb-0">
         <i class="bi bi-info-circle me-1"></i>
-        Tu compañía no tiene unidades activas registradas, por lo que no hay cobertura que calcular.
+        No hay unidades activas registradas para esta selección, por lo que no hay cobertura que calcular.
     </div>
 @else
 
@@ -66,7 +70,7 @@
             <div class="card-body p-3">
                 <div class="text-muted small d-flex align-items-center gap-1">
                     Cobertura promedio
-                    @include('partials._ayuda', ['texto' => 'Porcentaje del tiempo del período en que las unidades activas de tu compañía tuvieron un maquinista o cuartelero puesto en servicio con ellas. Se promedia entre todas las unidades.'])
+                    @include('partials._ayuda', ['texto' => 'Porcentaje del tiempo del período en que las unidades activas de la compañía tuvieron un maquinista o cuartelero puesto en servicio con ellas. Se promedia entre todas las unidades.'])
                 </div>
                 <div class="fs-3 fw-bold {{ $cobertura['kpi']['coberturaPromedio'] < $cobertura['umbral'] ? 'text-danger' : '' }}">
                     {{ number_format($cobertura['kpi']['coberturaPromedio'], 1, ',', '.') }}%
@@ -79,7 +83,7 @@
             <div class="card-body p-3">
                 <div class="text-muted small d-flex align-items-center gap-1">
                     Sin ningún conductor
-                    @include('partials._ayuda', ['texto' => 'Tiempo total del período en que ninguna unidad de tu compañía tenía conductor en servicio, es decir, la compañía no podía despachar ningún carro con conductor registrado.'])
+                    @include('partials._ayuda', ['texto' => 'Tiempo total del período en que ninguna unidad de la compañía tenía conductor en servicio, es decir, la compañía no podía despachar ningún carro con conductor registrado.'])
                 </div>
                 <div class="fs-3 fw-bold text-danger">{{ $fmtHoras($cobertura['kpi']['horasSinNinguna']) }}</div>
                 <div class="text-muted" style="font-size:.75rem">
@@ -121,7 +125,7 @@
             <div class="card-header bg-white fw-bold d-flex flex-wrap align-items-center gap-2">
                 <i class="bi bi-grid-3x3-gap text-danger"></i>
                 Cobertura por día y horario
-                @include('partials._ayuda', ['texto' => 'Se calcula con los registros de puesta en servicio de maquinistas y cuarteleros (hora de entrada, hora de salida y unidades asignadas). Para cada día y horario se suma el tiempo en que cada unidad de tu compañía tuvo conductor y se compara con el tiempo total de esa franja en el período. Ej.: 25% el lunes en la madrugada significa que, en promedio, las unidades tuvieron conductor solo un cuarto de ese tiempo. Solo se consideran las unidades activas hoy; un turno sin salida registrada se cuenta como en servicio.'])
+                @include('partials._ayuda', ['texto' => 'Se calcula con los registros de puesta en servicio de maquinistas y cuarteleros (hora de entrada, hora de salida y unidades asignadas). Para cada día y horario se suma el tiempo en que cada unidad de la compañía tuvo conductor y se compara con el tiempo total de esa franja en el período. Ej.: 25% el lunes en la madrugada significa que, en promedio, las unidades tuvieron conductor solo un cuarto de ese tiempo. Solo se consideran las unidades activas hoy; un turno sin salida registrada se cuenta como en servicio.'])
 
                 <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Tipo de vista">
                     <button type="button" class="btn btn-outline-secondary active" data-vista-cobertura="simple">
@@ -230,7 +234,7 @@
             <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
                 <i class="bi bi-exclamation-triangle text-warning"></i>
                 Horarios con falta de conductores
-                @include('partials._ayuda', ['texto' => 'Agrupa las horas consecutivas de un mismo día en que la cobertura promedio de tus unidades estuvo bajo ' . $cobertura['umbral'] . '%. Están ordenadas de la más débil a la menos débil. Son los horarios donde más conviene reforzar con maquinistas o cuarteleros.'])
+                @include('partials._ayuda', ['texto' => 'Agrupa las horas consecutivas de un mismo día en que la cobertura promedio de las unidades estuvo bajo ' . $cobertura['umbral'] . '%. Están ordenadas de la más débil a la menos débil. Son los horarios donde más conviene reforzar con maquinistas o cuarteleros.'])
             </div>
             <div class="card-body p-0">
                 @if(count($cobertura['franjas']))
@@ -257,6 +261,34 @@
             </div>
         </div>
 
+        @if($cobertura['panorama'])
+        {{-- ── Cobertura por compañía (panorama general) ───────────── --}}
+        <div class="card">
+            <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-building text-primary"></i>
+                Cobertura por compañía
+                @include('partials._ayuda', ['texto' => 'Promedio de cobertura de las unidades activas de cada compañía durante el período: qué parte del tiempo tuvieron un maquinista o cuartelero en servicio. Ordenadas de menor a mayor cobertura. Para ver el detalle de una compañía, elígela en el selector "Compañía".'])
+            </div>
+            <div class="card-body">
+                @foreach($cobertura['companias'] as $c)
+                    <div class="{{ !$loop->last ? 'mb-3' : '' }}">
+                        <div class="d-flex justify-content-between align-items-baseline small mb-1">
+                            <span>
+                                <span class="fw-bold">{{ $c['nombre'] }}</span>
+                                <span class="text-muted ms-1">{{ $c['unidades'] }} unidad(es)</span>
+                            </span>
+                            <span class="fw-bold">{{ number_format($c['pct'], 1, ',', '.') }}%</span>
+                        </div>
+                        <div class="progress" style="height:8px" role="progressbar"
+                             aria-valuenow="{{ $c['pct'] }}" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar {{ $c['pct'] < $cobertura['umbral'] ? 'bg-danger' : ($c['pct'] < 60 ? 'bg-warning' : 'bg-success') }}"
+                                 style="width: {{ min(100, $c['pct']) }}%"></div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @else
         {{-- ── Cobertura por unidad ────────────────────────────────── --}}
         <div class="card">
             <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
@@ -290,6 +322,7 @@
                 @endforeach
             </div>
         </div>
+        @endif
     </div>
 </div>
 @endif
