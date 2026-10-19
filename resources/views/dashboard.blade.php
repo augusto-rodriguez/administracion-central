@@ -322,6 +322,7 @@
         .cob-4  { background: #27ae60 !important; color: #fff; }
         .cob-na { background: #f1f1f1 !important; color: #aaa; }
         .leyenda { padding: 1px 8px; border-radius: 3px; font-size: .7rem; }
+        .etiqueta-nuevo { font-size: .62rem; letter-spacing: .3px; text-transform: uppercase; }
 
         /* ── Vista simple por bloques ── */
         .mapa-bloques { border-collapse: separate; border-spacing: 4px; }
@@ -350,7 +351,7 @@
     @php
         $tabsCapitan = [
             'emergencias' => ['icono' => 'bi-exclamation-octagon', 'texto' => 'Emergencias'],
-            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores'],
+            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores', 'nuevoHasta' => '2026-11-30'],
         ];
         $tabActiva = array_key_exists(request('tab'), $tabsCapitan) ? request('tab') : 'emergencias';
     @endphp
@@ -391,6 +392,10 @@
                         data-tab="{{ $clave }}"
                         aria-controls="tab-{{ $clave }}" aria-selected="{{ $tabActiva === $clave ? 'true' : 'false' }}">
                     <i class="bi {{ $t['icono'] }} me-1"></i>{{ $t['texto'] }}
+                    {{-- Etiqueta "Nuevo": desaparece sola después de la fecha indicada --}}
+                    @if(!empty($t['nuevoHasta']) && today('America/Santiago')->lte(\Carbon\Carbon::parse($t['nuevoHasta'])))
+                        <span class="badge rounded-pill bg-danger ms-1 align-text-top etiqueta-nuevo">Nuevo</span>
+                    @endif
                 </button>
             </li>
         @endforeach
@@ -419,7 +424,7 @@
     @php
         $tabsComandancia = [
             'general'   => ['icono' => 'bi-speedometer2',  'texto' => 'General'],
-            'cobertura' => ['icono' => 'bi-clock-history', 'texto' => 'Cobertura de conductores'],
+            'cobertura' => ['icono' => 'bi-clock-history', 'texto' => 'Cobertura de conductores', 'nuevoHasta' => '2026-11-30'],
         ];
         $tabActivaCmd = array_key_exists(request('tab'), $tabsComandancia) ? request('tab') : 'general';
     @endphp
@@ -433,6 +438,10 @@
                         data-tab="{{ $clave }}"
                         aria-controls="tab-{{ $clave }}" aria-selected="{{ $tabActivaCmd === $clave ? 'true' : 'false' }}">
                     <i class="bi {{ $t['icono'] }} me-1"></i>{{ $t['texto'] }}
+                    {{-- Etiqueta "Nuevo": desaparece sola después de la fecha indicada --}}
+                    @if(!empty($t['nuevoHasta']) && today('America/Santiago')->lte(\Carbon\Carbon::parse($t['nuevoHasta'])))
+                        <span class="badge rounded-pill bg-danger ms-1 align-text-top etiqueta-nuevo">Nuevo</span>
+                    @endif
                 </button>
             </li>
         @endforeach
