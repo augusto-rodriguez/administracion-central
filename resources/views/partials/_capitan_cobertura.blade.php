@@ -42,7 +42,10 @@
             @endif
         @endunless
     </div>
-    @include('partials._capitan_periodo', ['tab' => 'cobertura'])
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        @include('partials._capitan_periodo', ['tab' => 'cobertura'])
+        @include('partials._cobertura_guia')
+    </div>
 </div>
 
 @if($cobertura['sinUnidades'])
