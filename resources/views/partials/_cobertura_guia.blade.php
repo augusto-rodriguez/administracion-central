@@ -29,7 +29,7 @@
                 ],
                 [
                     'p' => '¿Por qué el promedio puede verse bajo aunque la compañía esté bien?',
-                    'r' => 'Porque se promedian <strong>todas las unidades activas</strong>, incluidas las de reserva. Una compañía con un carro siempre cubierto y otro de reserva que casi no se usa marcará cerca de 50%, aunque operativamente esté bien. Por eso conviene revisar también el detalle por unidad.',
+                    'r' => 'Porque el promedio mezcla <strong>todos los carros activos</strong> de la compañía, y no todos suelen tener conductor la misma cantidad de horas. Ejemplo: si una compañía tiene dos carros, uno con conductor todo el día (100%) y otro que casi nunca tiene conductor asignado (0%), el promedio da <strong>50%</strong>, aunque siempre hubo un carro disponible. Por eso conviene revisar también el detalle por unidad y el dato "Al menos una unidad". Los carros fuera de servicio no se consideran en el cálculo.',
                 ],
             ],
         ],
