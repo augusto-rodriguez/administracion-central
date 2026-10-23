@@ -141,7 +141,7 @@
                                 id="oficial_{{ $compania->id }}"
                                 class="form-select tomselect-oficial"
                                 data-compania="{{ $compania->id }}">
-                            <option value="">Buscar voluntario...</option>
+                            <option value=""></option>
                             @foreach($compania->voluntarios->where('activo', true) as $vol)
                                 <option value="{{ $vol->id }}"
                                         {{ $gnCompania?->oficial_a_cargo_id == $vol->id ? 'selected' : '' }}>
@@ -160,7 +160,7 @@
                         <select name="cuartelero_id"
                                 id="cuartelero_{{ $compania->id }}"
                                 class="form-select tomselect-cuartelero">
-                            <option value="">Sin cuartelero</option>
+                            <option value=""></option>
                             @foreach($compania->cuarteleros->where('activo', true) as $cuar)
                                 <option value="{{ $cuar->id }}"
                                         {{ $gnCompania?->cuartelero_id == $cuar->id ? 'selected' : '' }}>
@@ -344,12 +344,15 @@
 @push('scripts')
 <script>
 // Inicializar TomSelect oficial + listener automático a voluntarios
+// dropdown_input: el buscador va dentro del desplegable, así lo escrito
+// no se mezcla con el valor seleccionado ni con el placeholder
 document.querySelectorAll('.tomselect-oficial').forEach(el => {
     const companiaId = el.dataset.compania;
 
     const tsOficial = new TomSelect(el, {
-        allowEmptyOption: true,
+        plugins: ['dropdown_input', 'clear_button'],
         placeholder: 'Buscar oficial...',
+        maxOptions: null,
     });
 
     tsOficial.on('change', function(value) {
@@ -369,8 +372,9 @@ document.querySelectorAll('.tomselect-cuartelero').forEach(el => {
     const companiaId = el.closest('form').querySelector('input[name="compania_id"]').value;
 
     const tsCuartelero = new TomSelect(el, {
-        allowEmptyOption: true,
-        placeholder: 'Buscar cuartelero...',
+        plugins: ['dropdown_input', 'clear_button'],
+        placeholder: 'Sin cuartelero (buscar...)',
+        maxOptions: null,
     });
 
     tsCuartelero.on('change', function(value) {
@@ -441,6 +445,7 @@ document.querySelectorAll('.tomselect-voluntarios').forEach(el => {
     const ts = new TomSelect(el, {
         plugins: ['remove_button'],
         placeholder: 'Buscar y agregar voluntarios...',
+        maxOptions: null,
         onItemAdd: function() {
             this.setTextboxValue('');
             this.refreshOptions();
@@ -533,7 +538,7 @@ function heredarSituacion(companiaId, guardiaId) {
 
             tbody.innerHTML = html;
 
-            // ✅ VERIFICAR cuartelero DESPUÉS de heredar la situación actual
+            // Verificar cuartelero DESPUÉS de heredar la situación actual
             const cuarteleroSelect = document.querySelector(
                 `select[name="cuartelero_id"][id="cuartelero_${companiaId}"]`
             );
@@ -556,7 +561,7 @@ function confirmarCierre() {
     new bootstrap.Modal(document.getElementById('modalCerrar')).show();
 }
 
-// ✅ FUNCIÓN VERIFICACIÓN MEJORADA
+// Verifica que el cuartelero seleccionado aparezca a cargo de alguna unidad
 function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
     const warningId = 'warning-cuartelero-' + companiaId;
     const existing  = document.getElementById(warningId);
@@ -572,7 +577,6 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
     const filas        = tbody?.querySelectorAll('tr') ?? [];
     let aparece        = false;
 
-    // ✅ Buscar en atributo data-cuartelero-id (más confiable)
     filas.forEach(fila => {
         const cuarteleroEnFila = fila.getAttribute('data-cuartelero-id');
         if (cuarteleroEnFila && cuarteleroEnFila == cuarteleroId) {
@@ -580,7 +584,7 @@ function verificarCuarteleroEnUnidades(companiaId, cuarteleroId, selectEl) {
         }
     });
 
-    // ✅ Solo mostrar error si la tabla tiene unidades Y el cuartelero no aparece
+    // Solo mostrar aviso si la tabla tiene unidades Y el cuartelero no aparece
     if (!aparece && filas.length > 0) {
         const warning = document.createElement('div');
         warning.id    = warningId;
@@ -616,24 +620,12 @@ function agregarFilaUnidad(companiaId) {
         optsUnidad += `<option value="${u.id}">${u.nombre}</option>`;
     });
 
-    // Opciones maquinistas
-    let optsMaq = '<option value="">— Sin maquinista —</option>';
-    datos.maquinistas.forEach(v => {
-        optsMaq += `<option value="${v.id}">${v.nombre}</option>`;
-    });
-
-    // Opciones cuarteleros
-    let optsCuar = '<option value="">— Sin cuartelero —</option>';
-    datos.cuarteleros.forEach(c => {
-        optsCuar += `<option value="${c.id}">${c.nombre}</option>`;
-    });
-
     const tr = document.createElement('tr');
     tr.dataset.idx = idx;
     tr.innerHTML = `
         <td>
-            <select class="form-select form-select-sm select-unidad-manual"
-                    onchange="actualizarHiddenUnidad(this, ${companiaId}, ${idx})"
+            <select class="form-select form-select-sm"
+                    onchange="actualizarHiddenUnidad(this)"
                     style="min-width:130px">
                 ${optsUnidad}
             </select>
@@ -643,7 +635,7 @@ function agregarFilaUnidad(companiaId) {
         </td>
         <td>
             <select class="form-select form-select-sm"
-                    onchange="cambiarTipoConductor(this, ${companiaId}, ${idx})"
+                    onchange="cambiarTipoConductor(this, ${companiaId})"
                     style="min-width:130px">
                 <option value="">Sin conductor</option>
                 <option value="maquinista">Maquinista</option>
@@ -651,7 +643,7 @@ function agregarFilaUnidad(companiaId) {
             </select>
         </td>
         <td>
-            <div id="conductor-container-${companiaId}-${idx}">
+            <div class="conductor-container" style="min-width:200px">
                 <span class="text-muted small">—</span>
             </div>
         </td>
@@ -665,44 +657,47 @@ function agregarFilaUnidad(companiaId) {
     tbody.appendChild(tr);
 }
 
-function cambiarTipoConductor(selectTipo, companiaId, idx) {
+// Al elegir tipo de conductor, se crea un buscador TomSelect con la lista que corresponde
+function cambiarTipoConductor(selectTipo, companiaId) {
     const tipo      = selectTipo.value;
-    const container = document.getElementById(`conductor-container-${companiaId}-${idx}`);
-    const datos     = datosCompanias[companiaId];
     const tr        = selectTipo.closest('tr');
+    const container = tr.querySelector('.conductor-container');
+    const datos     = datosCompanias[companiaId];
 
-    // Limpiar hiddens conductor
-    tr.querySelector(`input[name="unidades[${idx}][maquinista_id]"]`).value = '';
-    tr.querySelector(`input[name="unidades[${idx}][cuartelero_id]"]`).value = '';
+    const inputMaq  = tr.querySelector('input[name$="[maquinista_id]"]');
+    const inputCuar = tr.querySelector('input[name$="[cuartelero_id]"]');
+    inputMaq.value  = '';
+    inputCuar.value = '';
+
+    // Destruir TomSelect anterior si existía
+    const prev = container.querySelector('select');
+    if (prev?.tomselect) prev.tomselect.destroy();
 
     if (!tipo) {
         container.innerHTML = '<span class="text-muted small">—</span>';
         return;
     }
 
-    const lista   = tipo === 'maquinista' ? datos.maquinistas : datos.cuarteleros;
-    const campo   = tipo === 'maquinista' ? 'maquinista_id' : 'cuartelero_id';
-    const badgeCs = tipo === 'maquinista' ? 'bg-danger' : 'bg-info text-dark';
+    const lista  = tipo === 'maquinista' ? datos.maquinistas : datos.cuarteleros;
+    const hidden = tipo === 'maquinista' ? inputMaq : inputCuar;
 
-    let opts = `<option value="">Seleccionar...</option>`;
-    lista.forEach(p => { opts += `<option value="${p.id}">${p.nombre}</option>`; });
+    container.innerHTML = '<select class="form-select form-select-sm"></select>';
+    const sel = container.querySelector('select');
 
-    container.innerHTML = `
-        <select class="form-select form-select-sm"
-                onchange="actualizarHiddenConductor(this, '${campo}', ${companiaId}, ${idx})"
-                style="min-width:160px">
-            ${opts}
-        </select>`;
+    const ts = new TomSelect(sel, {
+        plugins: ['dropdown_input'],
+        options: lista.map(p => ({ value: String(p.id), text: p.nombre })),
+        placeholder: tipo === 'maquinista' ? 'Buscar maquinista...' : 'Buscar cuartelero...',
+        maxOptions: null,
+        dropdownParent: 'body', // evita que la tabla recorte el desplegable
+        onChange: value => { hidden.value = value; },
+    });
+
+    ts.open(); // abre el buscador directo para escribir
 }
 
-function actualizarHiddenUnidad(select, companiaId, idx) {
-    const tr = select.closest('tr');
-    tr.querySelector(`input[name="unidades[${idx}][unidad_id]"]`).value = select.value;
-}
-
-function actualizarHiddenConductor(select, campo, companiaId, idx) {
-    const tr = select.closest('tr');
-    tr.querySelector(`input[name="unidades[${idx}][${campo}]"]`).value = select.value;
+function actualizarHiddenUnidad(select) {
+    select.closest('tr').querySelector('input[name$="[unidad_id]"]').value = select.value;
 }
 
 // Renumera los índices de los inputs tras eliminar una fila
@@ -712,13 +707,6 @@ function renumerarFilas(companiaId) {
         tr.dataset.idx = newIdx;
         tr.querySelectorAll('input[type="hidden"]').forEach(inp => {
             inp.name = inp.name.replace(/unidades\[\d+\]/, `unidades[${newIdx}]`);
-        });
-        tr.querySelectorAll('select').forEach(sel => {
-            if (sel.onchange) {
-                // actualizar referencias de idx en atributos onchange
-                sel.setAttribute('onchange',
-                    sel.getAttribute('onchange').replace(/,\s*\d+\)/, `, ${newIdx})`));
-            }
         });
     });
 }
