@@ -10,6 +10,7 @@ use App\Models\ChecklistHallazgo;
 use App\Models\ChecklistHallazgoFoto;
 use App\Models\Unidad;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -17,6 +18,15 @@ use App\Services\BrevoMailService;
 
 class ChecklistInspeccionController extends Controller
 {
+    /**
+     * Jerarquía de severidades (para saber si un problema empeoró).
+     */
+    private const NIVEL_SEVERIDAD = [
+        'info'     => 1,
+        'atencion' => 2,
+        'critico'  => 3,
+    ];
+
     /**
      * Listado de inspecciones del cuartelero logueado.
      */
@@ -26,7 +36,8 @@ class ChecklistInspeccionController extends Controller
 
         $query = ChecklistInspeccion::with(['unidad', 'cuartelero', 'plantilla'])
             ->withCount(['hallazgos as hallazgos_abiertos_count' => function ($q) {
-                $q->whereNotIn('estado', ['resuelto', 'verificado']);
+                // Corregido: el estado de cierre real es 'resuelto_verificado'
+                $q->where('estado', '!=', 'resuelto_verificado');
             }]);
 
         // Si es cuartelero, solo ve las suyas
@@ -236,13 +247,18 @@ class ChecklistInspeccionController extends Controller
             return back()->with('error', "Faltan {$faltantes} ítems por responder. Revisa todas las secciones.");
         }
 
-        DB::transaction(function () use ($inspeccion) {
+        $paraNotificar = collect();
+
+        DB::transaction(function () use ($inspeccion, &$paraNotificar) {
             // Marcar como completado
             $inspeccion->completar();
 
-            // Generar hallazgos automáticos
-            $this->generarHallazgos($inspeccion);
+            // Generar hallazgos (sin duplicar los que ya están abiertos)
+            $paraNotificar = $this->generarHallazgos($inspeccion);
         });
+
+        // El correo se envía fuera de la transacción: si falla, no deshace la inspección
+        $this->notificarHallazgos($inspeccion, $paraNotificar);
 
         return redirect()->route('checklist.show', $inspeccion)
             ->with('success', 'Inspección completada y enviada correctamente.');
@@ -339,18 +355,82 @@ class ChecklistInspeccionController extends Controller
     // ═════════════════════════════════════════════════════════════════
 
     /**
-     * Genera hallazgos automáticos a partir de las respuestas problemáticas.
+     * Genera hallazgos a partir de las respuestas con problemas, sin duplicar.
+     *
+     * Para cada ítem se busca si la unidad ya tiene un hallazgo ABIERTO
+     * (cualquier estado distinto de 'resuelto_verificado') para ese mismo ítem:
+     *
+     *  - Si NO existe  → se crea un hallazgo nuevo.
+     *  - Si YA existe  → no se duplica. Se registra la reincidencia como
+     *                    comentario en el hallazgo existente, se le adjuntan
+     *                    las fotos nuevas y, si el problema empeoró, se eleva
+     *                    su severidad y se vuelve a notificar.
+     *  - Si el ítem viene OK pero hay un hallazgo abierto → se deja constancia
+     *    en el historial (no se cierra solo: eso requiere verificación).
+     *
+     * Devuelve los hallazgos que deben notificarse por correo.
      */
-    private function generarHallazgos(ChecklistInspeccion $inspeccion): void
+    private function generarHallazgos(ChecklistInspeccion $inspeccion): Collection
     {
-        $respuestas = $inspeccion->respuestas()->with('item.seccion')->get();
-        $fotosTemp  = session()->pull("checklist_fotos_{$inspeccion->id}", []);
+        $respuestas    = $inspeccion->respuestas()->with('item.seccion')->get();
+        $fotosTemp     = collect(session()->pull("checklist_fotos_{$inspeccion->id}", []));
+        $usuarioId     = Auth::id();
+        $fecha         = $inspeccion->fecha->format('d/m/Y');
+        $paraNotificar = collect();
 
         foreach ($respuestas as $respuesta) {
             $severidad = $respuesta->calcularSeveridad();
 
-            if (is_null($severidad)) continue;
+            // ¿Ya hay un hallazgo abierto de este ítem en esta unidad?
+            $hallazgoAbierto = ChecklistHallazgo::abiertos()
+                ->deUnidad($inspeccion->unidad_id)
+                ->where('item_id', $respuesta->item_id)
+                ->latest()
+                ->first();
 
+            // ── El ítem viene sin problemas ───────────────────────────
+            if (is_null($severidad)) {
+                if ($hallazgoAbierto) {
+                    $hallazgoAbierto->comentarios()->create([
+                        'user_id'    => $usuarioId,
+                        'comentario' => "En la inspección #{$inspeccion->id} del {$fecha} el ítem fue marcado como "
+                                      . "\"{$respuesta->valor}\". El hallazgo sigue abierto hasta que sea verificado.",
+                    ]);
+                }
+                continue;
+            }
+
+            $fotosItem = $fotosTemp->where('item_id', $respuesta->item_id);
+
+            // ── Reincidencia: ya existe un hallazgo abierto ───────────
+            if ($hallazgoAbierto) {
+                $texto = "Reportado nuevamente en la inspección #{$inspeccion->id} del {$fecha} "
+                       . "(respuesta: \"{$respuesta->valor}\").";
+
+                $empeoro = self::NIVEL_SEVERIDAD[$severidad] > self::NIVEL_SEVERIDAD[$hallazgoAbierto->severidad];
+
+                if ($empeoro) {
+                    $texto .= " Severidad elevada de " . strtoupper($hallazgoAbierto->severidad)
+                            . " a " . strtoupper($severidad) . ".";
+
+                    $hallazgoAbierto->update([
+                        'severidad'  => $severidad,
+                        'notificado' => false,
+                    ]);
+
+                    $paraNotificar->push($hallazgoAbierto);
+                }
+
+                $hallazgoAbierto->comentarios()->create([
+                    'user_id'    => $usuarioId,
+                    'comentario' => $texto,
+                ]);
+
+                $this->adjuntarFotos($hallazgoAbierto, $fotosItem);
+                continue;
+            }
+
+            // ── Problema nuevo ────────────────────────────────────────
             $hallazgo = ChecklistHallazgo::create([
                 'inspeccion_id' => $inspeccion->id,
                 'item_id'       => $respuesta->item_id,
@@ -360,21 +440,26 @@ class ChecklistInspeccionController extends Controller
                 'notificado'    => false,
             ]);
 
-            // Asociar fotos temporales que correspondan a este ítem
-            foreach ($fotosTemp as $foto) {
-                if ($foto['item_id'] == $respuesta->item_id) {
-                    ChecklistHallazgoFoto::create([
-                        'hallazgo_id'     => $hallazgo->id,
-                        'ruta'            => $foto['ruta'],
-                        'nombre_original' => $foto['nombre_original'],
-                        'tipo'            => 'problema',
-                    ]);
-                }
-            }
+            $this->adjuntarFotos($hallazgo, $fotosItem);
+            $paraNotificar->push($hallazgo);
         }
 
-        // Disparar notificaciones por correo
-        $this->notificarHallazgos($inspeccion);
+        return $paraNotificar;
+    }
+
+    /**
+     * Asocia a un hallazgo las fotos subidas durante la inspección.
+     */
+    private function adjuntarFotos(ChecklistHallazgo $hallazgo, Collection $fotos): void
+    {
+        foreach ($fotos as $foto) {
+            ChecklistHallazgoFoto::create([
+                'hallazgo_id'     => $hallazgo->id,
+                'ruta'            => $foto['ruta'],
+                'nombre_original' => $foto['nombre_original'],
+                'tipo'            => 'problema',
+            ]);
+        }
     }
 
     /**
@@ -404,16 +489,16 @@ class ChecklistInspeccionController extends Controller
     }
 
     /**
-     * Envía correos de notificación según la severidad de los hallazgos.
+     * Envía el correo con los hallazgos nuevos y los que empeoraron.
+     * Las reincidencias sin cambio de severidad NO generan correo.
      */
-    private function notificarHallazgos(ChecklistInspeccion $inspeccion): void
+    private function notificarHallazgos(ChecklistInspeccion $inspeccion, Collection $hallazgos): void
     {
-        $hallazgos = $inspeccion->hallazgos()
-            ->pendientesNotificacion()
-            ->with(['item.seccion', 'fotos'])
-            ->get();
-            
+        $hallazgos = $hallazgos->filter(fn($h) => !$h->notificado);
+
         if ($hallazgos->isEmpty()) return;
+
+        $hallazgos->each->load(['item.seccion', 'fotos']);
 
         // Obtener emails configurados
         $emailsRaw = ChecklistConfiguracion::obtener('emails_notificacion_hallazgos', '');
@@ -424,16 +509,13 @@ class ChecklistInspeccionController extends Controller
         $atencion = $hallazgos->where('severidad', 'atencion');
         $info     = $hallazgos->where('severidad', 'info');
 
+        // Marcar todos como notificados
+        $hallazgos->each(fn($h) => $h->update(['notificado' => true, 'notificado_at' => now()]));
+
         // Verificar si solo notifica críticos
         $soloCriticos = ChecklistConfiguracion::obtener('notificar_solo_criticos', 'no') === 'si';
 
-        if ($soloCriticos && $criticos->isEmpty()) {
-            $hallazgos->each(fn($h) => $h->update(['notificado' => true, 'notificado_at' => now()]));
-            return;
-        }
-
-        // Marcar todos como notificados
-        $hallazgos->each(fn($h) => $h->update(['notificado' => true, 'notificado_at' => now()]));
+        if ($soloCriticos && $criticos->isEmpty()) return;
 
         // Enviar correo si hay destinatarios configurados
         if (!empty($emails)) {
@@ -445,12 +527,12 @@ class ChecklistInspeccionController extends Controller
                     'criticos'       => $criticos,
                     'atencion'       => $atencion,
                     'info'           => $info,
-                    'totalHallazgos' => $criticos->count() + $atencion->count() + $info->count(),
+                    'totalHallazgos' => $hallazgos->count(),
                 ])->render();
 
-                $unidad = $inspeccion->unidad->nombre;
+                $unidad    = $inspeccion->unidad->nombre;
                 $critCount = $criticos->count();
-                $total = $criticos->count() + $atencion->count() + $info->count();
+                $total     = $hallazgos->count();
 
                 $subject = $critCount > 0
                     ? "⚠️ ALERTA: {$critCount} hallazgo(s) crítico(s) en {$unidad}"
