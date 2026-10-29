@@ -349,10 +349,12 @@
     @endphp
 
     @php
+        // 'oculto' => true oculta la pestaña para todos (cambiar a false para reactivarla)
         $tabsCapitan = [
             'emergencias' => ['icono' => 'bi-exclamation-octagon', 'texto' => 'Emergencias'],
-            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores', 'nuevoHasta' => '2026-11-30'],
+            'cobertura'   => ['icono' => 'bi-clock-history',       'texto' => 'Cobertura de conductores', 'nuevoHasta' => '2026-11-30', 'oculto' => true],
         ];
+        $tabsCapitan = array_filter($tabsCapitan, fn($t) => empty($t['oculto']));
         $tabActiva = array_key_exists(request('tab'), $tabsCapitan) ? request('tab') : 'emergencias';
     @endphp
 
@@ -407,6 +409,7 @@
             @include('partials._emergency_charts')
         </div>
 
+        @if(isset($tabsCapitan['cobertura']))
         <div class="tab-pane fade {{ $tabActiva === 'cobertura' ? 'show active' : '' }}" id="tab-cobertura" role="tabpanel">
             @if($cobertura)
                 @include('partials._capitan_cobertura')
@@ -414,6 +417,7 @@
                 <div class="alert alert-warning mb-0">Tu usuario no tiene una compañía asociada.</div>
             @endif
         </div>
+        @endif
     </div>
 
 {{-- ══════════════════════════════════════════════════════════════════════
@@ -422,10 +426,12 @@
 @elseif(auth()->user()->esAdmin() || auth()->user()->esComandante())
 
     @php
+        // 'oculto' => true oculta la pestaña para todos (cambiar a false para reactivarla)
         $tabsComandancia = [
             'general'   => ['icono' => 'bi-speedometer2',  'texto' => 'General'],
-            'cobertura' => ['icono' => 'bi-clock-history', 'texto' => 'Cobertura de conductores', 'nuevoHasta' => '2026-11-30'],
+            'cobertura' => ['icono' => 'bi-clock-history', 'texto' => 'Cobertura de conductores', 'nuevoHasta' => '2026-11-30', 'oculto' => true],
         ];
+        $tabsComandancia = array_filter($tabsComandancia, fn($t) => empty($t['oculto']));
         $tabActivaCmd = array_key_exists(request('tab'), $tabsComandancia) ? request('tab') : 'general';
     @endphp
 
@@ -697,11 +703,13 @@
     </div>
     </div>{{-- /tab-general --}}
 
+    @if(isset($tabsComandancia['cobertura']))
     <div class="tab-pane fade {{ $tabActivaCmd === 'cobertura' ? 'show active' : '' }}" id="tab-cobertura" role="tabpanel">
         @if($cobertura)
             @include('partials._capitan_cobertura', ['companiasSelector' => $companiasCobertura])
         @endif
     </div>
+    @endif
     </div>{{-- /tab-content --}}
 
 {{-- ══════════════════════════════════════════════════════════════════════
