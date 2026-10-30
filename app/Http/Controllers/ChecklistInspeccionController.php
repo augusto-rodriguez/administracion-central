@@ -45,6 +45,11 @@ class ChecklistInspeccionController extends Controller
             $query->where('cuartelero_id', $user->cuartelero_id);
         }
 
+        // Si es capitán de compañía, solo ve las de unidades de su compañía
+        if ($user->esCapitanCia()) {
+            $query->deCompania($user->compania_id);
+        }
+
         // Filtros opcionales
         if ($request->filled('unidad_id')) {
             $query->where('unidad_id', $request->unidad_id);
@@ -571,6 +576,13 @@ class ChecklistInspeccionController extends Controller
             })->with('checklistPlantilla')->orderBy('nombre')->get();
         }
 
+        // Capitán de compañía: solo las unidades de su compañía
+        // (si no tiene compañía asignada, no ve ninguna)
+        if ($user->esCapitanCia()) {
+            return Unidad::where('compania_id', $user->compania_id ?? 0)
+                ->with('checklistPlantilla')->orderBy('nombre')->get();
+        }
+
         return Unidad::with('checklistPlantilla')->orderBy('nombre')->get();
     }
 
@@ -583,6 +595,15 @@ class ChecklistInspeccionController extends Controller
 
         if ($user->rol === 'cuartelero' && $user->cuartelero_id !== $inspeccion->cuartelero_id) {
             abort(403, 'No tienes permiso para acceder a esta inspección.');
+        }
+
+        // Capitán de compañía: solo inspecciones de unidades de su compañía
+        if ($user->esCapitanCia()) {
+            $companiaUnidad = $inspeccion->unidad->compania_id ?? null;
+
+            if (!$user->compania_id || (int) $companiaUnidad !== (int) $user->compania_id) {
+                abort(403, 'Esta inspección pertenece a una unidad de otra compañía.');
+            }
         }
     }
 

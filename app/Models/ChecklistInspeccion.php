@@ -76,6 +76,15 @@ class ChecklistInspeccion extends Model
         return $query->where('cuartelero_id', $cuarteleroId);
     }
 
+    /**
+     * Inspecciones de unidades que pertenecen a una compañía.
+     * Si la compañía es null no devuelve nada (nunca "todas").
+     */
+    public function scopeDeCompania($query, ?int $companiaId)
+    {
+        return $query->whereHas('unidad', fn ($q) => $q->where('compania_id', $companiaId ?? 0));
+    }
+
     // 🛠 Helpers
 
     public function estaCompletado(): bool

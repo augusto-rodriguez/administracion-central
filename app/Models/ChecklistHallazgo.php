@@ -94,6 +94,15 @@ class ChecklistHallazgo extends Model
         return $query->whereHas('inspeccion', fn ($q) => $q->where('unidad_id', $unidadId));
     }
 
+    /**
+     * Hallazgos de unidades que pertenecen a una compañía.
+     * Si la compañía es null no devuelve nada (nunca "todos").
+     */
+    public function scopeDeCompania($query, ?int $companiaId)
+    {
+        return $query->whereHas('inspeccion.unidad', fn ($q) => $q->where('compania_id', $companiaId ?? 0));
+    }
+
     // 🛠 Helpers
 
     /**

@@ -19,12 +19,19 @@ class ChecklistHallazgoController extends Controller
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+
         $query = ChecklistHallazgo::with([
             'item.seccion',
             'inspeccion.unidad',
             'inspeccion.cuartelero',
             'asignado',
         ]);
+
+        // Capitán de compañía: solo hallazgos de unidades de su compañía
+        if ($user->esCapitanCia()) {
+            $query->deCompania($user->compania_id);
+        }
 
         // Filtro por estado
         if ($request->filled('estado')) {
@@ -55,6 +62,8 @@ class ChecklistHallazgoController extends Controller
      */
     public function show(ChecklistHallazgo $hallazgo)
     {
+        $this->autorizarAcceso($hallazgo);
+
         $hallazgo->load([
             'item.seccion',
             'inspeccion.unidad',
@@ -81,6 +90,8 @@ class ChecklistHallazgoController extends Controller
      */
     public function cambiarEstado(Request $request, ChecklistHallazgo $hallazgo)
     {
+        $this->autorizarAcceso($hallazgo);
+
         $request->validate([
             'estado'     => 'required|in:abierto,en_revision,en_reparacion,resuelto_verificado',
             'comentario' => 'nullable|string|max:2000',
@@ -97,6 +108,8 @@ class ChecklistHallazgoController extends Controller
 
     public function asignar(Request $request, ChecklistHallazgo $hallazgo)
     {
+        $this->autorizarAcceso($hallazgo);
+
         $request->validate([
             'asignado_a'          => 'required|exists:users,id',
             'email_notificacion'  => 'nullable|email|max:255',
@@ -133,6 +146,8 @@ class ChecklistHallazgoController extends Controller
      */
     public function comentar(Request $request, ChecklistHallazgo $hallazgo)
     {
+        $this->autorizarAcceso($hallazgo);
+
         $request->validate([
             'comentario' => 'required|string|max:2000',
         ]);
@@ -150,6 +165,8 @@ class ChecklistHallazgoController extends Controller
      */
     public function subirFoto(Request $request, ChecklistHallazgo $hallazgo)
     {
+        $this->autorizarAcceso($hallazgo);
+
         $request->validate([
             'foto' => 'required|image|mimes:jpeg,jpg,png,webp|max:10240',
             'tipo' => 'nullable|in:problema,resolucion',
@@ -173,6 +190,23 @@ class ChecklistHallazgoController extends Controller
     // ═════════════════════════════════════════════════════════════════
     // MÉTODOS PRIVADOS
     // ═════════════════════════════════════════════════════════════════
+
+    /**
+     * Un capitán de compañía solo puede ver y gestionar hallazgos
+     * de unidades de su propia compañía (también por URL directa).
+     */
+    private function autorizarAcceso(ChecklistHallazgo $hallazgo): void
+    {
+        $user = Auth::user();
+
+        if (!$user->esCapitanCia()) return;
+
+        $companiaUnidad = $hallazgo->inspeccion->unidad->compania_id ?? null;
+
+        if (!$user->compania_id || (int) $companiaUnidad !== (int) $user->compania_id) {
+            abort(403, 'Este hallazgo pertenece a una unidad de otra compañía.');
+        }
+    }
 
     /**
      * Obtiene los roles configurados para gestión de hallazgos.
