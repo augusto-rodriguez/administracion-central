@@ -45,4 +45,9 @@ class User extends Authenticatable
     {
         return $this->rol === 'cuartelero';
     }
+
+    public function getCompaniaIdAttribute(): ?int
+    {
+        return $this->voluntario?->compania_id;
+    }
 }
