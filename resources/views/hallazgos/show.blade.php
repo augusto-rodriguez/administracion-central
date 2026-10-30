@@ -108,8 +108,8 @@
                         <strong>{{ $hallazgo->inspeccion->unidad->nombre }}</strong>
                     </div>
                     <div class="col-6 col-md-3">
-                        <span class="text-muted d-block">Cuartelero</span>
-                        <strong>{{ $hallazgo->inspeccion->cuartelero->nombre }}</strong>
+                        <span class="text-muted d-block">Realizada por</span>
+                        <strong>{{ $hallazgo->inspeccion->nombre_responsable }}</strong>
                     </div>
                     <div class="col-6 col-md-3">
                         <span class="text-muted d-block">Fecha inspección</span>

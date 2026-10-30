@@ -5,7 +5,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Inspecciones de Material Mayor</h4>
-    @if(auth()->user()->esCuartelero())
+    @if(auth()->user()->esCuartelero() || auth()->user()->esCapitanCia())
         <a href="{{ route('checklist.create') }}" class="btn btn-danger">
             <i class="bi bi-plus-lg me-1"></i>Nueva Inspección
         </a>
@@ -54,7 +54,7 @@
                 <tr>
                     <th>Fecha</th>
                     <th>Unidad</th>
-                    <th>Cuartelero</th>
+                    <th>Realizada por</th>
                     <th class="text-center">Estado</th>
                     <th class="text-center">Hallazgos</th>
                     <th class="text-end">Acciones</th>
@@ -68,7 +68,7 @@
                             <br><small class="text-muted">{{ $inspeccion->created_at->format('H:i') }}</small>
                         </td>
                         <td>{{ $inspeccion->unidad->nombre ?? '—' }}</td>
-                        <td>{{ $inspeccion->cuartelero->nombre ?? '—' }}</td>
+                        <td>{{ $inspeccion->nombre_responsable }}</td>
                         <td class="text-center">
                             @if($inspeccion->estado === 'completado')
                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completado</span>

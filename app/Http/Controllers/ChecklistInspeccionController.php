@@ -34,7 +34,7 @@ class ChecklistInspeccionController extends Controller
     {
         $user = Auth::user();
 
-        $query = ChecklistInspeccion::with(['unidad', 'cuartelero', 'plantilla'])
+        $query = ChecklistInspeccion::with(['unidad', 'cuartelero', 'creador', 'plantilla'])
             ->withCount(['hallazgos as hallazgos_abiertos_count' => function ($q) {
                 // Corregido: el estado de cierre real es 'resuelto_verificado'
                 $q->where('estado', '!=', 'resuelto_verificado');
@@ -90,13 +90,32 @@ class ChecklistInspeccionController extends Controller
         ]);
 
         $user = Auth::user();
-        $cuarteleroId = $user->cuartelero_id;
 
-        // Verificar si ya existe un borrador abierto hoy para esta unidad
-        $existeBorrador = ChecklistInspeccion::where('cuartelero_id', $cuarteleroId)
-            ->where('unidad_id', $request->unidad_id)
+        // Solo cuarteleros y capitanes de compañía crean inspecciones
+        if (!$user->esCuartelero() && !$user->esCapitanCia()) {
+            abort(403, 'No tienes permiso para crear inspecciones.');
+        }
+
+        // La unidad debe estar entre las permitidas para el usuario
+        // (cuartelero: sus unidades asignadas · capitán: las de su compañía)
+        $unidadesPermitidas = $this->unidadesDelUsuario($user)->pluck('id');
+
+        if (!$unidadesPermitidas->contains((int) $request->unidad_id)) {
+            abort(403, 'No puedes crear inspecciones para esta unidad.');
+        }
+
+        // El cuartelero queda registrado como cuartelero; el capitán solo como creador
+        $cuarteleroId = $user->esCuartelero() ? $user->cuartelero_id : null;
+
+        // Verificar si ya existe un borrador abierto hoy para esta unidad, de este usuario
+        $existeBorrador = ChecklistInspeccion::where('unidad_id', $request->unidad_id)
             ->where('estado', 'borrador')
             ->whereDate('fecha', today())
+            ->when(
+                $user->esCuartelero(),
+                fn ($q) => $q->where('cuartelero_id', $cuarteleroId),
+                fn ($q) => $q->where('creado_por', $user->id)
+            )
             ->first();
 
         if ($existeBorrador) {
@@ -126,6 +145,7 @@ class ChecklistInspeccionController extends Controller
         $inspeccion = ChecklistInspeccion::create([
             'unidad_id'     => $request->unidad_id,
             'cuartelero_id' => $cuarteleroId,
+            'creado_por'    => $user->id,
             'plantilla_id'  => $request->plantilla_id,
             'fecha'         => today(),
             'estado'        => 'borrador',
@@ -146,8 +166,8 @@ class ChecklistInspeccionController extends Controller
             return redirect()->route('checklist.show', $inspeccion);
         }
 
-        // Verificar si está vencida (solo bloquea a cuarteleros, admin puede entrar)
-        if ($this->inspeccionVencida($inspeccion) && Auth::user()->rol === 'cuartelero') {
+        // Verificar si está vencida (bloquea a cuarteleros y capitanes; admin/comandante pueden entrar)
+        if ($this->inspeccionVencida($inspeccion) && $this->sujetoAPlazo(Auth::user())) {
             return redirect()->route('checklist.index')
                 ->with('error', 'El plazo para completar esta inspección ha expirado. Contacta al administrador para reabrirlo.');
         }
@@ -233,7 +253,7 @@ class ChecklistInspeccionController extends Controller
         }
 
         // Verificar si está vencida
-        if ($this->inspeccionVencida($inspeccion) && Auth::user()->rol === 'cuartelero') {
+        if ($this->inspeccionVencida($inspeccion) && $this->sujetoAPlazo(Auth::user())) {
             return redirect()->route('checklist.index')
                 ->with('error', 'El plazo para completar esta inspección ha expirado. Contacta al administrador para reabrirlo.');
         }
@@ -279,6 +299,7 @@ class ChecklistInspeccionController extends Controller
         $inspeccion->load([
             'unidad',
             'cuartelero',
+            'creador',
             'plantilla.secciones' => fn($q) => $q->orderBy('orden'),
             'plantilla.secciones.items' => fn($q) => $q->orderBy('orden'),
             'respuestas',
@@ -352,7 +373,7 @@ class ChecklistInspeccionController extends Controller
         $inspeccion->hallazgos()->delete();
 
         return redirect()->route('checklist.index')
-            ->with('success', "Inspección #{$inspeccion->id} reabierta. El cuartelero puede completarla nuevamente.");
+            ->with('success', "Inspección #{$inspeccion->id} reabierta. Puede completarse nuevamente.");
     }
 
     // ═════════════════════════════════════════════════════════════════
@@ -477,6 +498,7 @@ class ChecklistInspeccionController extends Controller
         $inspeccion->load([
             'unidad.compania',
             'cuartelero',
+            'creador',
             'plantilla.secciones' => fn($q) => $q->orderBy('orden'),
             'plantilla.secciones.items' => fn($q) => $q->orderBy('orden'),
             'respuestas',
@@ -524,7 +546,7 @@ class ChecklistInspeccionController extends Controller
 
         // Enviar correo si hay destinatarios configurados
         if (!empty($emails)) {
-            $inspeccion->load(['unidad', 'cuartelero']);
+            $inspeccion->load(['unidad', 'cuartelero', 'creador']);
 
             try {
                 $html = view('emails.checklist-hallazgos', [
@@ -563,6 +585,15 @@ class ChecklistInspeccionController extends Controller
         $fechaLimite = $inspeccion->created_at->copy()->addHours($horasLimite);
 
         return now()->greaterThan($fechaLimite);
+    }
+
+    /**
+     * Roles a los que aplica el plazo para completar la inspección.
+     * Admin y comandante pueden entrar a un borrador vencido.
+     */
+    private function sujetoAPlazo($user): bool
+    {
+        return $user->esCuartelero() || $user->esCapitanCia();
     }
 
     /**

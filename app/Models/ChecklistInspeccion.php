@@ -11,6 +11,7 @@ class ChecklistInspeccion extends Model
     protected $fillable = [
         'unidad_id',
         'cuartelero_id',
+        'creado_por',
         'plantilla_id',
         'fecha',
         'kilometraje',
@@ -37,6 +38,14 @@ class ChecklistInspeccion extends Model
     public function cuartelero()
     {
         return $this->belongsTo(Cuartelero::class);
+    }
+
+    /**
+     * Usuario que creó la inspección (cuartelero o capitán de compañía).
+     */
+    public function creador()
+    {
+        return $this->belongsTo(User::class, 'creado_por');
     }
 
     public function plantilla()
@@ -86,6 +95,25 @@ class ChecklistInspeccion extends Model
     }
 
     // 🛠 Helpers
+
+    /**
+     * Nombre de quien realizó la inspección: el cuartelero si existe,
+     * si no el usuario que la creó (p. ej. un capitán de compañía).
+     * Uso en vistas: {{ $inspeccion->nombre_responsable }}
+     */
+    public function getNombreResponsableAttribute(): string
+    {
+        if ($this->cuartelero) {
+            return $this->cuartelero->nombre;
+        }
+
+        if ($this->creador) {
+            $rol = $this->creador->esCapitanCia() ? ' (Capitán Cía.)' : '';
+            return $this->creador->nombre . $rol;
+        }
+
+        return '—';
+    }
 
     public function estaCompletado(): bool
     {

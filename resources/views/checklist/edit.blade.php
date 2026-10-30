@@ -10,7 +10,7 @@
             <i class="bi bi-clipboard-check me-2"></i>{{ $inspeccion->unidad->nombre }}
         </h5>
         <small class="text-muted">
-            {{ $inspeccion->fecha->format('d/m/Y') }} · {{ $inspeccion->cuartelero->nombre ?? 'Sin cuartelero' }}
+            {{ $inspeccion->fecha->format('d/m/Y') }} · {{ $inspeccion->nombre_responsable }}
         </small>
     </div>
     <a href="{{ route('checklist.index') }}" class="btn btn-sm btn-outline-secondary">
